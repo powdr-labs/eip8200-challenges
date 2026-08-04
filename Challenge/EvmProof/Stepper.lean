@@ -810,7 +810,7 @@ def runBlock_sound (artifact : ProgramArtifact) (indices : List Nat)
               have henv := runAt_executionEnv hnext
               have hnextCode : next.executionEnv.code = artifact.code := by
                 rw [henv, hcode]
-              have hnextNp : Precompile.isPrecompile next.executionEnv.fork
+              have hnextNp : Precompile.isPrecompileWithConfig next.executionEnv.precompileConfig next.executionEnv.fork
                   next.executionEnv.codeAddr = false := by
                 simpa [henv] using hnp
               exact (runAt_sound hcode hnext hrun hnp).trans
@@ -966,7 +966,7 @@ def runLocatedBlock_sound (artifact : ProgramArtifact)
               have henv := runLocated_executionEnv hnext
               have hnextCode : next.executionEnv.code = artifact.code := by
                 rw [henv, hcode]
-              have hnextNp : Precompile.isPrecompile next.executionEnv.fork
+              have hnextNp : Precompile.isPrecompileWithConfig next.executionEnv.precompileConfig next.executionEnv.fork
                   next.executionEnv.codeAddr = false := by
                 simpa [henv] using hnp
               have hnextFork : next.fork = fork := by
