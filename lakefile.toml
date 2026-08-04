@@ -9,7 +9,7 @@ defaultTargets = ["Challenge"]
 [[require]]
 name = "yul-evm-compiler"
 git = "https://github.com/powdr-labs/yul-compiler"
-rev = "b0b6d6985709dbd007a877befd92ee6c238ff203"
+rev = "5f43e42"
 
 # The EVM semantics. This is where the *specification* lives: a challenge is
 # equality with `EvmSemantics.Crypto.Sha256.hash`, the function
@@ -21,7 +21,7 @@ rev = "b0b6d6985709dbd007a877befd92ee6c238ff203"
 [[require]]
 name = "evm_semantics"
 git = "https://github.com/powdr-labs/evm-semantics"
-rev = "601183cb2d959748243d59093c144652a6f10716"
+rev = "d69d73f"
 
 [[lean_lib]]
 name = "Challenge"
