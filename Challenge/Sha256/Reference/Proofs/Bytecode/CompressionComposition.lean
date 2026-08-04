@@ -83,7 +83,7 @@ def gasSteps_entry (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (compressEntry s msgOff returnDest rest)
       (callSchedule s msgOff returnDest rest) := by
@@ -109,7 +109,7 @@ def gasSteps_toRoundLoop (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (compressEntry s msgOff returnDest rest)
       (roundAt (copyHashState (afterSchedule s msgOff returnDest rest))
@@ -176,7 +176,7 @@ def gasSteps_toRoundLoop (s : State) (msgOff returnDest : UInt256)
     (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     let q := afterSchedule s msgOff returnDest rest
     (gasSteps_toRoundLoop s msgOff returnDest rest hcap hcode hfork hrun hnp).cost =
@@ -198,7 +198,7 @@ def gasSteps_condition (s : State) (msgOff returnDest : UInt256)
     (hcap : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (roundAt s msgOff returnDest rest j)
       (afterCondition s msgOff returnDest rest j) := by
@@ -217,7 +217,7 @@ def gasSteps_t1 (s : State) (msgOff returnDest : UInt256)
     (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (roundAt s msgOff returnDest rest j)
       (afterT1 s msgOff returnDest rest j) := by
@@ -464,7 +464,7 @@ def gasSteps_t2 (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (j : Nat) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (afterT1 s msgOff returnDest rest j)
       (afterT2 s msgOff returnDest rest j) := by
@@ -755,7 +755,7 @@ def gasSteps_updates (s : State) (msgOff returnDest : UInt256)
     (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (afterT2 s msgOff returnDest rest j)
       (afterSecondIteration s msgOff returnDest rest j) := by
@@ -967,7 +967,7 @@ def gasSteps_roundIteration (s : State) (msgOff returnDest : UInt256)
     (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (roundAt s msgOff returnDest rest j)
       (afterSecondIteration s msgOff returnDest rest j) :=
@@ -1042,7 +1042,7 @@ def gasSteps_roundLoop (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (roundLoopState s msgOff returnDest rest 0)
       (roundLoopState s msgOff returnDest rest 64) := by
@@ -1072,7 +1072,7 @@ def gasSteps_roundsExit (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (roundAt s msgOff returnDest rest 64)
       (foldAt s msgOff returnDest rest 0) := by
@@ -1089,7 +1089,7 @@ def gasSteps_foldIteration (s : State) (msgOff returnDest : UInt256)
     (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (foldAt s msgOff returnDest rest i)
       (afterFoldIteration s msgOff returnDest rest i) := by
@@ -1238,7 +1238,7 @@ def gasSteps_foldLoop (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (foldLoopState s msgOff returnDest rest 0)
       (foldLoopState s msgOff returnDest rest 8) := by
@@ -1264,7 +1264,7 @@ def gasSteps_foldExit (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (foldAt s msgOff returnDest rest 8)
@@ -1298,7 +1298,7 @@ def gasSteps_compress (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (compressEntry s msgOff returnDest rest)
@@ -1371,7 +1371,7 @@ def gasSteps_compress (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     let prepared := copyHashState (afterSchedule s msgOff returnDest rest)

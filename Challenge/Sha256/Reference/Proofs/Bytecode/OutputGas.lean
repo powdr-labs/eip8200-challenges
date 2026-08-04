@@ -156,7 +156,7 @@ theorem hAt_cost_potential (s : State) (index output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_hAt s index output returnDest rest hcap hcode hfork
@@ -361,7 +361,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Output.gasSteps_output s offset rest hcap hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -760,7 +760,7 @@ theorem gasSteps_output_cost_of_activeWords_ge (s : State) (offset : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (haw : 17 ≤ s.activeWords.toNat) :
     (Output.gasSteps_output s offset rest hcap hcode hfork hrun hnp).cost = 531 := by

@@ -20,7 +20,7 @@ algebra.  This is the common endpoint used by every opcode-specific symbolic
 rule, including submission-specific rules written outside this module. -/
 def of_running {s t : State} (cost : Nat)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hstep : ∀ gas, cost ≤ gas →
       StepRunning (withGas s gas) (withGas t (gas - cost))) :
@@ -38,7 +38,7 @@ def add {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .ADD ≤
       1024 + Operation.popArity .ADD)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := (a + b) :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .ADD
@@ -53,7 +53,7 @@ def mul {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .MUL ≤
       1024 + Operation.popArity .MUL)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := (a * b) :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .MUL
@@ -68,7 +68,7 @@ def sub {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .SUB ≤
       1024 + Operation.popArity .SUB)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := (a - b) :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .SUB
@@ -83,7 +83,7 @@ def div {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .DIV ≤
       1024 + Operation.popArity .DIV)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := (a / b) :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .DIV
@@ -98,7 +98,7 @@ def mod {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .MOD ≤
       1024 + Operation.popArity .MOD)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := (a % b) :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .MOD
@@ -113,7 +113,7 @@ def addmod {s : State} {a b n : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .ADDMOD ≤
       1024 + Operation.popArity .ADDMOD)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := UInt256.addMod a b n :: rest, pc := s.pc.succ } := by
@@ -129,7 +129,7 @@ def mulmod {s : State} {a b n : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .MULMOD ≤
       1024 + Operation.popArity .MULMOD)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := UInt256.mulMod a b n :: rest, pc := s.pc.succ } := by
@@ -145,7 +145,7 @@ def lt {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .LT ≤
       1024 + Operation.popArity .LT)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := UInt256.lt a b :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .LT
@@ -160,7 +160,7 @@ def gt {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .GT ≤
       1024 + Operation.popArity .GT)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := UInt256.gt a b :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .GT
@@ -175,7 +175,7 @@ def eq {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .EQ ≤
       1024 + Operation.popArity .EQ)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := UInt256.eq a b :: rest, pc := s.pc.succ } := by
@@ -191,7 +191,7 @@ def byte {s : State} {i x : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .BYTE ≤
       1024 + Operation.popArity .BYTE)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := UInt256.byteAt i x :: rest, pc := s.pc.succ } := by
@@ -207,7 +207,7 @@ def iszero {s : State} {a : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .ISZERO ≤
       1024 + Operation.popArity .ISZERO)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := UInt256.isZero a :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .ISZERO
@@ -222,7 +222,7 @@ def land {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .AND ≤
       1024 + Operation.popArity .AND)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := UInt256.land a b :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .AND
@@ -237,7 +237,7 @@ def lor {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .OR ≤
       1024 + Operation.popArity .OR)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := UInt256.lor a b :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .OR
@@ -252,7 +252,7 @@ def xor {s : State} {a b : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .XOR ≤
       1024 + Operation.popArity .XOR)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := UInt256.xor a b :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .XOR
@@ -267,7 +267,7 @@ def lnot {s : State} {a : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .NOT ≤
       1024 + Operation.popArity .NOT)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := UInt256.lnot a :: rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .NOT
@@ -282,7 +282,7 @@ def shl {s : State} {shift value : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .SHL ≤
       1024 + Operation.popArity .SHL)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := UInt256.shiftLeft value shift :: rest
@@ -299,7 +299,7 @@ def shr {s : State} {shift value : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .SHR ≤
       1024 + Operation.popArity .SHR)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := UInt256.shiftRight value shift :: rest
@@ -315,7 +315,7 @@ def jumpdest {s : State}
     (hcap : s.stack.length + Operation.pushArity .JUMPDEST ≤
       1024 + Operation.popArity .JUMPDEST)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .JUMPDEST
@@ -328,7 +328,7 @@ def push0 {s : State}
     (hop : s.decodedOp = some (.Push ⟨0, by decide⟩))
     (hcap : s.stack.length < 1024)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := ⟨0⟩ :: s.stack, pc := s.pc.succ } := by
   let op : Operation := .Push ⟨0, by decide⟩
@@ -344,7 +344,7 @@ def pushN {s : State} (k : Fin 33) (data : UInt256) (immWidth : Nat)
       some (.Push ⟨k, k.isLt⟩, some (data, immWidth)))
     (hcap : s.stack.length < 1024)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := data :: s.stack
@@ -362,7 +362,7 @@ def pop {s : State} {a : UInt256} {rest : List UInt256}
     (hcap : s.stack.length + Operation.pushArity .POP ≤
       1024 + Operation.popArity .POP)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .POP
@@ -376,7 +376,7 @@ def dup {s : State} (n : Fin 16) (value : UInt256)
     (hget : s.stack[n.val]? = some value)
     (hcap : s.stack.length < 1024)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := value :: s.stack, pc := s.pc.succ } := by
   let op : Operation := .Dup ⟨n⟩
@@ -392,7 +392,7 @@ def swap {s : State} (n : Fin 16) (stack' : List UInt256)
     (hcap : s.stack.length + Operation.pushArity (.Swap ⟨n⟩) ≤
       1024 + Operation.popArity (.Swap ⟨n⟩))
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := stack', pc := s.pc.succ } := by
   let op : Operation := .Swap ⟨n⟩
@@ -406,7 +406,7 @@ def calldatasize {s : State}
     (hop : s.decodedOp = some .CALLDATASIZE)
     (hcap : s.stack.length < 1024)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := UInt256.ofNat s.executionEnv.calldata.size :: s.stack,
@@ -423,7 +423,7 @@ def calldataload {s : State} (offset : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .CALLDATALOAD ≤
       1024 + Operation.popArity .CALLDATALOAD)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := MachineState.readWord s.executionEnv.calldata offset.toNat :: rest
@@ -441,7 +441,7 @@ def calldatacopy {s : State} (destOff srcOff size : UInt256)
     (hcap : s.stack.length + Operation.pushArity .CALLDATACOPY ≤
       1024 + Operation.popArity .CALLDATACOPY)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := rest
@@ -464,7 +464,7 @@ def mstore {s : State} (offset value : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .MSTORE ≤
       1024 + Operation.popArity .MSTORE)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := rest
@@ -490,7 +490,7 @@ def mload {s : State} (offset : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .MLOAD ≤
       1024 + Operation.popArity .MLOAD)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := MachineState.readWord s.memory offset.toNat :: rest
@@ -509,7 +509,7 @@ def mstore8 {s : State} (offset value : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .MSTORE8 ≤
       1024 + Operation.popArity .MSTORE8)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := rest
@@ -536,7 +536,7 @@ def mcopy {s : State} (destOff srcOff size : UInt256)
     (hcap : s.stack.length + Operation.pushArity .MCOPY ≤
       1024 + Operation.popArity .MCOPY)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       stack := rest
@@ -561,7 +561,7 @@ def jump {s : State} (dest : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .JUMP ≤
       1024 + Operation.popArity .JUMP)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := rest, pc := dest } := by
   let cost := Gas.baseCost s.fork .JUMP
@@ -578,7 +578,7 @@ def jumpiTaken {s : State} (dest cond : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .JUMPI ≤
       1024 + Operation.popArity .JUMPI)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := rest, pc := dest } := by
   let cost := Gas.baseCost s.fork .JUMPI
@@ -595,7 +595,7 @@ def jumpiNotTaken {s : State} (dest cond : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .JUMPI ≤
       1024 + Operation.popArity .JUMPI)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with stack := rest, pc := s.pc.succ } := by
   let cost := Gas.baseCost s.fork .JUMPI
@@ -611,7 +611,7 @@ def return_ {s : State} (offset size : UInt256) (rest : List UInt256)
     (hcap : s.stack.length + Operation.pushArity .RETURN ≤
       1024 + Operation.popArity .RETURN)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps s { s with
       halt := .Returned

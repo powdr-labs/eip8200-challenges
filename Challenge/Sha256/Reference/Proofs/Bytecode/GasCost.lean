@@ -61,7 +61,7 @@ theorem gasSteps_iteration_cost_of_compress
     (i : Nat) (hi : i < Driver.blockCount input)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hcompress :
       (Driver.gasSteps_iterationCompress s input i hcode hfork hrun hnp).cost +
@@ -122,7 +122,7 @@ theorem gasSteps_blockLoop_cost_of_compressions
     (hcompress : ∀ (s : State) (i : Nat)
       (hcode : s.executionEnv.code = referenceBytecode)
       (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-      (hnp : Precompile.isPrecompile s.executionEnv.fork
+      (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false),
       (Driver.gasSteps_iterationCompress s input i
           hcode hfork hrun hnp).cost +
@@ -214,7 +214,7 @@ theorem gasSteps_reference_cost (input : ByteArray)
   have hcompress : ∀ (s : State) (i : Nat)
       (hcode : s.executionEnv.code = referenceBytecode)
       (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-      (hnp : Precompile.isPrecompile s.executionEnv.fork
+      (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false),
       (Driver.gasSteps_iterationCompress s input i
           hcode hfork hrun hnp).cost +

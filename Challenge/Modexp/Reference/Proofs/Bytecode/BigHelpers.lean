@@ -264,7 +264,7 @@ def gasSteps_clearSetup (s : State) (ptr : UInt256) (count : Nat)
     (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1017) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (clearEntry s ptr count returnDest rest)
       (clearLoop s ptr count 0 returnDest rest) :=
@@ -277,7 +277,7 @@ def gasSteps_clearIteration (s : State) (ptr : UInt256) (count i : Nat)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256)
     (hi : i < count) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (clearLoop s ptr count i returnDest rest)
       (clearLoop s ptr count (i + 1) returnDest rest) :=
@@ -302,7 +302,7 @@ def gasSteps_clearLoop (s : State) (ptr : UInt256) (count : Nat)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (clearLoop s ptr count 0 returnDest rest)
       (clearLoop s ptr count count returnDest rest) := by
@@ -315,7 +315,7 @@ def gasSteps_clearFinish (s : State) (ptr : UInt256) (count : Nat)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (clearLoop s ptr count count returnDest rest)
@@ -340,7 +340,7 @@ def gasSteps_clear (s : State) (ptr : UInt256) (count : Nat)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (clearEntry s ptr count returnDest rest)
@@ -446,7 +446,7 @@ theorem gasSteps_clearSetup_cost_potential (s : State) (ptr : UInt256)
     (count : Nat) (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1017) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_clearSetup s ptr count returnDest rest hcap hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -468,7 +468,7 @@ theorem gasSteps_clearIteration_cost_potential (s : State) (ptr : UInt256)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_clearIteration s ptr count i returnDest rest hcap hcount hi
       hcode hfork hrun hnp).cost +
@@ -508,7 +508,7 @@ theorem gasSteps_clearLoop_cost_potential (s : State) (ptr : UInt256)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_clearLoop s ptr count returnDest rest hcap hcount hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -526,7 +526,7 @@ theorem gasSteps_clearFinish_cost_potential (s : State) (ptr : UInt256)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_clearFinish s ptr count returnDest rest hcap hcount hcode hfork
@@ -567,7 +567,7 @@ theorem gasSteps_clear_cost_potential (s : State) (ptr : UInt256)
     (hcap : rest.length < 1017) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_clear s ptr count returnDest rest hcap hcount hcode hfork hrun hnp
@@ -834,7 +834,7 @@ def gasSteps_copySetup (s : State) (dst src : UInt256) (count : Nat)
     (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1016) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (copyEntry s dst src count returnDest rest)
       (copyLoop s dst src count 0 returnDest rest) :=
@@ -847,7 +847,7 @@ def gasSteps_copyIteration (s : State) (dst src : UInt256) (count i : Nat)
     (hcap : rest.length < 1016) (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (copyLoop s dst src count i returnDest rest)
       (copyLoop s dst src count (i + 1) returnDest rest) :=
@@ -871,7 +871,7 @@ def gasSteps_copyLoop (s : State) (dst src : UInt256) (count : Nat)
     (hcap : rest.length < 1016) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (copyLoop s dst src count 0 returnDest rest)
       (copyLoop s dst src count count returnDest rest) := by
@@ -883,7 +883,7 @@ def gasSteps_copyFinish (s : State) (dst src : UInt256) (count : Nat)
     (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1016) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (copyLoop s dst src count count returnDest rest)
@@ -908,7 +908,7 @@ def gasSteps_copy (s : State) (dst src : UInt256) (count : Nat)
     (hcap : rest.length < 1016) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (copyEntry s dst src count returnDest rest)
@@ -1044,7 +1044,7 @@ theorem gasSteps_copySetup_cost_potential (s : State) (dst src : UInt256)
     (count : Nat) (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1016) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_copySetup s dst src count returnDest rest hcap hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -1066,7 +1066,7 @@ theorem gasSteps_copyIteration_cost_potential (s : State) (dst src : UInt256)
     (hcap : rest.length < 1016) (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_copyIteration s dst src count i returnDest rest hcap hcount hi
       hcode hfork hrun hnp).cost + MachineState.memCost
@@ -1106,7 +1106,7 @@ theorem gasSteps_copyLoop_cost_potential (s : State) (dst src : UInt256)
     (hcap : rest.length < 1016) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_copyLoop s dst src count returnDest rest hcap hcount hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -1123,7 +1123,7 @@ theorem gasSteps_copyFinish_cost_potential (s : State) (dst src : UInt256)
     (count : Nat) (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1016) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_copyFinish s dst src count returnDest rest hcap hcode hfork hrun hnp
@@ -1164,7 +1164,7 @@ theorem gasSteps_copy_cost_potential (s : State) (dst src : UInt256)
     (hcap : rest.length < 1016) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_copy s dst src count returnDest rest hcap hcount hcode hfork hrun
@@ -2869,7 +2869,7 @@ def gasSteps_addSetup (s : State) (dst src take modulus : UInt256)
     (count : Nat) (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1000) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (addEntry s dst src take modulus count returnDest rest)
@@ -2884,7 +2884,7 @@ def gasSteps_addIteration (s : State) (dst src take modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (addLoop s dst src take modulus count i returnDest rest)
@@ -2911,7 +2911,7 @@ def gasSteps_addLoop (s : State) (dst src take modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (addLoop s dst src take modulus count 0 returnDest rest)
@@ -2924,7 +2924,7 @@ def gasSteps_addToSubtract (s : State) (dst src take modulus : UInt256)
     (count : Nat) (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1000) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (addLoop s dst src take modulus count count returnDest rest)
@@ -2954,7 +2954,7 @@ def gasSteps_subtractIteration (s : State) (dst src take modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (subtractLoop s dst src take modulus count i returnDest rest)
@@ -2982,7 +2982,7 @@ def gasSteps_subtractLoop (s : State) (dst src take modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (subtractLoop s dst src take modulus count 0 returnDest rest)
@@ -2995,7 +2995,7 @@ def gasSteps_subtractToSelect (s : State) (dst src take modulus : UInt256)
     (count : Nat) (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1000) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (subtractLoop s dst src take modulus count count returnDest rest)
@@ -3024,7 +3024,7 @@ def gasSteps_selectIteration (s : State) (dst src take modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (selectLoop s dst src take modulus count i returnDest rest)
@@ -3052,7 +3052,7 @@ def gasSteps_selectLoop (s : State) (dst src take modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (selectLoop s dst src take modulus count 0 returnDest rest)
@@ -3065,7 +3065,7 @@ def gasSteps_selectFinish (s : State) (dst src take modulus : UInt256)
     (count : Nat) (returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1000) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps
@@ -3093,7 +3093,7 @@ def gasSteps_addMaskedMod (s : State) (dst src take modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps
@@ -3126,7 +3126,7 @@ theorem gasSteps_addSetup_cost_potential (s : State)
     (rest : List UInt256) (hcap : rest.length < 1000)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_addSetup s dst src take modulus count returnDest rest hcap hcode
         hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -3147,7 +3147,7 @@ theorem gasSteps_addIteration_cost_potential (s : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_addIteration s dst src take modulus count i returnDest rest hcap
         hcount hi hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3192,7 +3192,7 @@ theorem gasSteps_addLoop_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_addLoop s dst src take modulus count returnDest rest hcap hcount
         hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3210,7 +3210,7 @@ theorem gasSteps_addToSubtract_cost_potential (s : State)
     (rest : List UInt256) (hcap : rest.length < 1000)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_addToSubtract s dst src take modulus count returnDest rest hcap
         hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3257,7 +3257,7 @@ theorem gasSteps_subtractIteration_cost_potential (s : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_subtractIteration s dst src take modulus count i returnDest rest
         hcap hcount hi hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3303,7 +3303,7 @@ theorem gasSteps_subtractLoop_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_subtractLoop s dst src take modulus count returnDest rest hcap
         hcount hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3321,7 +3321,7 @@ theorem gasSteps_subtractToSelect_cost_potential (s : State)
     (rest : List UInt256) (hcap : rest.length < 1000)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_subtractToSelect s dst src take modulus count returnDest rest hcap
         hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3366,7 +3366,7 @@ theorem gasSteps_selectIteration_cost_potential (s : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_selectIteration s dst src take modulus count i returnDest rest
         hcap hcount hi hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3412,7 +3412,7 @@ theorem gasSteps_selectLoop_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_selectLoop s dst src take modulus count returnDest rest hcap hcount
         hcode hfork hrun hnp).cost + MachineState.memCost
@@ -3430,7 +3430,7 @@ theorem gasSteps_selectFinish_cost_potential (s : State)
     (rest : List UInt256) (hcap : rest.length < 1000)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_selectFinish s dst src take modulus count returnDest rest hcap hcode
@@ -3476,7 +3476,7 @@ theorem gasSteps_addMaskedMod_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode) (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_addMaskedMod s dst src take modulus count returnDest rest hcap

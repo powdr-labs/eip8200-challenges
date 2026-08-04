@@ -302,7 +302,7 @@ def gasSteps_bigSigma0 (s : State) (x output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1011)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (Functions.unaryEntry s 114 x output returnDest rest)
@@ -372,7 +372,7 @@ def gasSteps_bigSigma1 (s : State) (x output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1011)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (Functions.unaryEntry s 163 x output returnDest rest)

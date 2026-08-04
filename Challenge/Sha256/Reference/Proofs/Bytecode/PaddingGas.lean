@@ -530,7 +530,7 @@ private theorem mainJumpdest_cost (input : ByteArray) :
     (hstack : s.stack = [])
     (hcode : s.executionEnv.code = referenceBytecode)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Main.gasSteps_initStore s w hw hpc hstack hcode hrun hnp).cost =
       6 + Gas.mstoreTotal
@@ -557,7 +557,7 @@ theorem initStore_cost_add (s : State) (w : Artifact.InitStore)
     (hstack : s.stack = [])
     (hcode : s.executionEnv.code = referenceBytecode)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Main.gasSteps_initStore s w hw hpc hstack hcode hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -603,7 +603,7 @@ theorem initStores_cost_add (s : State) :
     (hstack : s.stack = []) →
     (hcode : s.executionEnv.code = referenceBytecode) →
     (hrun : s.halt = .Running) →
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) →
     (Main.gasSteps_initStores s ws hmem hchain hpc hstack hcode hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =

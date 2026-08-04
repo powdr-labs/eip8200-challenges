@@ -22,7 +22,7 @@ def gasSteps_baseByteAt (s : State) (accumulator : UInt256)
     (hoff : baseOff + baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (baseLoopState s accumulator count baseSize e m baseOff rest i)
@@ -40,7 +40,7 @@ theorem gasSteps_baseByteAt_cost_potential (s : State)
     (hi : i < baseSize) (hoff : baseOff + baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_baseByteAt s accumulator count baseSize e m baseOff i rest hcap
       hcount hbase hi hoff hcode hfork hrun hnp).cost + MachineState.memCost
@@ -61,7 +61,7 @@ def gasSteps_baseLoop (s : State) (accumulator : UInt256)
     (hbase : baseSize < 2 ^ 256) (hoff : baseOff + baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (baseLoopState s accumulator count baseSize e m baseOff rest 0)
@@ -77,7 +77,7 @@ theorem gasSteps_baseLoop_cost_potential (s : State)
     (hoff : baseOff + baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_baseLoop s accumulator count baseSize e m baseOff rest hcap
       hcount hbase hoff hcode hfork hrun hnp).cost + MachineState.memCost
@@ -115,7 +115,7 @@ def gasSteps_baseFinish (s : State) (accumulator : UInt256)
     (hbase : baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (baseLoopState s accumulator count baseSize e m baseOff rest baseSize)
@@ -167,7 +167,7 @@ theorem gasSteps_baseFinish_cost_potential (s : State)
     (hcount : count < 2 ^ 256) (hbase : baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_baseFinish s accumulator count baseSize e m baseOff rest hcap
       hcount hbase hcode hfork hrun hnp).cost + MachineState.memCost
@@ -221,7 +221,7 @@ def gasSteps_baseConversion (s : State) (accumulator : UInt256)
     (hbase : baseSize < 2 ^ 256) (hoff : baseOff + baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (baseLoopState s accumulator count baseSize e m baseOff rest 0)
@@ -238,7 +238,7 @@ theorem gasSteps_baseConversion_cost_potential (s : State)
     (hoff : baseOff + baseSize < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_baseConversion s accumulator count baseSize e m baseOff rest hcap
       hcount hbase hoff hcode hfork hrun hnp).cost + MachineState.memCost

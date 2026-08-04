@@ -145,7 +145,7 @@ private def gasSteps_writeIteration (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (writeLoopState s offset word ret tail j)
       (writeLoopState s offset word ret tail (j + 1)) := by
@@ -185,7 +185,7 @@ private def gasSteps_writeLoop (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (writeLoopState s offset word ret tail 0)
       (writeLoopState s offset word ret tail 4) :=
@@ -198,7 +198,7 @@ private def gasSteps_writeWord (s : State) (offset : Nat) (word ret : UInt256)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode ret.toNat = true) :
     GasSteps
@@ -254,7 +254,7 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
     (i : Nat) (hi : i < 5)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (outputLoopState s input i) (outputLoopState s input (i + 1)) := by
   let q := outputLoopState s input i
@@ -380,7 +380,7 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
 private def gasSteps_outputLoop (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (outputLoopState s input 0) (outputLoopState s input 5) :=
   GasSteps.iterateBounded (count := 5) (I := outputLoopState s input)
@@ -389,7 +389,7 @@ private def gasSteps_outputLoop (s : State) (input : ByteArray)
 private def gasSteps_output (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (DriverTrace.afterExit s input) (outputResult s input) := by
   have gpre := Output.gasSteps_prelude s

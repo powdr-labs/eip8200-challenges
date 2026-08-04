@@ -36,7 +36,7 @@ private theorem block_cost_potential (path : List Output.Located)
     (hfork : s.fork = .Osaka)
     (hresult : Challenge.EvmProof.Stepper.runLocatedBlock path s = some t)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hstatic : ∀ located, located ∈ path → ∀ q, q.fork = .Osaka →
       Challenge.EvmProof.Meter.instrCostWithoutMemory located.instruction q =
@@ -55,7 +55,7 @@ private theorem writeIteration_cost_potential (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_writeIteration s offset word ret tail j hj htail hoff hcode
       hfork hrun hnp).cost +
@@ -129,7 +129,7 @@ private theorem writeLoop_cost_potential (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_writeLoop s offset word ret tail htail hoff hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -150,7 +150,7 @@ private theorem writeWord_cost_potential (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode ret.toNat = true) :
     (gasSteps_writeWord s offset word ret tail htail hoff hcode hfork
@@ -240,7 +240,7 @@ private theorem outputIteration_cost_potential (s : State) (input : ByteArray)
     (i : Nat) (hi : i < 5)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_outputIteration s input i hi hcode hfork hrun hnp).cost +
         MachineState.memCost (outputLoopState s input i).activeWords.toNat =
@@ -411,7 +411,7 @@ private theorem outputIteration_cost_potential (s : State) (input : ByteArray)
 private theorem outputLoop_cost_potential (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_outputLoop s input hcode hfork hrun hnp).cost +
         MachineState.memCost (outputLoopState s input 0).activeWords.toNat =
@@ -509,7 +509,7 @@ set_option linter.unusedSimpArgs false in
 private theorem output_cost_potential (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_output s input hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -601,7 +601,7 @@ private theorem output_cost_potential (s : State) (input : ByteArray)
 private theorem output_cost (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hactive : 64 ≤ s.activeWords.toNat) :
     (gasSteps_output s input hcode hfork hrun hnp).cost = 2636 := by

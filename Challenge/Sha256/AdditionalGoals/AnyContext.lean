@@ -22,7 +22,7 @@ def CorrectInAnyContext (code : ByteArray) : Prop :=
   ∀ (s : State), s.executionEnv.code = code → s.pc = 0 → s.stack = [] →
     s.callStack = [] → s.halt = .Running → s.memory = .empty →
     s.activeWords = 0 → s.executionEnv.fork = .Osaka →
-    Precompile.isPrecompile s.executionEnv.fork s.executionEnv.codeAddr = false →
+    Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork s.executionEnv.codeAddr = false →
     CalldataFits s.executionEnv.calldata →
     ∃ g₀ : Nat, ∀ g : Nat, g₀ ≤ g →
       Eval { s with gasAvailable := g } (.returned (spec s.executionEnv.calldata))

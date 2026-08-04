@@ -357,7 +357,7 @@ theorem gasSteps_mulModBig_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest Challenge.Modexp.referenceBytecode
       returnDest.toNat = true) :

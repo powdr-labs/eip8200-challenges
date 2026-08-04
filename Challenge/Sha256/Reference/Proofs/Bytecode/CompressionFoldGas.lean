@@ -18,7 +18,7 @@ theorem foldIteration_cost_potential (s : State)
     (hi : i < 8) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Compression.gasSteps_foldIteration s msgOff returnDest rest i hi hcap
       hcode hfork hrun hnp).cost +
@@ -112,7 +112,7 @@ theorem foldLoop_cost_potential (s : State)
     (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Compression.gasSteps_foldLoop s msgOff returnDest rest hcap hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -147,7 +147,7 @@ theorem roundsExit_cost_potential (s : State)
     (hcap : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Compression.gasSteps_roundsExit s msgOff returnDest rest hcap hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -169,7 +169,7 @@ theorem foldExit_cost_potential (s : State)
     (hcap : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Compression.gasSteps_foldExit s msgOff returnDest rest hcap hcode hfork

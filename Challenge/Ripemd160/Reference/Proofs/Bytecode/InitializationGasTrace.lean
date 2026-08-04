@@ -62,7 +62,7 @@ private theorem initStore_cost_potential (s : State) (w : Artifact.InitStore)
     (hstack : s.stack = [])
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Main.gasSteps_initStore s w hw hpc hstack hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -92,7 +92,7 @@ private theorem initStores_cost_potential (s : State)
     (hstack : s.stack = [])
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Main.gasSteps_initStores s ws hmem hchain hpc hstack hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =

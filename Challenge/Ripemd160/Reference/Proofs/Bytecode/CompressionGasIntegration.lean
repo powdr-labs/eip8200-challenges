@@ -29,7 +29,7 @@ theorem schedule_cost_potential (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Schedule.gasSteps_schedule s msgOff returnDest rest hstack hcode hfork
@@ -121,7 +121,7 @@ theorem leftRoundSetup_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_leftRoundSetup s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -219,7 +219,7 @@ theorem leftIteration_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_leftIterationConcrete s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -295,7 +295,7 @@ theorem rightRoundSetup_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_rightRoundSetup s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -394,7 +394,7 @@ theorem rightIteration_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_rightIterationConcrete s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =

@@ -71,6 +71,10 @@ def CalldataFits (input : ByteArray) : Prop := input.size < 2 ^ 64
 do; `0x8200` names the EIP. -/
 def deployAddress : AccountAddress := AccountAddress.ofNat 0x8200
 
+/-- Disable the native SHA-256 precompile for replacement executions. -/
+def executionConfig : PrecompileConfig :=
+  { disabled := [Precompile.sha256Address] }
+
 /-- The fixed initial EVM state used by the challenge: `code` deployed at
 `deployAddress`, `calldata` as input, `gas` available, and everything else at
 its zero — fresh memory, no storage, no transient storage, no balance, no call
@@ -94,6 +98,7 @@ def initialState (code calldata : ByteArray) (gas : Nat) : EVM.State :=
     permitStateMutation := true
     blobVersionedHashes := #[]
     fork := .Osaka
+    precompileConfig := executionConfig
   }
   { (default : EVM.State) with
     pc := 0

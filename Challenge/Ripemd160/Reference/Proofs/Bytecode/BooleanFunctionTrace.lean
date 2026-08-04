@@ -280,7 +280,7 @@ def gasSteps_fCase (s : State) (j : Nat) (hj : j < 5)
     (x y z returnDest : UInt256) (rest : List UInt256)
     (hstack : rest.length < 1008) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork s.executionEnv.codeAddr = false)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (fEntry s j x y z returnDest rest)
       (fReturned s j x y z returnDest rest) := by

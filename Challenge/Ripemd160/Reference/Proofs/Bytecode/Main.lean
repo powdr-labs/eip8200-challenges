@@ -121,7 +121,7 @@ def gasSteps_initStore (s : State) (w : Artifact.InitStore)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps s (applyInitStore s w) := by
   apply Challenge.EvmProof.Stepper.runLocatedBlock_sound
@@ -146,7 +146,7 @@ def gasSteps_initStores (s : State) :
     s.executionEnv.code = referenceBytecode →
     s.fork = .Osaka →
     s.halt = .Running →
-    Precompile.isPrecompile s.executionEnv.fork
+    Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false →
     Challenge.EvmProof.GasSteps s (ws.foldl applyInitStore s)
   | [], _, _, _, _, _, _, _, _ => Challenge.EvmProof.GasSteps.refl s

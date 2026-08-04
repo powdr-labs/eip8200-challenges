@@ -18,7 +18,7 @@ theorem roundIteration_cost_potential (s : State)
     (hj : j < 64) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Compression.gasSteps_roundIteration s msgOff returnDest rest j hj hcap
       hcode hfork hrun hnp).cost + MachineState.memCost
@@ -40,7 +40,7 @@ theorem roundLoop_cost_potential (s : State)
     (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Compression.gasSteps_roundLoop s msgOff returnDest rest hcap hcode hfork
       hrun hnp).cost + MachineState.memCost

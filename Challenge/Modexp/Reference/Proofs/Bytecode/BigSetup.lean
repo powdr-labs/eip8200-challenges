@@ -340,7 +340,7 @@ def gasSteps_setupToClear0 (s : State) (b e m baseOff expOff modOff : Nat)
     (hm : m ≤ 1024) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (setupEntry s b e m baseOff expOff modOff returnDest rest)
@@ -360,7 +360,7 @@ def gasSteps_toClear1024 (s : State) (b e m baseOff expOff modOff : Nat)
     (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (afterClear0 s b e m baseOff expOff modOff returnDest rest)
@@ -383,7 +383,7 @@ def gasSteps_toClear2048 (s : State) (b e m baseOff expOff modOff : Nat)
     (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (afterClear1024 s b e m baseOff expOff modOff returnDest rest)
@@ -409,7 +409,7 @@ def gasSteps_toClear6144 (s : State) (b e m baseOff expOff modOff : Nat)
     (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (afterClear2048 s b e m baseOff expOff modOff returnDest rest)
@@ -436,7 +436,7 @@ def gasSteps_toLoadModulus (s : State) (b e m baseOff expOff modOff : Nat)
     (hcap : rest.length < 992)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (afterClear6144 s b e m baseOff expOff modOff returnDest rest)
@@ -462,7 +462,7 @@ theorem gasSteps_setupToClear0_cost (s : State)
     (rest : List UInt256) (hm : m ≤ 1024) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_setupToClear0 s b e m baseOff expOff modOff returnDest rest
       hm hcap hcode hfork hrun hnp).cost = 35 := by
@@ -489,7 +489,7 @@ theorem gasSteps_toClear1024_cost (s : State)
     (rest : List UInt256) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_toClear1024 s b e m baseOff expOff modOff returnDest rest
       hcap hcode hfork hrun hnp).cost = 21 := by
@@ -518,7 +518,7 @@ theorem gasSteps_toClear2048_cost (s : State)
     (rest : List UInt256) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_toClear2048 s b e m baseOff expOff modOff returnDest rest
       hcap hcode hfork hrun hnp).cost = 21 := by
@@ -548,7 +548,7 @@ theorem gasSteps_toClear6144_cost (s : State)
     (rest : List UInt256) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_toClear6144 s b e m baseOff expOff modOff returnDest rest
       hcap hcode hfork hrun hnp).cost = 21 := by
@@ -579,7 +579,7 @@ theorem gasSteps_toLoadModulus_cost (s : State)
     (hmodOff : modOff < 2 ^ 256) (hcap : rest.length < 992)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_toLoadModulus s b e m baseOff expOff modOff returnDest rest
       hm hmodOff hcap hcode hfork hrun hnp).cost = 23 := by
@@ -610,7 +610,7 @@ def gasSteps_setup (s : State) (b e m baseOff expOff modOff : Nat)
     (hinputFit : modOff + m ≤ 2 ^ 256) (hcap : rest.length < 992)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (setupEntry s b e m baseOff expOff modOff returnDest rest)
@@ -708,7 +708,7 @@ theorem gasSteps_setup_cost_potential (s : State)
     (hcap : rest.length < 992)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_setup s b e m baseOff expOff modOff returnDest rest hmBound
         hmodOff hinputFit hcap hcode hfork hrun hnp).cost +

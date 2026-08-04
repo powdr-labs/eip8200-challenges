@@ -507,7 +507,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (outputEntry s offset rest) (outputResult s rest) := by
   let q7 := afterH7 s rest

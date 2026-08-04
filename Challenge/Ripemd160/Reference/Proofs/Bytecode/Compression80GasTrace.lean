@@ -17,7 +17,7 @@ theorem left80_cost_potential (s : State)
     (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_left80Concrete s messageOffset returnDest rest hstack hcode
       hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -46,7 +46,7 @@ theorem right80_cost_potential (s : State)
     (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_right80Concrete s messageOffset returnDest rest hstack hcode
       hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =

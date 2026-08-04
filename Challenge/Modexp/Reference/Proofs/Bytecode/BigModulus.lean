@@ -298,7 +298,7 @@ def gasSteps_scanSetup (s : State) (count : Nat) (rest : List UInt256)
     (hcap : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (scanEntry s count rest)
       (scanLoop s count 0 rest) :=
@@ -315,7 +315,7 @@ def gasSteps_scanIteration (s : State) (count i : Nat)
     (hcount : count ≤ 32) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (scanLoop s count i rest)
       (scanLoop s count (i + 1) rest) :=
@@ -338,7 +338,7 @@ def gasSteps_scanLoop (s : State) (count : Nat) (rest : List UInt256)
     (hcap : rest.length < 1018) (hcount : count ≤ 32)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (scanLoop s count 0 rest)
       (scanLoop s count count rest) :=
@@ -350,7 +350,7 @@ def gasSteps_scanFinishNonzero (s : State) (count : Nat)
     (hcount : count ≤ 32) (hor : scanOr s.memory count ≠ 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (scanLoop s count count rest)
       (scanNonzero s count rest) :=
@@ -374,7 +374,7 @@ def gasSteps_scanNonzeroTotal (s : State) (count : Nat)
     (hcount : count ≤ 32) (hor : scanOr s.memory count ≠ 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (scanEntry s count rest)
       (scanNonzero s count rest) :=
@@ -388,7 +388,7 @@ theorem gasSteps_scanIteration_cost_potential (s : State) (count i : Nat)
     (hcount : count ≤ 32) (hi : i < count)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_scanIteration s count i rest hcap hcount hi hcode hfork hrun
         hnp).cost + MachineState.memCost
@@ -427,7 +427,7 @@ theorem gasSteps_scanLoop_cost_potential (s : State) (count : Nat)
     (hcount : count ≤ 32)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_scanLoop s count rest hcap hcount hcode hfork hrun hnp).cost +
         MachineState.memCost (scanLoop s count 0 rest).activeWords.toNat =
@@ -444,7 +444,7 @@ theorem gasSteps_scanNonzeroTotal_cost_potential (s : State) (count : Nat)
     (hcount : count ≤ 32) (hor : scanOr s.memory count ≠ 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_scanNonzeroTotal s count rest hcap hcount hor hcode hfork hrun
         hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -479,7 +479,7 @@ def gasSteps_scanZeroTotal (s : State) (count b e m baseOff expOff modOff : Nat)
     (hm : m < 2 ^ 256) (hor : scanOr s.memory count = 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (scanEntry s count ([UInt256.ofNat b, UInt256.ofNat e,
@@ -515,7 +515,7 @@ theorem gasSteps_scanZeroTotal_cost_potential (s : State)
     (hor : scanOr s.memory count = 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_scanZeroTotal s count b e m baseOff expOff modOff returnDest
         rest hcap hcount hm hor hcode hfork hrun hnp).cost +

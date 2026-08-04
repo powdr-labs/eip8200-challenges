@@ -28,7 +28,7 @@ theorem initialState_calldata (code calldata : ByteArray) (gas : Nat) :
     (initialState code calldata gas).executionEnv.calldata = calldata := rfl
 
 theorem deployAddress_not_precompile :
-    Precompile.isPrecompile .Osaka deployAddress = false := by
+    Precompile.isPrecompileWithConfig executionConfig .Osaka deployAddress = false := by
   decide
 
 end Challenge.Sha256

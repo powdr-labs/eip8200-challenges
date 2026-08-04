@@ -2355,7 +2355,7 @@ def gasSteps_mulInitialize (s : State) (a b out modulus : UInt256)
     (hcap : rest.length < 1000) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (mulEntry s a b out modulus count returnDest rest)
@@ -2420,7 +2420,7 @@ def gasSteps_mulModBig (s : State) (a b out modulus : UInt256)
     (hcap : rest.length < 980) (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest Challenge.Modexp.referenceBytecode
       returnDest.toNat = true) :
@@ -2460,7 +2460,7 @@ theorem gasSteps_mulInitialize_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_mulInitialize s a b out modulus count returnDest rest hcap
       hcount hcode hfork hrun hnp).cost +
@@ -2521,7 +2521,7 @@ theorem gasSteps_mulModBig_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest Challenge.Modexp.referenceBytecode
       returnDest.toNat = true) :
