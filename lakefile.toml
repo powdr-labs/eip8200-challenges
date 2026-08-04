@@ -21,7 +21,7 @@ rev = "8b9c5bb"
 [[require]]
 name = "evm_semantics"
 git = "https://github.com/powdr-labs/evm-semantics"
-rev = "726e35d"
+rev = "26fdf59"
 
 [[lean_lib]]
 name = "Challenge"
