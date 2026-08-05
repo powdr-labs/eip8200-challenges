@@ -75,7 +75,7 @@ def initializedState (input : ByteArray) : State :=
   Artifact.initStores.foldl applyInitStore (Execution.mainStart input)
 
 @[simp] theorem initializedState_pc (input : ByteArray) :
-    (initializedState input).pc = UInt256.ofNat (Artifact.instructionPC 764) := by
+    (initializedState input).pc = UInt256.ofNat (Artifact.instructionPC 81) := by
   rfl
 
 @[simp] theorem initializedState_stack (input : ByteArray) :

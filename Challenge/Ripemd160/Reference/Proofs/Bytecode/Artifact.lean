@@ -944,267 +944,80 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
   all_goals repeat' apply And.intro
   all_goals rfl
 
-@[simp] theorem referenceArtifact_pc_683 :
-    referenceArtifact.instructionPC 683 = 0x5b9 := by rfl
+/-! ### Instruction-PC table
 
-@[simp] theorem referenceArtifact_pc_684 :
-    referenceArtifact.instructionPC 684 = 0x5ba := by rfl
+Generated from the instruction list for the indices the re-derived proofs
+anchor on.  The old table's index set described the old layout and none of it
+survived the re-schedule.  A *complete* table is not an option here: each entry
+is an `rfl` that folds the instruction list up to its index, so 847 of them cost
+more than ten minutes of elaboration.
 
-@[simp] theorem referenceArtifact_pc_685 :
-    referenceArtifact.instructionPC 685 = 0x5bf := by rfl
+The local `instructionPC` abbreviation gets one reduction lemma rather than a
+second table; it is definitionally the artifact's own projection. -/
 
-@[simp] theorem referenceArtifact_pc_686 :
-    referenceArtifact.instructionPC 686 = 0x5c0 := by rfl
+@[simp] theorem instructionPC_eq (index : Nat) :
+    instructionPC index = referenceArtifact.instructionPC index := rfl
 
-@[simp] theorem referenceArtifact_pc_687 :
-    referenceArtifact.instructionPC 687 = 0x5c5 := by rfl
-
-@[simp] theorem referenceArtifact_pc_688 :
-    referenceArtifact.instructionPC 688 = 0x5c6 := by rfl
-
-@[simp] theorem referenceArtifact_pc_689 :
-    referenceArtifact.instructionPC 689 = 0x5c7 := by rfl
-
-@[simp] theorem referenceArtifact_pc_690 :
-    referenceArtifact.instructionPC 690 = 0x5c8 := by rfl
-
-@[simp] theorem referenceArtifact_pc_691 :
-    referenceArtifact.instructionPC 691 = 0x5c9 := by rfl
-
-@[simp] theorem referenceArtifact_pc_692 :
-    referenceArtifact.instructionPC 692 = 0x5ca := by rfl
-
-@[simp] theorem referenceArtifact_pc_693 :
-    referenceArtifact.instructionPC 693 = 0x5cb := by rfl
-
-@[simp] theorem referenceArtifact_pc_694 :
-    referenceArtifact.instructionPC 694 = 0x5cc := by rfl
-
-@[simp] theorem referenceArtifact_pc_695 :
-    referenceArtifact.instructionPC 695 = 0x5cd := by rfl
-
-@[simp] theorem referenceArtifact_pc_696 :
-    referenceArtifact.instructionPC 696 = 0x5ce := by rfl
-
-@[simp] theorem referenceArtifact_pc_697 :
-    referenceArtifact.instructionPC 697 = 0x5d3 := by rfl
-
-@[simp] theorem referenceArtifact_pc_698 :
-    referenceArtifact.instructionPC 698 = 0x5d4 := by rfl
-
-@[simp] theorem referenceArtifact_pc_699 :
-    referenceArtifact.instructionPC 699 = 0x5d5 := by rfl
-
-@[simp] theorem referenceArtifact_pc_700 :
-    referenceArtifact.instructionPC 700 = 0x5d6 := by rfl
-
-@[simp] theorem referenceArtifact_pc_701 :
-    referenceArtifact.instructionPC 701 = 0x5d7 := by rfl
-
-@[simp] theorem referenceArtifact_pc_702 :
-    referenceArtifact.instructionPC 702 = 0x5d8 := by rfl
-
-@[simp] theorem referenceArtifact_pc_703 :
-    referenceArtifact.instructionPC 703 = 0x5d9 := by rfl
-
-@[simp] theorem referenceArtifact_pc_704 :
-    referenceArtifact.instructionPC 704 = 0x5db := by rfl
-
-@[simp] theorem referenceArtifact_pc_705 :
-    referenceArtifact.instructionPC 705 = 0x5dc := by rfl
-
-@[simp] theorem referenceArtifact_pc_706 :
-    referenceArtifact.instructionPC 706 = 0x5dd := by rfl
-
-@[simp] theorem referenceArtifact_pc_707 :
-    referenceArtifact.instructionPC 707 = 0x5de := by rfl
-
-@[simp] theorem referenceArtifact_pc_708 :
-    referenceArtifact.instructionPC 708 = 0x5e0 := by rfl
-
-@[simp] theorem referenceArtifact_pc_709 :
-    referenceArtifact.instructionPC 709 = 0x5e5 := by rfl
-
-@[simp] theorem referenceArtifact_pc_710 :
-    referenceArtifact.instructionPC 710 = 0x5e6 := by rfl
-
-@[simp] theorem referenceArtifact_pc_711 :
-    referenceArtifact.instructionPC 711 = 0x5e8 := by rfl
-
-@[simp] theorem referenceArtifact_pc_712 :
-    referenceArtifact.instructionPC 712 = 0x5e9 := by rfl
-
-@[simp] theorem referenceArtifact_pc_713 :
-    referenceArtifact.instructionPC 713 = 0x5ea := by rfl
-
-@[simp] theorem referenceArtifact_pc_714 :
-    referenceArtifact.instructionPC 714 = 0x5eb := by rfl
-
-@[simp] theorem referenceArtifact_pc_715 :
-    referenceArtifact.instructionPC 715 = 0x5ec := by rfl
-
-@[simp] theorem referenceArtifact_pc_716 :
-    referenceArtifact.instructionPC 716 = 0x5ed := by rfl
-
-@[simp] theorem referenceArtifact_pc_717 :
-    referenceArtifact.instructionPC 717 = 0x5ee := by rfl
-
-@[simp] theorem referenceArtifact_pc_718 :
-    referenceArtifact.instructionPC 718 = 0x5ef := by rfl
-
-@[simp] theorem referenceArtifact_pc_719 :
-    referenceArtifact.instructionPC 719 = 0x5f0 := by rfl
-
-@[simp] theorem referenceArtifact_pc_720 :
-    referenceArtifact.instructionPC 720 = 0x5f1 := by rfl
-
-@[simp] theorem referenceArtifact_pc_721 :
-    referenceArtifact.instructionPC 721 = 0x5f2 := by rfl
-
-@[simp] theorem referenceArtifact_pc_722 :
-    referenceArtifact.instructionPC 722 = 0x5f3 := by rfl
-
-@[simp] theorem referenceArtifact_pc_723 :
-    referenceArtifact.instructionPC 723 = 0x5f8 := by rfl
-
-@[simp] theorem referenceArtifact_pc_724 :
-    referenceArtifact.instructionPC 724 = 0x5f9 := by rfl
-
-@[simp] theorem referenceArtifact_pc_725 :
-    referenceArtifact.instructionPC 725 = 0x5fb := by rfl
-
-@[simp] theorem referenceArtifact_pc_726 :
-    referenceArtifact.instructionPC 726 = 0x5fc := by rfl
-
-@[simp] theorem referenceArtifact_pc_727 :
-    referenceArtifact.instructionPC 727 = 0x5fd := by rfl
-
-@[simp] theorem referenceArtifact_pc_728 :
-    referenceArtifact.instructionPC 728 = 0x5fe := by rfl
-
-@[simp] theorem referenceArtifact_pc_729 :
-    referenceArtifact.instructionPC 729 = 0x603 := by rfl
-
-@[simp] theorem referenceArtifact_pc_730 :
-    referenceArtifact.instructionPC 730 = 0x604 := by rfl
-
-@[simp] theorem referenceArtifact_pc_731 :
-    referenceArtifact.instructionPC 731 = 0x605 := by rfl
-
-@[simp] theorem referenceArtifact_pc_732 :
-    referenceArtifact.instructionPC 732 = 0x606 := by rfl
-
-@[simp] theorem referenceArtifact_pc_733 :
-    referenceArtifact.instructionPC 733 = 0x607 := by rfl
-
-@[simp] theorem referenceArtifact_pc_734 :
-    referenceArtifact.instructionPC 734 = 0x609 := by rfl
-
-@[simp] theorem referenceArtifact_pc_735 :
-    referenceArtifact.instructionPC 735 = 0x60a := by rfl
-
-@[simp] theorem referenceArtifact_pc_736 :
-    referenceArtifact.instructionPC 736 = 0x60b := by rfl
-
-@[simp] theorem referenceArtifact_pc_737 :
-    referenceArtifact.instructionPC 737 = 0x60c := by rfl
-
-@[simp] theorem referenceArtifact_pc_738 :
-    referenceArtifact.instructionPC 738 = 0x611 := by rfl
-
-@[simp] theorem referenceArtifact_pc_739 :
-    referenceArtifact.instructionPC 739 = 0x612 := by rfl
-
-@[simp] theorem referenceArtifact_pc_740 :
-    referenceArtifact.instructionPC 740 = 0x614 := by rfl
-
-@[simp] theorem referenceArtifact_pc_741 :
-    referenceArtifact.instructionPC 741 = 0x615 := by rfl
-
-@[simp] theorem referenceArtifact_pc_742 :
-    referenceArtifact.instructionPC 742 = 0x616 := by rfl
-
-@[simp] theorem referenceArtifact_pc_743 :
-    referenceArtifact.instructionPC 743 = 0x617 := by rfl
-
-@[simp] theorem referenceArtifact_pc_744 :
-    referenceArtifact.instructionPC 744 = 0x618 := by rfl
-
-@[simp] theorem referenceArtifact_pc_745 :
-    referenceArtifact.instructionPC 745 = 0x619 := by rfl
-
-@[simp] theorem referenceArtifact_pc_746 :
-    referenceArtifact.instructionPC 746 = 0x61a := by rfl
-
-@[simp] theorem referenceArtifact_pc_747 :
-    referenceArtifact.instructionPC 747 = 0x61b := by rfl
-
-@[simp] theorem referenceArtifact_pc_748 :
-    referenceArtifact.instructionPC 748 = 0x61c := by rfl
-
-@[simp] theorem referenceArtifact_pc_749 :
-    referenceArtifact.instructionPC 749 = 0x61d := by rfl
-
-@[simp] theorem referenceArtifact_pc_750 :
-    referenceArtifact.instructionPC 750 = 0x61e := by rfl
-
-@[simp] theorem referenceArtifact_pc_751 :
-    referenceArtifact.instructionPC 751 = 0x61f := by rfl
-
-@[simp] theorem referenceArtifact_pc_752 :
-    referenceArtifact.instructionPC 752 = 0x620 := by rfl
-
-@[simp] theorem referenceArtifact_pc_753 :
-    referenceArtifact.instructionPC 753 = 0x621 := by rfl
-
-@[simp] theorem referenceArtifact_pc_754 :
-    referenceArtifact.instructionPC 754 = 0x622 := by rfl
-
-@[simp] theorem referenceArtifact_pc_755 :
-    referenceArtifact.instructionPC 755 = 0x623 := by rfl
-
-@[simp] theorem referenceArtifact_pc_756 :
-    referenceArtifact.instructionPC 756 = 0x624 := by rfl
-
-@[simp] theorem referenceArtifact_pc_757 :
-    referenceArtifact.instructionPC 757 = 0x625 := by rfl
-
-@[simp] theorem referenceArtifact_pc_758 :
-    referenceArtifact.instructionPC 758 = 0x626 := by rfl
-
-@[simp] theorem referenceArtifact_pc_759 :
-    referenceArtifact.instructionPC 759 = 0x627 := by rfl
-
-@[simp] theorem referenceArtifact_pc_760 :
-    referenceArtifact.instructionPC 760 = 0x628 := by rfl
-
-@[simp] theorem referenceArtifact_pc_761 :
-    referenceArtifact.instructionPC 761 = 0x629 := by rfl
-
-@[simp] theorem referenceArtifact_pc_762 :
-    referenceArtifact.instructionPC 762 = 0x62a := by rfl
-
-@[simp] theorem referenceArtifact_pc_763 :
-    referenceArtifact.instructionPC 763 = 0x62d := by rfl
-
-
-@[simp] theorem referenceArtifact_pc_764 :
-    referenceArtifact.instructionPC 764 = 0x62e := by rfl
-
-@[simp] theorem referenceArtifact_pc_765 :
-    referenceArtifact.instructionPC 765 = 0x62f := by rfl
-
-@[simp] theorem referenceArtifact_pc_766 :
-    referenceArtifact.instructionPC 766 = 0x631 := by rfl
-
-@[simp] theorem referenceArtifact_pc_767 :
-    referenceArtifact.instructionPC 767 = 0x632 := by rfl
 
 @[simp] theorem referenceArtifact_pc_0 :
     referenceArtifact.instructionPC 0 = 0x0 := by rfl
 
 @[simp] theorem referenceArtifact_pc_1 :
     referenceArtifact.instructionPC 1 = 0x20 := by rfl
+
+@[simp] theorem referenceArtifact_pc_2 :
+    referenceArtifact.instructionPC 2 = 0x23 := by rfl
+
+@[simp] theorem referenceArtifact_pc_3 :
+    referenceArtifact.instructionPC 3 = 0x24 := by rfl
+
+@[simp] theorem referenceArtifact_pc_4 :
+    referenceArtifact.instructionPC 4 = 0x45 := by rfl
+
+@[simp] theorem referenceArtifact_pc_5 :
+    referenceArtifact.instructionPC 5 = 0x48 := by rfl
+
+@[simp] theorem referenceArtifact_pc_6 :
+    referenceArtifact.instructionPC 6 = 0x49 := by rfl
+
+@[simp] theorem referenceArtifact_pc_7 :
+    referenceArtifact.instructionPC 7 = 0x6a := by rfl
+
+@[simp] theorem referenceArtifact_pc_8 :
+    referenceArtifact.instructionPC 8 = 0x6d := by rfl
+
+@[simp] theorem referenceArtifact_pc_9 :
+    referenceArtifact.instructionPC 9 = 0x6e := by rfl
+
+@[simp] theorem referenceArtifact_pc_10 :
+    referenceArtifact.instructionPC 10 = 0x8f := by rfl
+
+@[simp] theorem referenceArtifact_pc_11 :
+    referenceArtifact.instructionPC 11 = 0x92 := by rfl
+
+@[simp] theorem referenceArtifact_pc_12 :
+    referenceArtifact.instructionPC 12 = 0x93 := by rfl
+
+@[simp] theorem referenceArtifact_pc_13 :
+    referenceArtifact.instructionPC 13 = 0xb4 := by rfl
+
+@[simp] theorem referenceArtifact_pc_14 :
+    referenceArtifact.instructionPC 14 = 0xb7 := by rfl
+
+@[simp] theorem referenceArtifact_pc_15 :
+    referenceArtifact.instructionPC 15 = 0xb8 := by rfl
+
+@[simp] theorem referenceArtifact_pc_16 :
+    referenceArtifact.instructionPC 16 = 0xd9 := by rfl
+
+@[simp] theorem referenceArtifact_pc_17 :
+    referenceArtifact.instructionPC 17 = 0xdc := by rfl
+
+@[simp] theorem referenceArtifact_pc_18 :
+    referenceArtifact.instructionPC 18 = 0xdd := by rfl
+
+@[simp] theorem referenceArtifact_pc_19 :
+    referenceArtifact.instructionPC 19 = 0xfe := by rfl
 
 @[simp] theorem referenceArtifact_pc_20 :
     referenceArtifact.instructionPC 20 = 0x101 := by rfl
@@ -1215,6 +1028,42 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 @[simp] theorem referenceArtifact_pc_22 :
     referenceArtifact.instructionPC 22 = 0x123 := by rfl
 
+@[simp] theorem referenceArtifact_pc_23 :
+    referenceArtifact.instructionPC 23 = 0x126 := by rfl
+
+@[simp] theorem referenceArtifact_pc_24 :
+    referenceArtifact.instructionPC 24 = 0x127 := by rfl
+
+@[simp] theorem referenceArtifact_pc_25 :
+    referenceArtifact.instructionPC 25 = 0x148 := by rfl
+
+@[simp] theorem referenceArtifact_pc_26 :
+    referenceArtifact.instructionPC 26 = 0x14b := by rfl
+
+@[simp] theorem referenceArtifact_pc_27 :
+    referenceArtifact.instructionPC 27 = 0x14c := by rfl
+
+@[simp] theorem referenceArtifact_pc_28 :
+    referenceArtifact.instructionPC 28 = 0x16d := by rfl
+
+@[simp] theorem referenceArtifact_pc_29 :
+    referenceArtifact.instructionPC 29 = 0x170 := by rfl
+
+@[simp] theorem referenceArtifact_pc_30 :
+    referenceArtifact.instructionPC 30 = 0x171 := by rfl
+
+@[simp] theorem referenceArtifact_pc_31 :
+    referenceArtifact.instructionPC 31 = 0x192 := by rfl
+
+@[simp] theorem referenceArtifact_pc_32 :
+    referenceArtifact.instructionPC 32 = 0x195 := by rfl
+
+@[simp] theorem referenceArtifact_pc_33 :
+    referenceArtifact.instructionPC 33 = 0x196 := by rfl
+
+@[simp] theorem referenceArtifact_pc_34 :
+    referenceArtifact.instructionPC 34 = 0x1b7 := by rfl
+
 @[simp] theorem referenceArtifact_pc_35 :
     referenceArtifact.instructionPC 35 = 0x1ba := by rfl
 
@@ -1223,6 +1072,48 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 
 @[simp] theorem referenceArtifact_pc_37 :
     referenceArtifact.instructionPC 37 = 0x1bc := by rfl
+
+@[simp] theorem referenceArtifact_pc_38 :
+    referenceArtifact.instructionPC 38 = 0x1bf := by rfl
+
+@[simp] theorem referenceArtifact_pc_39 :
+    referenceArtifact.instructionPC 39 = 0x1c0 := by rfl
+
+@[simp] theorem referenceArtifact_pc_40 :
+    referenceArtifact.instructionPC 40 = 0x1c5 := by rfl
+
+@[simp] theorem referenceArtifact_pc_41 :
+    referenceArtifact.instructionPC 41 = 0x1c8 := by rfl
+
+@[simp] theorem referenceArtifact_pc_42 :
+    referenceArtifact.instructionPC 42 = 0x1c9 := by rfl
+
+@[simp] theorem referenceArtifact_pc_43 :
+    referenceArtifact.instructionPC 43 = 0x1ce := by rfl
+
+@[simp] theorem referenceArtifact_pc_44 :
+    referenceArtifact.instructionPC 44 = 0x1d1 := by rfl
+
+@[simp] theorem referenceArtifact_pc_45 :
+    referenceArtifact.instructionPC 45 = 0x1d2 := by rfl
+
+@[simp] theorem referenceArtifact_pc_46 :
+    referenceArtifact.instructionPC 46 = 0x1d7 := by rfl
+
+@[simp] theorem referenceArtifact_pc_47 :
+    referenceArtifact.instructionPC 47 = 0x1da := by rfl
+
+@[simp] theorem referenceArtifact_pc_48 :
+    referenceArtifact.instructionPC 48 = 0x1db := by rfl
+
+@[simp] theorem referenceArtifact_pc_49 :
+    referenceArtifact.instructionPC 49 = 0x1e0 := by rfl
+
+@[simp] theorem referenceArtifact_pc_50 :
+    referenceArtifact.instructionPC 50 = 0x1e3 := by rfl
+
+@[simp] theorem referenceArtifact_pc_51 :
+    referenceArtifact.instructionPC 51 = 0x1e4 := by rfl
 
 @[simp] theorem referenceArtifact_pc_52 :
     referenceArtifact.instructionPC 52 = 0x1e9 := by rfl
@@ -1233,6 +1124,42 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 @[simp] theorem referenceArtifact_pc_54 :
     referenceArtifact.instructionPC 54 = 0x1ed := by rfl
 
+@[simp] theorem referenceArtifact_pc_55 :
+    referenceArtifact.instructionPC 55 = 0x1f2 := by rfl
+
+@[simp] theorem referenceArtifact_pc_56 :
+    referenceArtifact.instructionPC 56 = 0x1f5 := by rfl
+
+@[simp] theorem referenceArtifact_pc_57 :
+    referenceArtifact.instructionPC 57 = 0x1f6 := by rfl
+
+@[simp] theorem referenceArtifact_pc_58 :
+    referenceArtifact.instructionPC 58 = 0x1fb := by rfl
+
+@[simp] theorem referenceArtifact_pc_59 :
+    referenceArtifact.instructionPC 59 = 0x1fe := by rfl
+
+@[simp] theorem referenceArtifact_pc_60 :
+    referenceArtifact.instructionPC 60 = 0x1ff := by rfl
+
+@[simp] theorem referenceArtifact_pc_61 :
+    referenceArtifact.instructionPC 61 = 0x204 := by rfl
+
+@[simp] theorem referenceArtifact_pc_62 :
+    referenceArtifact.instructionPC 62 = 0x207 := by rfl
+
+@[simp] theorem referenceArtifact_pc_63 :
+    referenceArtifact.instructionPC 63 = 0x208 := by rfl
+
+@[simp] theorem referenceArtifact_pc_64 :
+    referenceArtifact.instructionPC 64 = 0x209 := by rfl
+
+@[simp] theorem referenceArtifact_pc_65 :
+    referenceArtifact.instructionPC 65 = 0x20c := by rfl
+
+@[simp] theorem referenceArtifact_pc_66 :
+    referenceArtifact.instructionPC 66 = 0x20d := by rfl
+
 @[simp] theorem referenceArtifact_pc_67 :
     referenceArtifact.instructionPC 67 = 0x212 := by rfl
 
@@ -1241,6 +1168,45 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 
 @[simp] theorem referenceArtifact_pc_69 :
     referenceArtifact.instructionPC 69 = 0x215 := by rfl
+
+@[simp] theorem referenceArtifact_pc_70 :
+    referenceArtifact.instructionPC 70 = 0x21a := by rfl
+
+@[simp] theorem referenceArtifact_pc_71 :
+    referenceArtifact.instructionPC 71 = 0x21c := by rfl
+
+@[simp] theorem referenceArtifact_pc_72 :
+    referenceArtifact.instructionPC 72 = 0x21d := by rfl
+
+@[simp] theorem referenceArtifact_pc_73 :
+    referenceArtifact.instructionPC 73 = 0x222 := by rfl
+
+@[simp] theorem referenceArtifact_pc_74 :
+    referenceArtifact.instructionPC 74 = 0x224 := by rfl
+
+@[simp] theorem referenceArtifact_pc_75 :
+    referenceArtifact.instructionPC 75 = 0x225 := by rfl
+
+@[simp] theorem referenceArtifact_pc_76 :
+    referenceArtifact.instructionPC 76 = 0x22a := by rfl
+
+@[simp] theorem referenceArtifact_pc_77 :
+    referenceArtifact.instructionPC 77 = 0x22c := by rfl
+
+@[simp] theorem referenceArtifact_pc_78 :
+    referenceArtifact.instructionPC 78 = 0x22d := by rfl
+
+@[simp] theorem referenceArtifact_pc_79 :
+    referenceArtifact.instructionPC 79 = 0x232 := by rfl
+
+@[simp] theorem referenceArtifact_pc_80 :
+    referenceArtifact.instructionPC 80 = 0x234 := by rfl
+
+@[simp] theorem referenceArtifact_pc_81 :
+    referenceArtifact.instructionPC 81 = 0x235 := by rfl
+
+@[simp] theorem referenceArtifact_pc_82 :
+    referenceArtifact.instructionPC 82 = 0x236 := by rfl
 
 @[simp] theorem referenceArtifact_pc_83 :
     referenceArtifact.instructionPC 83 = 0x238 := by rfl
@@ -1251,6 +1217,63 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 @[simp] theorem referenceArtifact_pc_85 :
     referenceArtifact.instructionPC 85 = 0x23a := by rfl
 
+@[simp] theorem referenceArtifact_pc_86 :
+    referenceArtifact.instructionPC 86 = 0x23c := by rfl
+
+@[simp] theorem referenceArtifact_pc_87 :
+    referenceArtifact.instructionPC 87 = 0x23d := by rfl
+
+@[simp] theorem referenceArtifact_pc_88 :
+    referenceArtifact.instructionPC 88 = 0x23f := by rfl
+
+@[simp] theorem referenceArtifact_pc_89 :
+    referenceArtifact.instructionPC 89 = 0x240 := by rfl
+
+@[simp] theorem referenceArtifact_pc_90 :
+    referenceArtifact.instructionPC 90 = 0x241 := by rfl
+
+@[simp] theorem referenceArtifact_pc_91 :
+    referenceArtifact.instructionPC 91 = 0x244 := by rfl
+
+@[simp] theorem referenceArtifact_pc_92 :
+    referenceArtifact.instructionPC 92 = 0x245 := by rfl
+
+@[simp] theorem referenceArtifact_pc_93 :
+    referenceArtifact.instructionPC 93 = 0x246 := by rfl
+
+@[simp] theorem referenceArtifact_pc_94 :
+    referenceArtifact.instructionPC 94 = 0x247 := by rfl
+
+@[simp] theorem referenceArtifact_pc_95 :
+    referenceArtifact.instructionPC 95 = 0x248 := by rfl
+
+@[simp] theorem referenceArtifact_pc_96 :
+    referenceArtifact.instructionPC 96 = 0x24a := by rfl
+
+@[simp] theorem referenceArtifact_pc_97 :
+    referenceArtifact.instructionPC 97 = 0x24d := by rfl
+
+@[simp] theorem referenceArtifact_pc_98 :
+    referenceArtifact.instructionPC 98 = 0x24e := by rfl
+
+@[simp] theorem referenceArtifact_pc_99 :
+    referenceArtifact.instructionPC 99 = 0x24f := by rfl
+
+@[simp] theorem referenceArtifact_pc_100 :
+    referenceArtifact.instructionPC 100 = 0x250 := by rfl
+
+@[simp] theorem referenceArtifact_pc_101 :
+    referenceArtifact.instructionPC 101 = 0x252 := by rfl
+
+@[simp] theorem referenceArtifact_pc_102 :
+    referenceArtifact.instructionPC 102 = 0x253 := by rfl
+
+@[simp] theorem referenceArtifact_pc_103 :
+    referenceArtifact.instructionPC 103 = 0x254 := by rfl
+
+@[simp] theorem referenceArtifact_pc_104 :
+    referenceArtifact.instructionPC 104 = 0x255 := by rfl
+
 @[simp] theorem referenceArtifact_pc_105 :
     referenceArtifact.instructionPC 105 = 0x256 := by rfl
 
@@ -1260,574 +1283,77 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 @[simp] theorem referenceArtifact_pc_107 :
     referenceArtifact.instructionPC 107 = 0x259 := by rfl
 
-@[simp] theorem referenceArtifact_pc_205 :
-    referenceArtifact.instructionPC 205 = 0x2e7 := by rfl
+@[simp] theorem referenceArtifact_pc_108 :
+    referenceArtifact.instructionPC 108 = 0x25a := by rfl
 
-@[simp] theorem referenceArtifact_pc_206 :
-    referenceArtifact.instructionPC 206 = 0x2e8 := by rfl
+@[simp] theorem referenceArtifact_pc_109 :
+    referenceArtifact.instructionPC 109 = 0x25d := by rfl
 
-@[simp] theorem referenceArtifact_pc_207 :
-    referenceArtifact.instructionPC 207 = 0x2eb := by rfl
+@[simp] theorem referenceArtifact_pc_110 :
+    referenceArtifact.instructionPC 110 = 0x25e := by rfl
 
-@[simp] theorem referenceArtifact_pc_313 :
-    referenceArtifact.instructionPC 313 = 0x394 := by rfl
+@[simp] theorem referenceArtifact_pc_111 :
+    referenceArtifact.instructionPC 111 = 0x25f := by rfl
 
-@[simp] theorem referenceArtifact_pc_314 :
-    referenceArtifact.instructionPC 314 = 0x395 := by rfl
+@[simp] theorem referenceArtifact_pc_112 :
+    referenceArtifact.instructionPC 112 = 0x262 := by rfl
 
-@[simp] theorem referenceArtifact_pc_315 :
-    referenceArtifact.instructionPC 315 = 0x39a := by rfl
+@[simp] theorem referenceArtifact_pc_113 :
+    referenceArtifact.instructionPC 113 = 0x263 := by rfl
 
-@[simp] theorem referenceArtifact_pc_346 :
-    referenceArtifact.instructionPC 346 = 0x3d9 := by rfl
+@[simp] theorem referenceArtifact_pc_114 :
+    referenceArtifact.instructionPC 114 = 0x264 := by rfl
 
-@[simp] theorem referenceArtifact_pc_347 :
-    referenceArtifact.instructionPC 347 = 0x3db := by rfl
+@[simp] theorem referenceArtifact_pc_115 :
+    referenceArtifact.instructionPC 115 = 0x265 := by rfl
 
-@[simp] theorem referenceArtifact_pc_348 :
-    referenceArtifact.instructionPC 348 = 0x3dc := by rfl
+@[simp] theorem referenceArtifact_pc_116 :
+    referenceArtifact.instructionPC 116 = 0x266 := by rfl
 
-@[simp] theorem referenceArtifact_pc_410 :
-    referenceArtifact.instructionPC 410 = 0x439 := by rfl
+@[simp] theorem referenceArtifact_pc_117 :
+    referenceArtifact.instructionPC 117 = 0x267 := by rfl
 
-@[simp] theorem referenceArtifact_pc_411 :
-    referenceArtifact.instructionPC 411 = 0x43a := by rfl
+@[simp] theorem referenceArtifact_pc_118 :
+    referenceArtifact.instructionPC 118 = 0x26a := by rfl
 
-@[simp] theorem referenceArtifact_pc_412 :
-    referenceArtifact.instructionPC 412 = 0x43b := by rfl
+@[simp] theorem referenceArtifact_pc_119 :
+    referenceArtifact.instructionPC 119 = 0x26b := by rfl
 
-@[simp] theorem referenceArtifact_pc_448 :
-    referenceArtifact.instructionPC 448 = 0x474 := by rfl
+@[simp] theorem referenceArtifact_pc_120 :
+    referenceArtifact.instructionPC 120 = 0x26c := by rfl
 
-@[simp] theorem referenceArtifact_pc_449 :
-    referenceArtifact.instructionPC 449 = 0x476 := by rfl
+@[simp] theorem referenceArtifact_pc_121 :
+    referenceArtifact.instructionPC 121 = 0x26d := by rfl
 
-@[simp] theorem referenceArtifact_pc_450 :
-    referenceArtifact.instructionPC 450 = 0x478 := by rfl
+@[simp] theorem referenceArtifact_pc_122 :
+    referenceArtifact.instructionPC 122 = 0x26e := by rfl
 
-@[simp] theorem referenceArtifact_pc_647 :
-    referenceArtifact.instructionPC 647 = 0x58c := by rfl
+@[simp] theorem referenceArtifact_pc_123 :
+    referenceArtifact.instructionPC 123 = 0x26f := by rfl
 
-@[simp] theorem referenceArtifact_pc_648 :
-    referenceArtifact.instructionPC 648 = 0x58d := by rfl
+@[simp] theorem referenceArtifact_pc_124 :
+    referenceArtifact.instructionPC 124 = 0x270 := by rfl
 
-@[simp] theorem referenceArtifact_pc_649 :
-    referenceArtifact.instructionPC 649 = 0x58e := by rfl
+@[simp] theorem referenceArtifact_pc_125 :
+    referenceArtifact.instructionPC 125 = 0x271 := by rfl
 
-@[simp] theorem referenceArtifact_pc_682 :
-    referenceArtifact.instructionPC 682 = 0x5b8 := by rfl
+@[simp] theorem referenceArtifact_pc_126 :
+    referenceArtifact.instructionPC 126 = 0x274 := by rfl
 
-/-! ### Jump-destination certificates
+@[simp] theorem referenceArtifact_pc_127 :
+    referenceArtifact.instructionPC 127 = 0x275 := by rfl
 
-One per `JUMPDEST` the new artifact actually contains, generated from the
-instruction list.  The old set named the previous layout's targets, none of
-which survive the re-schedule.  Each certificate reduces the artifact's own
-`isValidJumpDest_index` at that instruction to the concrete PC. -/
+@[simp] theorem referenceArtifact_pc_128 :
+    referenceArtifact.instructionPC 128 = 0x276 := by rfl
 
-@[simp] theorem validJumpDest_263 :
-    Decode.isValidJumpDest referenceBytecode 0x263 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 113 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 113) = true at h
-  have hpc : referenceArtifact.instructionPC 113 = 0x263 := by rfl
-  rwa [hpc] at h
+@[simp] theorem referenceArtifact_pc_129 :
+    referenceArtifact.instructionPC 129 = 0x279 := by rfl
 
-@[simp] theorem validJumpDest_27a :
-    Decode.isValidJumpDest referenceBytecode 0x27a = true := by
-  have h := referenceArtifact.isValidJumpDest_index 130 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 130) = true at h
-  have hpc : referenceArtifact.instructionPC 130 = 0x27a := by rfl
-  rwa [hpc] at h
+@[simp] theorem referenceArtifact_pc_130 :
+    referenceArtifact.instructionPC 130 = 0x27a := by rfl
 
-@[simp] theorem validJumpDest_285 :
-    Decode.isValidJumpDest referenceBytecode 0x285 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 137 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 137) = true at h
-  have hpc : referenceArtifact.instructionPC 137 = 0x285 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_29c :
-    Decode.isValidJumpDest referenceBytecode 0x29c = true := by
-  have h := referenceArtifact.isValidJumpDest_index 152 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 152) = true at h
-  have hpc : referenceArtifact.instructionPC 152 = 0x29c := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_2b6 :
-    Decode.isValidJumpDest referenceBytecode 0x2b6 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 170 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 170) = true at h
-  have hpc : referenceArtifact.instructionPC 170 = 0x2b6 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_2cc :
-    Decode.isValidJumpDest referenceBytecode 0x2cc = true := by
-  have h := referenceArtifact.isValidJumpDest_index 185 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 185) = true at h
-  have hpc : referenceArtifact.instructionPC 185 = 0x2cc := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_2ec :
-    Decode.isValidJumpDest referenceBytecode 0x2ec = true := by
-  have h := referenceArtifact.isValidJumpDest_index 208 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 208) = true at h
-  have hpc : referenceArtifact.instructionPC 208 = 0x2ec := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_300 :
-    Decode.isValidJumpDest referenceBytecode 0x300 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 221 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 221) = true at h
-  have hpc : referenceArtifact.instructionPC 221 = 0x300 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_33e :
-    Decode.isValidJumpDest referenceBytecode 0x33e = true := by
-  have h := referenceArtifact.isValidJumpDest_index 264 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 264) = true at h
-  have hpc : referenceArtifact.instructionPC 264 = 0x33e := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_34c :
-    Decode.isValidJumpDest referenceBytecode 0x34c = true := by
-  have h := referenceArtifact.isValidJumpDest_index 275 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 275) = true at h
-  have hpc : referenceArtifact.instructionPC 275 = 0x34c := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_3f1 :
-    Decode.isValidJumpDest referenceBytecode 0x3f1 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 359 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 359) = true at h
-  have hpc : referenceArtifact.instructionPC 359 = 0x3f1 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_438 :
-    Decode.isValidJumpDest referenceBytecode 0x438 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 409 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 409) = true at h
-  have hpc : referenceArtifact.instructionPC 409 = 0x438 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_45a :
-    Decode.isValidJumpDest referenceBytecode 0x45a = true := by
-  have h := referenceArtifact.isValidJumpDest_index 432 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 432) = true at h
-  have hpc : referenceArtifact.instructionPC 432 = 0x45a := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_486 :
-    Decode.isValidJumpDest referenceBytecode 0x486 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 458 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 458) = true at h
-  have hpc : referenceArtifact.instructionPC 458 = 0x486 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_4e0 :
-    Decode.isValidJumpDest referenceBytecode 0x4e0 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 519 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 519) = true at h
-  have hpc : referenceArtifact.instructionPC 519 = 0x4e0 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_4f8 :
-    Decode.isValidJumpDest referenceBytecode 0x4f8 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 535 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 535) = true at h
-  have hpc : referenceArtifact.instructionPC 535 = 0x4f8 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_53b :
-    Decode.isValidJumpDest referenceBytecode 0x53b = true := by
-  have h := referenceArtifact.isValidJumpDest_index 579 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 579) = true at h
-  have hpc : referenceArtifact.instructionPC 579 = 0x53b := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_579 :
-    Decode.isValidJumpDest referenceBytecode 0x579 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 630 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 630) = true at h
-  have hpc : referenceArtifact.instructionPC 630 = 0x579 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_58c :
-    Decode.isValidJumpDest referenceBytecode 0x58c = true := by
-  have h := referenceArtifact.isValidJumpDest_index 647 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 647) = true at h
-  have hpc : referenceArtifact.instructionPC 647 = 0x58c := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_619 :
-    Decode.isValidJumpDest referenceBytecode 0x619 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 745 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 745) = true at h
-  have hpc : referenceArtifact.instructionPC 745 = 0x619 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_62e :
-    Decode.isValidJumpDest referenceBytecode 0x62e = true := by
-  have h := referenceArtifact.isValidJumpDest_index 764 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 764) = true at h
-  have hpc : referenceArtifact.instructionPC 764 = 0x62e := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_646 :
-    Decode.isValidJumpDest referenceBytecode 0x646 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 783 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 783) = true at h
-  have hpc : referenceArtifact.instructionPC 783 = 0x646 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_662 :
-    Decode.isValidJumpDest referenceBytecode 0x662 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 802 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 802) = true at h
-  have hpc : referenceArtifact.instructionPC 802 = 0x662 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_679 :
-    Decode.isValidJumpDest referenceBytecode 0x679 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 820 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 820) = true at h
-  have hpc : referenceArtifact.instructionPC 820 = 0x679 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem validJumpDest_698 :
-    Decode.isValidJumpDest referenceBytecode 0x698 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 845 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 845) = true at h
-  have hpc : referenceArtifact.instructionPC 845 = 0x698 := by rfl
-  rwa [hpc] at h
-
-@[simp] theorem refPc349 :
-    referenceArtifact.instructionPC 349 = 0x3e1 := by rfl
-@[simp] theorem pc349 :
-    instructionPC 349 = 0x3e1 := by rfl
-
-@[simp] theorem refPc350 :
-    referenceArtifact.instructionPC 350 = 0x3e2 := by rfl
-@[simp] theorem pc350 :
-    instructionPC 350 = 0x3e2 := by rfl
-
-@[simp] theorem refPc351 :
-    referenceArtifact.instructionPC 351 = 0x3e4 := by rfl
-@[simp] theorem pc351 :
-    instructionPC 351 = 0x3e4 := by rfl
-
-@[simp] theorem refPc352 :
-    referenceArtifact.instructionPC 352 = 0x3e5 := by rfl
-@[simp] theorem pc352 :
-    instructionPC 352 = 0x3e5 := by rfl
-
-@[simp] theorem refPc353 :
-    referenceArtifact.instructionPC 353 = 0x3e7 := by rfl
-@[simp] theorem pc353 :
-    instructionPC 353 = 0x3e7 := by rfl
-
-@[simp] theorem refPc354 :
-    referenceArtifact.instructionPC 354 = 0x3e8 := by rfl
-@[simp] theorem pc354 :
-    instructionPC 354 = 0x3e8 := by rfl
-
-@[simp] theorem refPc355 :
-    referenceArtifact.instructionPC 355 = 0x3eb := by rfl
-@[simp] theorem pc355 :
-    instructionPC 355 = 0x3eb := by rfl
-
-@[simp] theorem refPc356 :
-    referenceArtifact.instructionPC 356 = 0x3ec := by rfl
-@[simp] theorem pc356 :
-    instructionPC 356 = 0x3ec := by rfl
-
-@[simp] theorem refPc357 :
-    referenceArtifact.instructionPC 357 = 0x3ed := by rfl
-@[simp] theorem pc357 :
-    instructionPC 357 = 0x3ed := by rfl
-
-@[simp] theorem refPc358 :
-    referenceArtifact.instructionPC 358 = 0x3f0 := by rfl
-@[simp] theorem pc358 :
-    instructionPC 358 = 0x3f0 := by rfl
-
-@[simp] theorem refPc359 :
-    referenceArtifact.instructionPC 359 = 0x3f1 := by rfl
-@[simp] theorem pc359 :
-    instructionPC 359 = 0x3f1 := by rfl
-
-@[simp] theorem refPc360 :
-    referenceArtifact.instructionPC 360 = 0x3f2 := by rfl
-@[simp] theorem pc360 :
-    instructionPC 360 = 0x3f2 := by rfl
-
-@[simp] theorem refPc361 :
-    referenceArtifact.instructionPC 361 = 0x3f3 := by rfl
-@[simp] theorem pc361 :
-    instructionPC 361 = 0x3f3 := by rfl
-
-@[simp] theorem refPc362 :
-    referenceArtifact.instructionPC 362 = 0x3f5 := by rfl
-@[simp] theorem pc362 :
-    instructionPC 362 = 0x3f5 := by rfl
-
-@[simp] theorem refPc363 :
-    referenceArtifact.instructionPC 363 = 0x3f6 := by rfl
-@[simp] theorem pc363 :
-    instructionPC 363 = 0x3f6 := by rfl
-
-@[simp] theorem refPc364 :
-    referenceArtifact.instructionPC 364 = 0x3f7 := by rfl
-@[simp] theorem pc364 :
-    instructionPC 364 = 0x3f7 := by rfl
-
-@[simp] theorem refPc365 :
-    referenceArtifact.instructionPC 365 = 0x3f9 := by rfl
-@[simp] theorem pc365 :
-    instructionPC 365 = 0x3f9 := by rfl
-
-@[simp] theorem refPc366 :
-    referenceArtifact.instructionPC 366 = 0x3fa := by rfl
-@[simp] theorem pc366 :
-    instructionPC 366 = 0x3fa := by rfl
-
-@[simp] theorem refPc367 :
-    referenceArtifact.instructionPC 367 = 0x3fd := by rfl
-@[simp] theorem pc367 :
-    instructionPC 367 = 0x3fd := by rfl
-
-@[simp] theorem refPc368 :
-    referenceArtifact.instructionPC 368 = 0x3fe := by rfl
-@[simp] theorem pc368 :
-    instructionPC 368 = 0x3fe := by rfl
-
-@[simp] theorem refPc369 :
-    referenceArtifact.instructionPC 369 = 0x3ff := by rfl
-@[simp] theorem pc369 :
-    instructionPC 369 = 0x3ff := by rfl
-
-@[simp] theorem refPc370 :
-    referenceArtifact.instructionPC 370 = 0x402 := by rfl
-@[simp] theorem pc370 :
-    instructionPC 370 = 0x402 := by rfl
-
-@[simp] theorem refPc371 :
-    referenceArtifact.instructionPC 371 = 0x403 := by rfl
-@[simp] theorem pc371 :
-    instructionPC 371 = 0x403 := by rfl
-
-@[simp] theorem refPc372 :
-    referenceArtifact.instructionPC 372 = 0x405 := by rfl
-@[simp] theorem pc372 :
-    instructionPC 372 = 0x405 := by rfl
-
-@[simp] theorem refPc373 :
-    referenceArtifact.instructionPC 373 = 0x406 := by rfl
-@[simp] theorem pc373 :
-    instructionPC 373 = 0x406 := by rfl
-
-@[simp] theorem refPc374 :
-    referenceArtifact.instructionPC 374 = 0x408 := by rfl
-@[simp] theorem pc374 :
-    instructionPC 374 = 0x408 := by rfl
-
-@[simp] theorem refPc375 :
-    referenceArtifact.instructionPC 375 = 0x409 := by rfl
-@[simp] theorem pc375 :
-    instructionPC 375 = 0x409 := by rfl
-
-@[simp] theorem refPc376 :
-    referenceArtifact.instructionPC 376 = 0x40a := by rfl
-@[simp] theorem pc376 :
-    instructionPC 376 = 0x40a := by rfl
-
-@[simp] theorem refPc377 :
-    referenceArtifact.instructionPC 377 = 0x40b := by rfl
-@[simp] theorem pc377 :
-    instructionPC 377 = 0x40b := by rfl
-
-@[simp] theorem refPc378 :
-    referenceArtifact.instructionPC 378 = 0x40d := by rfl
-@[simp] theorem pc378 :
-    instructionPC 378 = 0x40d := by rfl
-
-@[simp] theorem refPc379 :
-    referenceArtifact.instructionPC 379 = 0x40e := by rfl
-@[simp] theorem pc379 :
-    instructionPC 379 = 0x40e := by rfl
-
-@[simp] theorem refPc380 :
-    referenceArtifact.instructionPC 380 = 0x40f := by rfl
-@[simp] theorem pc380 :
-    instructionPC 380 = 0x40f := by rfl
-
-@[simp] theorem refPc381 :
-    referenceArtifact.instructionPC 381 = 0x410 := by rfl
-@[simp] theorem pc381 :
-    instructionPC 381 = 0x410 := by rfl
-
-@[simp] theorem refPc382 :
-    referenceArtifact.instructionPC 382 = 0x413 := by rfl
-@[simp] theorem pc382 :
-    instructionPC 382 = 0x413 := by rfl
-
-@[simp] theorem refPc383 :
-    referenceArtifact.instructionPC 383 = 0x414 := by rfl
-@[simp] theorem pc383 :
-    instructionPC 383 = 0x414 := by rfl
-
-@[simp] theorem refPc384 :
-    referenceArtifact.instructionPC 384 = 0x416 := by rfl
-@[simp] theorem pc384 :
-    instructionPC 384 = 0x416 := by rfl
-
-@[simp] theorem refPc385 :
-    referenceArtifact.instructionPC 385 = 0x417 := by rfl
-@[simp] theorem pc385 :
-    instructionPC 385 = 0x417 := by rfl
-
-@[simp] theorem refPc386 :
-    referenceArtifact.instructionPC 386 = 0x419 := by rfl
-@[simp] theorem pc386 :
-    instructionPC 386 = 0x419 := by rfl
-
-@[simp] theorem refPc387 :
-    referenceArtifact.instructionPC 387 = 0x41a := by rfl
-@[simp] theorem pc387 :
-    instructionPC 387 = 0x41a := by rfl
-
-@[simp] theorem refPc388 :
-    referenceArtifact.instructionPC 388 = 0x41b := by rfl
-@[simp] theorem pc388 :
-    instructionPC 388 = 0x41b := by rfl
-
-@[simp] theorem refPc389 :
-    referenceArtifact.instructionPC 389 = 0x41c := by rfl
-@[simp] theorem pc389 :
-    instructionPC 389 = 0x41c := by rfl
-
-@[simp] theorem refPc390 :
-    referenceArtifact.instructionPC 390 = 0x41e := by rfl
-@[simp] theorem pc390 :
-    instructionPC 390 = 0x41e := by rfl
-
-@[simp] theorem refPc391 :
-    referenceArtifact.instructionPC 391 = 0x41f := by rfl
-@[simp] theorem pc391 :
-    instructionPC 391 = 0x41f := by rfl
-
-@[simp] theorem refPc392 :
-    referenceArtifact.instructionPC 392 = 0x420 := by rfl
-@[simp] theorem pc392 :
-    instructionPC 392 = 0x420 := by rfl
-
-@[simp] theorem refPc393 :
-    referenceArtifact.instructionPC 393 = 0x421 := by rfl
-@[simp] theorem pc393 :
-    instructionPC 393 = 0x421 := by rfl
-
-@[simp] theorem refPc394 :
-    referenceArtifact.instructionPC 394 = 0x423 := by rfl
-@[simp] theorem pc394 :
-    instructionPC 394 = 0x423 := by rfl
-
-@[simp] theorem refPc395 :
-    referenceArtifact.instructionPC 395 = 0x424 := by rfl
-@[simp] theorem pc395 :
-    instructionPC 395 = 0x424 := by rfl
-
-@[simp] theorem refPc396 :
-    referenceArtifact.instructionPC 396 = 0x425 := by rfl
-@[simp] theorem pc396 :
-    instructionPC 396 = 0x425 := by rfl
-
-@[simp] theorem refPc397 :
-    referenceArtifact.instructionPC 397 = 0x426 := by rfl
-@[simp] theorem pc397 :
-    instructionPC 397 = 0x426 := by rfl
-
-@[simp] theorem refPc398 :
-    referenceArtifact.instructionPC 398 = 0x427 := by rfl
-@[simp] theorem pc398 :
-    instructionPC 398 = 0x427 := by rfl
-
-@[simp] theorem refPc399 :
-    referenceArtifact.instructionPC 399 = 0x428 := by rfl
-@[simp] theorem pc399 :
-    instructionPC 399 = 0x428 := by rfl
-
-@[simp] theorem refPc400 :
-    referenceArtifact.instructionPC 400 = 0x429 := by rfl
-@[simp] theorem pc400 :
-    instructionPC 400 = 0x429 := by rfl
-
-@[simp] theorem refPc401 :
-    referenceArtifact.instructionPC 401 = 0x42c := by rfl
-@[simp] theorem pc401 :
-    instructionPC 401 = 0x42c := by rfl
-
-@[simp] theorem refPc402 :
-    referenceArtifact.instructionPC 402 = 0x42f := by rfl
-@[simp] theorem pc402 :
-    instructionPC 402 = 0x42f := by rfl
-
-@[simp] theorem refPc403 :
-    referenceArtifact.instructionPC 403 = 0x430 := by rfl
-@[simp] theorem pc403 :
-    instructionPC 403 = 0x430 := by rfl
-
-@[simp] theorem refPc404 :
-    referenceArtifact.instructionPC 404 = 0x431 := by rfl
-@[simp] theorem pc404 :
-    instructionPC 404 = 0x431 := by rfl
-
-@[simp] theorem refPc405 :
-    referenceArtifact.instructionPC 405 = 0x432 := by rfl
-@[simp] theorem pc405 :
-    instructionPC 405 = 0x432 := by rfl
-
-@[simp] theorem refPc406 :
-    referenceArtifact.instructionPC 406 = 0x433 := by rfl
-@[simp] theorem pc406 :
-    instructionPC 406 = 0x433 := by rfl
-
-@[simp] theorem refPc407 :
-    referenceArtifact.instructionPC 407 = 0x434 := by rfl
-@[simp] theorem pc407 :
-    instructionPC 407 = 0x434 := by rfl
-
-@[simp] theorem refPc408 :
-    referenceArtifact.instructionPC 408 = 0x437 := by rfl
-@[simp] theorem pc408 :
-    instructionPC 408 = 0x437 := by rfl
-
-@[simp] theorem refPc409 :
-    referenceArtifact.instructionPC 409 = 0x438 := by rfl
-@[simp] theorem pc409 :
-    instructionPC 409 = 0x438 := by rfl
+@[simp] theorem referenceArtifact_pc_846 :
+    referenceArtifact.instructionPC 846 = 0x699 := by rfl
 
 private def wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
