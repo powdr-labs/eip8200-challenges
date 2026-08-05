@@ -182,22 +182,18 @@ def gasSteps_initStores (s : State) :
       let joined := gone.trans grest
       exact Challenge.EvmProof.GasSteps.cast joined rfl (by simp [List.foldl])
 
+/-- The initialization run now sits at the program entry, so the first store
+executes from the initial state itself. -/
 def initStart (calldata : ByteArray) : State :=
   { initialState referenceBytecode calldata 0 with
-    pc := UInt256.ofNat (Artifact.instructionPC 659) }
+    pc := UInt256.ofNat (Artifact.instructionPC 0) }
 
 def initializedState (calldata : ByteArray) : State :=
   Artifact.initStores.foldl applyInitStore (initStart calldata)
 
-def gasSteps_mainJumpdest (calldata : ByteArray) :
-    Challenge.EvmProof.GasSteps
-      (Reference.atPC calldata Reference.mainPC) (initStart calldata) := by
-  have hv := Artifact.mainEntry_valid
-  have hd := Artifact.decodeAt_op_index 658 .JUMPDEST hv.2.1
-    (by decide) trivial
-  have g := Reference.gasSteps_jumpdest_at calldata Reference.mainPC (by
-    simp [Reference.mainPC]) (by simpa [Reference.mainPC, hv.1] using hd)
-  simpa [initStart, Reference.atPC, Reference.mainPC, hv.2.2] using g
+@[simp] theorem initStart_eq (calldata : ByteArray) :
+    initStart calldata = initialState referenceBytecode calldata 0 := by
+  rfl
 
 def gasSteps_initialize (calldata : ByteArray) :
     Challenge.EvmProof.GasSteps
@@ -216,7 +212,6 @@ def gasSteps_initialize (calldata : ByteArray) :
   have body' : Challenge.EvmProof.GasSteps (initStart calldata)
       (initializedState calldata) :=
     Challenge.EvmProof.GasSteps.cast body rfl (by simp [initializedState])
-  exact (Reference.gasSteps_to_main calldata).trans
-    ((gasSteps_mainJumpdest calldata).trans body')
+  exact Challenge.EvmProof.GasSteps.cast body' (initStart_eq calldata) rfl
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.Main
