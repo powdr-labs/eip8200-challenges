@@ -610,4 +610,47 @@ theorem run_sigma0 (s : State) (x returnDest : UInt256) (rest : List UInt256)
     sigma0Entry, sigma0Returned, sigma0Word, maskedRotr, List.exchange,
     g2, g3, g4, g5, g6, g7, g8, hrun, hvalid, hcode]
 
+/-! ### `GasSteps` wrappers -/
+
+def gasSteps_sigma1 (s : State) (v0 v1 x : UInt256) (rest : List UInt256)
+    (hcap : rest.length < 1000)
+    (hcode : (sigma1Entry s v0 v1 x rest).executionEnv.code = referenceBytecode)
+    (hfork : (sigma1Entry s v0 v1 x rest).fork = .Osaka)
+    (hrun : s.halt = .Running)
+    (hhalt : (sigma1Entry s v0 v1 x rest).halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig
+      (sigma1Entry s v0 v1 x rest).executionEnv.precompileConfig
+      (sigma1Entry s v0 v1 x rest).executionEnv.fork
+      (sigma1Entry s v0 v1 x rest).executionEnv.codeAddr = false) :
+    Challenge.EvmProof.GasSteps (sigma1Entry s v0 v1 x rest)
+      (sigma1Result s v0 v1 x rest) := by
+  apply Challenge.EvmProof.Stepper.runLocatedBlock_sound
+    Artifact.referenceArtifact .Osaka sigma1Path
+  · exact hcode
+  · exact hfork
+  · exact run_sigma1 s v0 v1 x rest hcap hrun
+  · exact hhalt
+  · exact hnp
+
+def gasSteps_sigma0 (s : State) (x returnDest : UInt256) (rest : List UInt256)
+    (hcap : rest.length < 1000)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : (sigma0Entry s x returnDest rest).fork = .Osaka)
+    (hrun : s.halt = .Running)
+    (hhalt : (sigma0Entry s x returnDest rest).halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig
+      (sigma0Entry s x returnDest rest).executionEnv.precompileConfig
+      (sigma0Entry s x returnDest rest).executionEnv.fork
+      (sigma0Entry s x returnDest rest).executionEnv.codeAddr = false)
+    (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
+    Challenge.EvmProof.GasSteps (sigma0Entry s x returnDest rest)
+      (sigma0Returned s x returnDest rest) := by
+  apply Challenge.EvmProof.Stepper.runLocatedBlock_sound
+    Artifact.referenceArtifact .Osaka sigma0Path
+  · exact hcode
+  · exact hfork
+  · exact run_sigma0 s x returnDest rest hcap hrun hvalid hcode
+  · exact hhalt
+  · exact hnp
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.BigSigma
