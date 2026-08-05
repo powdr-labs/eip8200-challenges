@@ -148,22 +148,30 @@ def PaddedBlockAt (memory : ByteArray) (msgOff : UInt256)
     Challenge.EvmProof.Word.ofUInt32
       (Sha256.readBE32 padded (blockOff + k * 4))
 
-@[simp] theorem afterFirstIteration_memory (s : State)
-    (msgOff : UInt256) (rest : List UInt256) (j : Nat) :
-    (Schedule.afterFirstIteration s msgOff returnDest rest j).memory =
-      MachineState.writeBytes s.memory
+/-! The per-iteration memory updates.  The old pair described the states
+`afterFirstIteration`/`afterSecondIteration` left behind, which named the loop
+bodies' *call* frames; the models replace them, and `wSlotAddr_toNat` reconciles
+the address form. -/
+
+@[simp] theorem firstMemory_succ_slot (base : ByteArray) (msgOff : UInt256)
+    (j : Nat) :
+    Schedule.firstMemory base msgOff (j + 1) =
+      MachineState.writeBytes (Schedule.firstMemory base msgOff j)
         (Data.Bytes.natToBytesPadded
-          (Schedule.initialWord s.memory msgOff j).toNat 32)
+          (Schedule.initialWord (Schedule.firstMemory base msgOff j)
+            msgOff j).toNat 32)
         (Schedule.scheduleSlot j) := by
+  rw [Schedule.firstMemory_succ, Schedule.wSlotAddr_toNat]
   rfl
 
-@[simp] theorem afterSecondIteration_memory (s : State)
-    (msgOff : UInt256) (rest : List UInt256) (j : Nat) :
-    (Schedule.afterSecondIteration s msgOff returnDest rest j).memory =
-      MachineState.writeBytes s.memory
+@[simp] theorem extMemory_succ_slot (base : ByteArray) (n : Nat) :
+    Schedule.extMemory base (n + 1) =
+      MachineState.writeBytes (Schedule.extMemory base n)
         (Data.Bytes.natToBytesPadded
-          (Schedule.recurrenceWord s msgOff returnDest rest j).toNat 32)
-        (Schedule.scheduleSlot j) := by
+          (Schedule.extWord (Schedule.extMemory base n)
+            (UInt256.ofNat (16 + n))).toNat 32)
+        (Schedule.scheduleSlot (16 + n)) := by
+  rw [Schedule.extMemory_succ, Schedule.wSlotAddr_toNat]
   rfl
 
 private theorem initialWord_write_schedule (memory : ByteArray)
@@ -185,6 +193,7 @@ private theorem initialWord_write_schedule (memory : ByteArray)
       hseparated
     simpa [Data.Bytes.natToBytesPadded, ByteArray.size] using h)
 
+set_option maxHeartbeats 4000000 in
 theorem firstLoopState_initialWord (s : State) (msgOff : UInt256)
     (rest : List UInt256) (n k : Nat) (hn : n ≤ 16)
     (hseparated : Padding.messageOffset ≤ Schedule.loadOffset msgOff k) :
@@ -194,10 +203,11 @@ theorem firstLoopState_initialWord (s : State) (msgOff : UInt256)
   induction n with
   | zero => rfl
   | succ n ih =>
-      rw [Schedule.firstLoopState, afterFirstIteration_memory]
+      rw [Schedule.firstLoopState_memory, firstMemory_succ_slot]
       rw [initialWord_write_schedule _ _ k n (by omega) hseparated]
       exact ih (by omega)
 
+set_option maxHeartbeats 4000000 in
 theorem firstLoopState_slots (s : State) (msgOff : UInt256)
     (rest : List UInt256) (padded : ByteArray) (blockOff n : Nat)
     (hn : n ≤ 16)
@@ -216,7 +226,7 @@ theorem firstLoopState_slots (s : State) (msgOff : UInt256)
   | succ n ih =>
       intro k hk
       rw [Schedule.firstLoopState]
-      simp only [Schedule.wValue, afterFirstIteration_memory]
+      simp only [Schedule.wValue, firstMemory_succ_slot]
       by_cases hkn : k = n
       · subst k
         rw [Challenge.EvmProof.Memory.readWord_writeWord]
@@ -230,6 +240,7 @@ theorem firstLoopState_slots (s : State) (msgOff : UInt256)
           rw [scheduleSlot_eq k (by omega), scheduleSlot_eq n (by omega)]
           omega
 
+set_option maxHeartbeats 4000000 in
 theorem secondLoopState_slots (s : State) (msgOff : UInt256)
     (rest : List UInt256) (padded : ByteArray) (blockOff n : Nat)
     (hn : n ≤ 48) (hbase : SlotsCorrect s padded blockOff 16) :
@@ -243,7 +254,7 @@ theorem secondLoopState_slots (s : State) (msgOff : UInt256)
   | succ n ih =>
       intro k hk
       rw [Schedule.secondLoopState]
-      simp only [Schedule.wValue, afterSecondIteration_memory]
+      simp only [Schedule.wValue, extMemory_succ_slot]
       let j := 16 + n
       by_cases hkj : k = j
       · subst k
@@ -259,6 +270,7 @@ theorem secondLoopState_slots (s : State) (msgOff : UInt256)
           rw [scheduleSlot_eq k (by omega), scheduleSlot_eq j (by omega)]
           omega
 
+set_option maxHeartbeats 4000000 in
 /-- Generic end-to-end functional postcondition for the complete proved
 schedule state.  The two hypotheses are precisely the memory-reader seam a
 caller must establish for its chosen message layout. -/
