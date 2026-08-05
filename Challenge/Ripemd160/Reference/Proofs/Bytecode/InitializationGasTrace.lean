@@ -10,44 +10,13 @@ namespace Challenge.Ripemd160.Reference.Proofs.Bytecode.InitializationGasTrace
 open Challenge.Ripemd160
 open EvmSemantics EvmSemantics.EVM
 
-private theorem entry_start_cost (input : ByteArray) :
-    (Execution.gasSteps_start input).cost = 11 := by rfl
-private theorem entry_1b_cost (input : ByteArray) :
-    (Execution.gasSteps_1b input).cost = 12 := by rfl
-private theorem entry_2e_cost (input : ByteArray) :
-    (Execution.gasSteps_2e input).cost = 12 := by rfl
-private theorem entry_46_cost (input : ByteArray) :
-    (Execution.gasSteps_46 input).cost = 12 := by rfl
-private theorem entry_5a_cost (input : ByteArray) :
-    (Execution.gasSteps_5a input).cost = 12 := by rfl
-private theorem entry_73_cost (input : ByteArray) :
-    (Execution.gasSteps_73 input).cost = 12 := by rfl
-private theorem entry_8e_cost (input : ByteArray) :
-    (Execution.gasSteps_8e input).cost = 12 := by rfl
-private theorem entry_10f_cost (input : ByteArray) :
-    (Execution.gasSteps_10f input).cost = 12 := by rfl
-private theorem entry_1b2_cost (input : ByteArray) :
-    (Execution.gasSteps_1b2 input).cost = 12 := by rfl
-private theorem entry_1db_cost (input : ByteArray) :
-    (Execution.gasSteps_1db input).cost = 12 := by rfl
-private theorem entry_231_cost (input : ByteArray) :
-    (Execution.gasSteps_231 input).cost = 12 := by rfl
-private theorem entry_268_cost (input : ByteArray) :
-    (Execution.gasSteps_268 input).cost = 12 := by rfl
-private theorem entry_3c1_cost (input : ByteArray) :
-    (Execution.gasSteps_3c1 input).cost = 12 := by rfl
-private theorem entry_3ee_cost (input : ByteArray) :
-    (Execution.gasSteps_3ee input).cost = 1 := by rfl
-
+/-- Reaching the body is free.  The old layout charged 156 gas to walk fourteen
+`JUMPDEST; PUSH2 next; JUMP` trampolines (11 for the initial `PUSH2; JUMP`, 12
+for each of the twelve interior links, 1 for the final `JUMPDEST`); the new
+artifact starts executing the initialization block at byte 0, so
+`Execution.gasSteps_entry` is reflexivity and costs nothing. -/
 theorem entry_cost (input : ByteArray) :
-    (Execution.gasSteps_entry input).cost = 156 := by
-  unfold Execution.gasSteps_entry
-  simp only [Challenge.EvmProof.GasSteps.trans_cost]
-  rw [entry_start_cost input, entry_1b_cost input, entry_2e_cost input,
-    entry_46_cost input, entry_5a_cost input, entry_73_cost input,
-    entry_8e_cost input, entry_10f_cost input, entry_1b2_cost input,
-    entry_1db_cost input, entry_231_cost input, entry_268_cost input,
-    entry_3c1_cost input, entry_3ee_cost input]
+    (Execution.gasSteps_entry input).cost = 0 := by rfl
 
 private def initStoreWork (w : Artifact.InitStore) : Nat :=
   Challenge.EvmProof.Meter.instrStaticCost .Osaka
@@ -164,9 +133,13 @@ theorem bodyInitialization_cost_potential (input : ByteArray) :
       (Execution.mainStart input)).activeWords.toNat
   convert h using 1
 
+/-- Initialization costs 424: the 241 gas of the 27 store triples plus the 183
+gas of expanding memory to 59 active words.  The old figure was 580, which
+included the 156 gas of the entry trampoline chain the new layout does not
+emit. -/
 theorem initialize_cost_of_active (input : ByteArray)
     (hactive : (Main.initializedState input).activeWords.toNat = 59) :
-    (Main.gasSteps_initialize input).cost = 580 := by
+    (Main.gasSteps_initialize input).cost = 424 := by
   have hbody := bodyInitialization_cost_potential input
   rw [hactive] at hbody
   norm_num [MachineState.memCost, Execution.mainStart, Execution.atPC,
