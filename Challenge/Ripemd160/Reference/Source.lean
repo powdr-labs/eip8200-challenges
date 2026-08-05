@@ -24,15 +24,6 @@ def referenceBlock? : Option (Block Op) :=
 
 /-- Bytecode emitted by the pinned verified Yul compiler. -/
 def referenceBytecode? : Option ByteArray :=
-  match referenceBlock? with
-  | none => none
-  | some block =>
-    let normalized : Block Op := @Optimizer.Normalize.normalize
-      (evmWithExternal ExternalCalls.none ExternalCreates.none) block
-    let optimized := (Optimizer.optimizerPipeline
-      (calls := ExternalCalls.none) (creates := ExternalCreates.none)).run normalized
-    match compile optimized with
-    | some is => some (assemble is)
-    | none => none
+  YulParser.compileSource referenceSource
 
 end Challenge.Ripemd160
