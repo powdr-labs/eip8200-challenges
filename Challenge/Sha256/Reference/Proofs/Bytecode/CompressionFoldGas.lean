@@ -40,8 +40,7 @@ theorem foldIteration_cost_potential (s : State)
     simpa [Compression.loadedSaved, State.fork] using hfork
   have qSavedRun : (Compression.loadedSaved s i).halt = .Running := by
     simpa [Compression.loadedSaved] using hrun
-  have qSavedNp : Precompile.isPrecompile
-      (Compression.loadedSaved s i).executionEnv.fork
+  have qSavedNp : Precompile.isPrecompileWithConfig (Compression.loadedSaved s i).executionEnv.precompileConfig (Compression.loadedSaved s i).executionEnv.fork
       (Compression.loadedSaved s i).executionEnv.codeAddr = false := by
     simpa [Compression.loadedSaved] using hnp
   have hh := hAt_cost_potential (Compression.loadedSaved s i)
@@ -59,8 +58,7 @@ theorem foldIteration_cost_potential (s : State)
   have qHRun : (Compression.foldGotH s msgOff returnDest rest i).halt = .Running := by
     simpa [Compression.foldGotH, Compression.loadedSaved,
       Accessors.loadReturned] using hrun
-  have qHNp : Precompile.isPrecompile
-      (Compression.foldGotH s msgOff returnDest rest i).executionEnv.fork
+  have qHNp : Precompile.isPrecompileWithConfig (Compression.foldGotH s msgOff returnDest rest i).executionEnv.precompileConfig (Compression.foldGotH s msgOff returnDest rest i).executionEnv.fork
       (Compression.foldGotH s msgOff returnDest rest i).executionEnv.codeAddr = false := by
     simpa [Compression.foldGotH, Compression.loadedSaved,
       Accessors.loadReturned] using hnp

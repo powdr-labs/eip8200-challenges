@@ -80,8 +80,7 @@ private theorem shift_cost_potential
       (Compression.shiftLoaded q src loadReturn storeReturn context).halt =
         .Running := by
     simpa [Compression.shiftLoaded, Accessors.loadReturned] using hrun
-  have qLoadedNp : Precompile.isPrecompile
-      (Compression.shiftLoaded q src loadReturn storeReturn context).executionEnv.fork
+  have qLoadedNp : Precompile.isPrecompileWithConfig (Compression.shiftLoaded q src loadReturn storeReturn context).executionEnv.precompileConfig (Compression.shiftLoaded q src loadReturn storeReturn context).executionEnv.fork
       (Compression.shiftLoaded q src loadReturn storeReturn context).executionEnv.codeAddr =
         false := by
     simpa [Compression.shiftLoaded, Accessors.loadReturned] using hnp

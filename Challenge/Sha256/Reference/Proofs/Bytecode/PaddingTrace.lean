@@ -1029,7 +1029,7 @@ def padReturned (input : ByteArray) : State :=
     (padReturned input).executionEnv.codeAddr = deployAddress := by rfl
 
 @[simp] theorem padReturned_noPrecompile (input : ByteArray) :
-    Precompile.isPrecompile (padReturned input).executionEnv.fork
+    Precompile.isPrecompileWithConfig (padReturned input).executionEnv.precompileConfig (padReturned input).executionEnv.fork
       (padReturned input).executionEnv.codeAddr = false := by
   exact deployAddress_not_precompile
 

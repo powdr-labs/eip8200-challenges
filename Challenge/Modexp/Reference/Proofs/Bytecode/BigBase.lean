@@ -1023,8 +1023,7 @@ def gasSteps_baseSetup (s : State) (accumulator : UInt256) (count : Nat)
     simpa [BigModulus.scanNonzero, State.fork] using hfork
   have hrunScan : (BigModulus.scanNonzero s count rest).halt = .Running := by
     simpa [BigModulus.scanNonzero] using hrun
-  have hnpScan : Precompile.isPrecompile
-      (BigModulus.scanNonzero s count rest).executionEnv.fork
+  have hnpScan : Precompile.isPrecompileWithConfig (BigModulus.scanNonzero s count rest).executionEnv.precompileConfig (BigModulus.scanNonzero s count rest).executionEnv.fork
       (BigModulus.scanNonzero s count rest).executionEnv.codeAddr = false := by
     simpa [BigModulus.scanNonzero, State.fork] using hnp
   exact (Challenge.EvmProof.Stepper.runLocatedBlock_sound
@@ -1073,8 +1072,7 @@ theorem gasSteps_baseSetup_cost_potential (s : State)
     simpa [BigModulus.scanNonzero, State.fork] using hfork
   have hrunScan : (BigModulus.scanNonzero s count rest).halt = .Running := by
     simpa [BigModulus.scanNonzero] using hrun
-  have hnpScan : Precompile.isPrecompile
-      (BigModulus.scanNonzero s count rest).executionEnv.fork
+  have hnpScan : Precompile.isPrecompileWithConfig (BigModulus.scanNonzero s count rest).executionEnv.precompileConfig (BigModulus.scanNonzero s count rest).executionEnv.fork
       (BigModulus.scanNonzero s count rest).executionEnv.codeAddr = false := by
     simpa [BigModulus.scanNonzero, State.fork] using hnp
   have hraw := Challenge.EvmProof.Meter.runLocatedBlock_cost_potential_of_copyFree

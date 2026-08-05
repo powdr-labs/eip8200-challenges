@@ -156,8 +156,7 @@ def gasSteps_compress (s : State) (input : ByteArray) (i : Nat)
     exact hrun
   have hleftNp : Precompile.isPrecompileWithConfig leftFinal.executionEnv.precompileConfig leftFinal.executionEnv.fork
       leftFinal.executionEnv.codeAddr = false := by
-    change Precompile.isPrecompile
-      (leftFinalState s messageOffset returnDest rest).executionEnv.fork
+    change Precompile.isPrecompileWithConfig (leftFinalState s messageOffset returnDest rest).executionEnv.precompileConfig (leftFinalState s messageOffset returnDest rest).executionEnv.fork
       (leftFinalState s messageOffset returnDest rest).executionEnv.codeAddr = false
     rw [leftFinalState_executionEnv]
     exact hnp

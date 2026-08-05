@@ -655,8 +655,7 @@ theorem initStores_full_cost (input : ByteArray)
     (hstack : (Main.initStart input).stack = [])
     (hcode : (Main.initStart input).executionEnv.code = referenceBytecode)
     (hrun : (Main.initStart input).halt = .Running)
-    (hnp : Precompile.isPrecompile
-      (Main.initStart input).executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig (Main.initStart input).executionEnv.precompileConfig (Main.initStart input).executionEnv.fork
       (Main.initStart input).executionEnv.codeAddr = false) :
     (Main.gasSteps_initStores (Main.initStart input) Artifact.initStores
       hmem hchain hpc hstack hcode hrun hnp).cost = 195 := by

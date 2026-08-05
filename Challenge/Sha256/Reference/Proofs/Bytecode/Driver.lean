@@ -441,8 +441,7 @@ def gasSteps_iterationIncrement (s : State) (input : ByteArray)
     simpa [State.fork] using hfork
   have qrun : (afterCompression s input i).halt = .Running := by
     simpa using hrun
-  have qnp : Precompile.isPrecompile
-      (afterCompression s input i).executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig (afterCompression s input i).executionEnv.precompileConfig (afterCompression s input i).executionEnv.fork
       (afterCompression s input i).executionEnv.codeAddr = false := by
     simpa using hnp
   apply Challenge.EvmProof.Stepper.runLocatedBlock_sound

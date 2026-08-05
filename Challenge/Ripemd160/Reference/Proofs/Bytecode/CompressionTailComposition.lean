@@ -359,8 +359,7 @@ def gasSteps_rightLoopAndTail (s : State)
   have hqrun : (rightStates s messageOffset returnDest rest 80).halt = .Running := by
     rw [rightStates_halt]
     exact hrun
-  have hqnp : Precompile.isPrecompile
-      (rightStates s messageOffset returnDest rest 80).executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig (rightStates s messageOffset returnDest rest 80).executionEnv.precompileConfig (rightStates s messageOffset returnDest rest 80).executionEnv.fork
       (rightStates s messageOffset returnDest rest 80).executionEnv.codeAddr =
         false := by
     simpa [rightStates_executionEnv] using hnp
