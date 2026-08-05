@@ -38,10 +38,14 @@ class E:
             return a[0]
         if k in ("+", "-", "*"):
             return f"({a[0].short()} {k} {a[1].short()})"
-        infix = {"shl": "<<", "shr": ">>", "and": "&", "or": "|", "xor": "^"}
+        # only the shifts read their operands out of stack order: the EVM's
+        # `shl`/`shr` take the shift amount on top, the value beneath it
+        shifts = {"shl": "<<", "shr": ">>", "sar": ">>>"}
+        if k in shifts:
+            return f"({a[1].short()} {shifts[k]} {a[0].short()})"
+        infix = {"and": "&", "or": "|", "xor": "^"}
         if k in infix:
-            # EVM shifts take the shift amount on top: shl(shift, value)
-            return f"({a[1].short()} {infix[k]} {a[0].short()})"
+            return f"({a[0].short()} {infix[k]} {a[1].short()})"
         return f"{k}({', '.join(x.short() for x in a)})"
 
     def lean(self):
