@@ -34,15 +34,16 @@ private def wfOp {op : Operation}
 def wSlotAddr (j : UInt256) : UInt256 :=
   UInt256.ofNat 800 + UInt256.shiftLeft j (UInt256.ofNat 5)
 
-/-- Address of the `j`-th message word, four bytes apart. -/
-def msgWordAddr (msgOff j : UInt256) : UInt256 :=
-  msgOff + UInt256.shiftLeft j (UInt256.ofNat 2)
+/-- Byte offset of the `j`-th message word, four bytes apart.  The bytecode's
+`ADD` puts `msgOff` first, so this does too. -/
+def loadOffset (msgOff : UInt256) (j : Nat) : Nat :=
+  (msgOff + UInt256.shiftLeft (UInt256.ofNat j) (UInt256.ofNat 2)).toNat
 
 /-- The `j`-th schedule word as the bytecode computes it: load the 32-byte window
 at `msgOff + 4j` and take its top four bytes. -/
-def initialWord (memory : ByteArray) (msgOff j : UInt256) : UInt256 :=
+def initialWord (memory : ByteArray) (msgOff : UInt256) (j : Nat) : UInt256 :=
   UInt256.shiftRight
-    (MachineState.readWord memory (msgWordAddr msgOff j).toNat)
+    (MachineState.readWord memory (loadOffset msgOff j))
     (UInt256.ofNat 224)
 
 @[simp] private theorem pc493 :
@@ -322,7 +323,7 @@ def firstMemory (base : ByteArray) (msgOff : UInt256) : Nat → ByteArray
       let prev := firstMemory base msgOff j
       MachineState.writeBytes prev
         (Data.Bytes.natToBytesPadded
-          (initialWord prev msgOff (UInt256.ofNat j)).toNat 32)
+          (initialWord prev msgOff j).toNat 32)
         (wSlotAddr (UInt256.ofNat j)).toNat
 
 /-- Both the `MLOAD` of the message word and the `MSTORE` of the schedule word
@@ -332,7 +333,7 @@ def firstActiveWords (s : State) (msgOff : UInt256) : Nat → UInt256
   | j + 1 =>
       let afterLoad := UInt256.ofNat (MachineState.activeWordsAfter
         (firstActiveWords s msgOff j).toNat
-        (msgWordAddr msgOff (UInt256.ofNat j)).toNat 32)
+        (loadOffset msgOff j) 32)
       UInt256.ofNat (MachineState.activeWordsAfter afterLoad.toNat
         (wSlotAddr (UInt256.ofNat j)).toNat 32)
 
@@ -409,7 +410,7 @@ theorem run_firstBody (s : State) (msgOff : UInt256) (rest : List UInt256)
   simp [firstBodyPath, Challenge.EvmProof.Stepper.runLocatedBlock,
     Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
     firstBodyState, firstLoopState, firstMemory, firstActiveWords,
-    initialWord, msgWordAddr, wSlotAddr, State.activeWordsAfterUInt256,
+    initialWord, loadOffset, wSlotAddr, State.activeWordsAfterUInt256,
     g2, g3, g4, g5, hsucc, hrun, hcode]
 
 def gasSteps_firstCondition (s : State) (msgOff : UInt256)
@@ -1362,10 +1363,6 @@ writes. -/
 def scheduleSlot (j : Nat) : Nat :=
   Accessors.slotOffset 800 (UInt256.ofNat j)
 
-/-- Byte offset of the `j`-th message word. -/
-def loadOffset (msgOff : UInt256) (j : Nat) : Nat :=
-  (UInt256.shiftLeft (UInt256.ofNat j) (UInt256.ofNat 2) + msgOff).toNat
-
 /-- `W[j]` as it stands in `s`. -/
 def wValue (s : State) (j : Nat) : UInt256 :=
   MachineState.readWord s.memory (scheduleSlot j)
@@ -1425,5 +1422,33 @@ def gasSteps_schedule (s : State) (msgOff : UInt256) (rest : List UInt256)
     (soundStep extExitPath
       (run_extExit (firstLoopState s msgOff rest 16) rest hcap hmid hcode)
       hcode hfork hmid hnp)
+
+/-! The models are `irreducible`, so their recursion equations are exposed here
+for the correctness bridge to rewrite with. -/
+
+theorem firstMemory_succ (base : ByteArray) (msgOff : UInt256) (j : Nat) :
+    firstMemory base msgOff (j + 1) =
+      MachineState.writeBytes (firstMemory base msgOff j)
+        (Data.Bytes.natToBytesPadded
+          (initialWord (firstMemory base msgOff j) msgOff j).toNat 32)
+        (wSlotAddr (UInt256.ofNat j)).toNat := by
+  rw [firstMemory]
+
+theorem firstLoopState_memory (s : State) (msgOff : UInt256)
+    (rest : List UInt256) (n : Nat) :
+    (firstLoopState s msgOff rest n).memory = firstMemory s.memory msgOff n := by
+  rfl
+
+theorem extMemory_succ (base : ByteArray) (n : Nat) :
+    extMemory base (n + 1) =
+      MachineState.writeBytes (extMemory base n)
+        (Data.Bytes.natToBytesPadded
+          (extWord (extMemory base n) (UInt256.ofNat (16 + n))).toNat 32)
+        (wSlotAddr (UInt256.ofNat (16 + n))).toNat := by
+  rw [extMemory]
+
+theorem extLoopState_memory (s : State) (rest : List UInt256) (n : Nat) :
+    (extLoopState s rest n).memory = extMemory s.memory n := by
+  rfl
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule

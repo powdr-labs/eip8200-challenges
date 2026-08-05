@@ -149,7 +149,7 @@ def PaddedBlockAt (memory : ByteArray) (msgOff : UInt256)
       (Sha256.readBE32 padded (blockOff + k * 4))
 
 @[simp] theorem afterFirstIteration_memory (s : State)
-    (msgOff returnDest : UInt256) (rest : List UInt256) (j : Nat) :
+    (msgOff : UInt256) (rest : List UInt256) (j : Nat) :
     (Schedule.afterFirstIteration s msgOff returnDest rest j).memory =
       MachineState.writeBytes s.memory
         (Data.Bytes.natToBytesPadded
@@ -158,7 +158,7 @@ def PaddedBlockAt (memory : ByteArray) (msgOff : UInt256)
   rfl
 
 @[simp] theorem afterSecondIteration_memory (s : State)
-    (msgOff returnDest : UInt256) (rest : List UInt256) (j : Nat) :
+    (msgOff : UInt256) (rest : List UInt256) (j : Nat) :
     (Schedule.afterSecondIteration s msgOff returnDest rest j).memory =
       MachineState.writeBytes s.memory
         (Data.Bytes.natToBytesPadded
@@ -185,11 +185,11 @@ private theorem initialWord_write_schedule (memory : ByteArray)
       hseparated
     simpa [Data.Bytes.natToBytesPadded, ByteArray.size] using h)
 
-theorem firstLoopState_initialWord (s : State) (msgOff returnDest : UInt256)
+theorem firstLoopState_initialWord (s : State) (msgOff : UInt256)
     (rest : List UInt256) (n k : Nat) (hn : n ≤ 16)
     (hseparated : Padding.messageOffset ≤ Schedule.loadOffset msgOff k) :
     Schedule.initialWord
-        (Schedule.firstLoopState s msgOff returnDest rest n).memory msgOff k =
+        (Schedule.firstLoopState s msgOff rest n).memory msgOff k =
       Schedule.initialWord s.memory msgOff k := by
   induction n with
   | zero => rfl
@@ -198,7 +198,7 @@ theorem firstLoopState_initialWord (s : State) (msgOff returnDest : UInt256)
       rw [initialWord_write_schedule _ _ k n (by omega) hseparated]
       exact ih (by omega)
 
-theorem firstLoopState_slots (s : State) (msgOff returnDest : UInt256)
+theorem firstLoopState_slots (s : State) (msgOff : UInt256)
     (rest : List UInt256) (padded : ByteArray) (blockOff n : Nat)
     (hn : n ≤ 16)
     (hseparated : ∀ k, k < 16 →
@@ -207,7 +207,7 @@ theorem firstLoopState_slots (s : State) (msgOff returnDest : UInt256)
       Schedule.initialWord s.memory msgOff k =
         Challenge.EvmProof.Word.ofUInt32
           (Sha256.readBE32 padded (blockOff + k * 4))) :
-    SlotsCorrect (Schedule.firstLoopState s msgOff returnDest rest n)
+    SlotsCorrect (Schedule.firstLoopState s msgOff rest n)
       padded blockOff n := by
   induction n with
   | zero =>
@@ -230,10 +230,10 @@ theorem firstLoopState_slots (s : State) (msgOff returnDest : UInt256)
           rw [scheduleSlot_eq k (by omega), scheduleSlot_eq n (by omega)]
           omega
 
-theorem secondLoopState_slots (s : State) (msgOff returnDest : UInt256)
+theorem secondLoopState_slots (s : State) (msgOff : UInt256)
     (rest : List UInt256) (padded : ByteArray) (blockOff n : Nat)
     (hn : n ≤ 48) (hbase : SlotsCorrect s padded blockOff 16) :
-    SlotsCorrect (Schedule.secondLoopState s msgOff returnDest rest n)
+    SlotsCorrect (Schedule.secondLoopState s msgOff rest n)
       padded blockOff (16 + n) := by
   induction n with
   | zero =>
@@ -262,7 +262,7 @@ theorem secondLoopState_slots (s : State) (msgOff returnDest : UInt256)
 /-- Generic end-to-end functional postcondition for the complete proved
 schedule state.  The two hypotheses are precisely the memory-reader seam a
 caller must establish for its chosen message layout. -/
-theorem scheduleResult_slots (s : State) (msgOff returnDest : UInt256)
+theorem scheduleResult_slots (s : State) (msgOff : UInt256)
     (rest : List UInt256) (padded : ByteArray) (blockOff : Nat)
     (hseparated : ∀ k, k < 16 →
       Padding.messageOffset ≤ Schedule.loadOffset msgOff k)
@@ -270,27 +270,27 @@ theorem scheduleResult_slots (s : State) (msgOff returnDest : UInt256)
       Schedule.initialWord s.memory msgOff k =
         Challenge.EvmProof.Word.ofUInt32
           (Sha256.readBE32 padded (blockOff + k * 4))) :
-    SlotsCorrect (Schedule.scheduleResult s msgOff returnDest rest)
+    SlotsCorrect (Schedule.scheduleResult s rest)
       padded blockOff 64 := by
-  let q := Schedule.firstLoopState s msgOff returnDest rest 16
+  let q := Schedule.firstLoopState s msgOff rest 16
   have hfirst : SlotsCorrect q padded blockOff 16 :=
-    firstLoopState_slots s msgOff returnDest rest padded blockOff 16
+    firstLoopState_slots s msgOff rest padded blockOff 16
       (by omega) hseparated hread
-  have hsecond := secondLoopState_slots q msgOff returnDest rest
+  have hsecond := secondLoopState_slots q rest
     padded blockOff 48 (by omega) hfirst
   intro k hk
   change Schedule.wValue
-      (Schedule.secondLoopState q msgOff returnDest rest 48) k = _
+      (Schedule.secondLoopState q rest 48) k = _
   exact hsecond k (by simpa using hk)
 
 /-- Caller-facing form using the concrete initial-memory predicate. -/
 theorem scheduleResult_slots_of_paddedBlockAt (s : State)
-    (msgOff returnDest : UInt256) (rest : List UInt256)
+    (msgOff : UInt256) (rest : List UInt256)
     (padded : ByteArray) (blockOff : Nat)
     (hseparated : ∀ k, k < 16 →
       Padding.messageOffset ≤ Schedule.loadOffset msgOff k)
     (hblock : PaddedBlockAt s.memory msgOff padded blockOff) :
-    SlotsCorrect (Schedule.scheduleResult s msgOff returnDest rest)
+    SlotsCorrect (Schedule.scheduleResult s rest)
       padded blockOff 64 := by
   apply scheduleResult_slots
   · exact hseparated
