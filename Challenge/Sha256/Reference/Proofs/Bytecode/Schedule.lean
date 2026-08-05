@@ -237,6 +237,11 @@ def initialWord (memory : ByteArray) (msgOff j : UInt256) : UInt256 :=
   rw [← pc507]
   exact Artifact.isValidJumpDest_index 507 (by rfl)
 
+@[simp] private theorem valid1125 :
+    Decode.isValidJumpDest referenceBytecode 1125 = true := by
+  rw [← pc543]
+  exact Artifact.isValidJumpDest_index 543 (by rfl)
+
 @[simp] private theorem valid1095 :
     Decode.isValidJumpDest referenceBytecode 1095 = true := by
   rw [← pc526]
@@ -971,16 +976,19 @@ def extMemory (base : ByteArray) : Nat → ByteArray
           (extWord prev (UInt256.ofNat (16 + n))).toNat 32)
         (wSlotAddr (UInt256.ofNat (16 + n))).toNat
 
+/-- One memory touch of a 32-byte window. -/
+def awStep (aw addr : UInt256) : UInt256 :=
+  UInt256.ofNat (MachineState.activeWordsAfter aw.toNat addr.toNat 32)
+
 /-- Active words after `n` extension iterations.  Each iteration touches memory
 five times: the four reads, then the write. -/
 def extActiveWords (base : UInt256) (mem : ByteArray) : Nat → UInt256
   | 0 => base
   | n + 1 =>
       let k := UInt256.ofNat (16 + n)
-      let step (aw : UInt256) (addr : UInt256) : UInt256 :=
-        UInt256.ofNat (MachineState.activeWordsAfter aw.toNat addr.toNat 32)
       let aw := extActiveWords base mem n
-      step (step (step (step (step aw (wSlotAddr (k - UInt256.ofNat 16)))
+      awStep (awStep (awStep (awStep (awStep aw
+        (wSlotAddr (k - UInt256.ofNat 16)))
         (wSlotAddr (k - UInt256.ofNat 15)))
         (wSlotAddr (k - UInt256.ofNat 7)))
         (wSlotAddr (k - UInt256.ofNat 2)))
@@ -993,5 +1001,75 @@ def extLoopState (s : State) (rest : List UInt256) (n : Nat) : State :=
     stack := UInt256.ofNat (16 + n) :: rest
     memory := extMemory s.memory n
     activeWords := extActiveWords s.activeWords s.memory n }
+
+/-- Counter value at extension iteration `n`. -/
+def extK (n : Nat) : UInt256 := UInt256.ofNat (16 + n)
+
+def extBodyState (s : State) (rest : List UInt256) (n : Nat) : State :=
+  { extLoopState s rest n with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 543) }
+
+/-- After the two loads, with `W[k-15]` on top ready for the inlined sigma-0. -/
+def extAfterLoads (s : State) (rest : List UInt256) (n : Nat) : State :=
+  { extLoopState s rest n with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 560)
+    stack := wRead (extMemory s.memory n) (extK n) 15 ::
+      wRead (extMemory s.memory n) (extK n) 16 :: extK n :: rest
+    activeWords := awStep
+      (awStep (extActiveWords s.activeWords s.memory n)
+        (wSlotAddr (extK n - UInt256.ofNat 16)))
+      (wSlotAddr (extK n - UInt256.ofNat 15)) }
+
+@[simp] private theorem extLoopState_halt (s : State) (rest : List UInt256)
+    (n : Nat) : (extLoopState s rest n).halt = s.halt := by rfl
+@[simp] private theorem extLoopState_code (s : State) (rest : List UInt256)
+    (n : Nat) : (extLoopState s rest n).executionEnv.code =
+      s.executionEnv.code := by rfl
+@[simp] private theorem extLoopState_pc (s : State) (rest : List UInt256)
+    (n : Nat) : (extLoopState s rest n).pc = UInt256.ofNat 1095 := by rfl
+@[simp] private theorem extBodyState_pc (s : State) (rest : List UInt256)
+    (n : Nat) : (extBodyState s rest n).pc = UInt256.ofNat 1125 := by rfl
+
+set_option maxHeartbeats 1000000 in
+theorem run_extCondition (s : State) (rest : List UInt256) (n : Nat)
+    (hn : n < 48) (hcap : rest.length < 1000) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode) :
+    Challenge.EvmProof.Stepper.runLocatedBlock extConditionPath
+      (extLoopState s rest n) = some (extBodyState s rest n) := by
+  have hk : 16 + n < 2 ^ 256 := by omega
+  have hkWord : (UInt256.ofNat (16 + n)).toNat = 16 + n := by
+    rw [Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt hk]
+  have hlt : UInt256.lt (UInt256.ofNat (16 + n)) (UInt256.ofNat 64) =
+      UInt256.ofNat 1 := by
+    simp only [UInt256.lt, hkWord, Challenge.EvmProof.Word.word_toNat_ofNat,
+      Nat.mod_eq_of_lt (by norm_num : (64 : Nat) < 2 ^ 256)]
+    simp; omega
+  have g1 : rest.length + 1 < 1024 := by omega
+  have g2 : rest.length + 1 + 1 < 1024 := by omega
+  have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  simp [extConditionPath, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    extLoopState, extBodyState, hlt, UInt256.isTrue,
+    g1, g2, g3, hrun, hcode]
+
+@[simp] private theorem extBodyState_halt (s : State) (rest : List UInt256)
+    (n : Nat) : (extBodyState s rest n).halt = s.halt := by rfl
+@[simp] private theorem extBodyState_code (s : State) (rest : List UInt256)
+    (n : Nat) : (extBodyState s rest n).executionEnv.code =
+      s.executionEnv.code := by rfl
+
+set_option maxHeartbeats 2000000 in
+theorem run_extLoads (s : State) (rest : List UInt256) (n : Nat)
+    (hcap : rest.length < 1000) (hrun : s.halt = .Running) :
+    Challenge.EvmProof.Stepper.runLocatedBlock extLoadsPath
+      (extBodyState s rest n) = some (extAfterLoads s rest n) := by
+  have g1 : rest.length + 1 < 1024 := by omega
+  have g2 : rest.length + 1 + 1 < 1024 := by omega
+  have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  have g4 : rest.length + 1 + 1 + 1 + 1 < 1024 := by omega
+  simp [extLoadsPath, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    extBodyState, extLoopState, extAfterLoads, extK, wRead, wSlotAddr, awStep,
+    State.activeWordsAfterUInt256, g1, g2, g3, g4, hrun]
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
