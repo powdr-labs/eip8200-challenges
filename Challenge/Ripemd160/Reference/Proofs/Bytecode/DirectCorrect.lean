@@ -153,7 +153,7 @@ private def gasSteps_writeIteration (s : State) (offset : Nat)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gtestRaw : GasSteps
       { q with
@@ -222,7 +222,7 @@ private def gasSteps_writeWord (s : State) (offset : Nat) (word ret : UInt256)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gtest : GasSteps q
       { q with
@@ -261,7 +261,7 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gconditionRaw : GasSteps
       { q with
@@ -325,9 +325,9 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
   have loadedRun : loaded.halt = .Running := by
     change q.halt = .Running
     exact qrun
-  have loadedNp : Precompile.isPrecompile loaded.executionEnv.fork
+  have loadedNp : Precompile.isPrecompileWithConfig loaded.executionEnv.precompileConfig loaded.executionEnv.fork
       loaded.executionEnv.codeAddr = false := by
-    change Precompile.isPrecompile q.executionEnv.fork
+    change Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false
     exact qnp
   have gwcall : GasSteps
@@ -358,7 +358,7 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
   have writtenFork : written.fork = .Osaka := by
     simpa [written, State.fork] using loadedFork
   have writtenRun : written.halt = .Running := by simpa [written] using loadedRun
-  have writtenNp : Precompile.isPrecompile written.executionEnv.fork
+  have writtenNp : Precompile.isPrecompileWithConfig written.executionEnv.precompileConfig written.executionEnv.fork
       written.executionEnv.codeAddr = false := by simpa [written] using loadedNp
   have gnext : GasSteps
       { written with
@@ -399,7 +399,7 @@ private def gasSteps_output (s : State) (input : ByteArray)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gexitRaw : GasSteps
       { q with

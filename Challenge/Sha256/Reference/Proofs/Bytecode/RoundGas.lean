@@ -57,7 +57,7 @@ theorem roundLoop_cost_potential (s : State)
     simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by
     simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q] using hnp
   have h := roundIteration_cost_potential q msgOff returnDest rest i hi hcap

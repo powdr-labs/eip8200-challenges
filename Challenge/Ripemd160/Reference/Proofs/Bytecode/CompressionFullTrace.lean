@@ -154,7 +154,7 @@ def gasSteps_compress (s : State) (input : ByteArray) (i : Nat)
     change (leftFinalState s messageOffset returnDest rest).halt = _
     rw [leftFinalState_halt]
     exact hrun
-  have hleftNp : Precompile.isPrecompile leftFinal.executionEnv.fork
+  have hleftNp : Precompile.isPrecompileWithConfig leftFinal.executionEnv.precompileConfig leftFinal.executionEnv.fork
       leftFinal.executionEnv.codeAddr = false := by
     change Precompile.isPrecompile
       (leftFinalState s messageOffset returnDest rest).executionEnv.fork

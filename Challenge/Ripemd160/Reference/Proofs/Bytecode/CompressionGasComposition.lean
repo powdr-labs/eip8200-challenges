@@ -110,7 +110,7 @@ theorem rightLoopAndTail_cost_potential (s : State)
     rw [State.fork, rightStates_executionEnv]
     exact hfork
   have hqrun : q.halt = .Running := by rw [rightStates_halt]; exact hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, rightStates_executionEnv] using hnp
   have h0 := right80_cost_potential s messageOffset returnDest rest hstack
@@ -206,7 +206,7 @@ theorem compressToRight_cost_potential (s : State)
     simpa [scheduled, scheduledState, State.fork] using hfork
   have hsRun : scheduled.halt = .Running := by
     simpa [scheduled, scheduledState] using hrun
-  have hsNp : Precompile.isPrecompile scheduled.executionEnv.fork
+  have hsNp : Precompile.isPrecompileWithConfig scheduled.executionEnv.precompileConfig scheduled.executionEnv.fork
       scheduled.executionEnv.codeAddr = false := by
     simpa [scheduled, scheduledState] using hnp
   let initial := leftInitialState s messageOffset returnDest rest
@@ -219,7 +219,7 @@ theorem compressToRight_cost_potential (s : State)
   have hiRun : initial.halt = .Running := by
     simpa [initial, scheduled, leftInitialState, copiedWorkingState,
       copyRegion] using hsRun
-  have hiNp : Precompile.isPrecompile initial.executionEnv.fork
+  have hiNp : Precompile.isPrecompileWithConfig initial.executionEnv.precompileConfig initial.executionEnv.fork
       initial.executionEnv.codeAddr = false := by
     simpa [initial, scheduled, leftInitialState, copiedWorkingState,
       copyRegion] using hsNp
@@ -230,7 +230,7 @@ theorem compressToRight_cost_potential (s : State)
     simpa [final, initial, leftFinalState, State.fork] using hiFork
   have hfRun : final.halt = .Running := by
     simpa [final, leftFinalState, initial, leftStates_halt] using hiRun
-  have hfNp : Precompile.isPrecompile final.executionEnv.fork
+  have hfNp : Precompile.isPrecompileWithConfig final.executionEnv.precompileConfig final.executionEnv.fork
       final.executionEnv.codeAddr = false := by
     simpa [final, leftFinalState, initial, leftStates_executionEnv] using hiNp
   have h0 := scheduleSetup_cost_potential s messageOffset returnDest rest
@@ -350,7 +350,7 @@ theorem compress_cost_potential (s : State) (input : ByteArray) (i : Nat)
   have hleftRun : leftFinal.halt = .Running := by
     simpa [leftFinal, leftFinalState, leftInitialState, copiedWorkingState,
       copyRegion, scheduledState, leftStates_halt] using hrun
-  have hleftNp : Precompile.isPrecompile leftFinal.executionEnv.fork
+  have hleftNp : Precompile.isPrecompileWithConfig leftFinal.executionEnv.precompileConfig leftFinal.executionEnv.fork
       leftFinal.executionEnv.codeAddr = false := by
     simpa [leftFinal, leftFinalState, leftInitialState, copiedWorkingState,
       copyRegion, scheduledState, leftStates_executionEnv] using hnp

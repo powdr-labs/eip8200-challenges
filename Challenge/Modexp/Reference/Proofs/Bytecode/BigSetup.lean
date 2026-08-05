@@ -664,18 +664,18 @@ def gasSteps_setup (s : State) (b e m baseOff expOff modOff : Nat)
   have hrun3 : s3.halt = .Running := by
     simpa [s3, afterClear6144, s2, afterClear2048, s1, afterClear1024,
       s0, afterClear0, BigHelpers.clearReturned] using hrun
-  have hnp0 : Precompile.isPrecompile s0.executionEnv.fork
+  have hnp0 : Precompile.isPrecompileWithConfig s0.executionEnv.precompileConfig s0.executionEnv.fork
       s0.executionEnv.codeAddr = false := by
     simpa [s0, afterClear0, BigHelpers.clearReturned, State.fork] using hnp
-  have hnp1 : Precompile.isPrecompile s1.executionEnv.fork
+  have hnp1 : Precompile.isPrecompileWithConfig s1.executionEnv.precompileConfig s1.executionEnv.fork
       s1.executionEnv.codeAddr = false := by
     simpa [s1, afterClear1024, s0, afterClear0,
       BigHelpers.clearReturned, State.fork] using hnp
-  have hnp2 : Precompile.isPrecompile s2.executionEnv.fork
+  have hnp2 : Precompile.isPrecompileWithConfig s2.executionEnv.precompileConfig s2.executionEnv.fork
       s2.executionEnv.codeAddr = false := by
     simpa [s2, afterClear2048, s1, afterClear1024, s0, afterClear0,
       BigHelpers.clearReturned, State.fork] using hnp
-  have hnp3 : Precompile.isPrecompile s3.executionEnv.fork
+  have hnp3 : Precompile.isPrecompileWithConfig s3.executionEnv.precompileConfig s3.executionEnv.fork
       s3.executionEnv.codeAddr = false := by
     simpa [s3, afterClear6144, s2, afterClear2048, s1, afterClear1024,
       s0, afterClear0, BigHelpers.clearReturned, State.fork] using hnp
@@ -766,18 +766,18 @@ theorem gasSteps_setup_cost_potential (s : State)
   have hrun3 : s3.halt = .Running := by
     simpa [s3, afterClear6144, s2, afterClear2048, s1, afterClear1024,
       s0, afterClear0, BigHelpers.clearReturned] using hrun
-  have hnp0 : Precompile.isPrecompile s0.executionEnv.fork
+  have hnp0 : Precompile.isPrecompileWithConfig s0.executionEnv.precompileConfig s0.executionEnv.fork
       s0.executionEnv.codeAddr = false := by
     simpa [s0, afterClear0, BigHelpers.clearReturned, State.fork] using hnp
-  have hnp1 : Precompile.isPrecompile s1.executionEnv.fork
+  have hnp1 : Precompile.isPrecompileWithConfig s1.executionEnv.precompileConfig s1.executionEnv.fork
       s1.executionEnv.codeAddr = false := by
     simpa [s1, afterClear1024, s0, afterClear0,
       BigHelpers.clearReturned, State.fork] using hnp
-  have hnp2 : Precompile.isPrecompile s2.executionEnv.fork
+  have hnp2 : Precompile.isPrecompileWithConfig s2.executionEnv.precompileConfig s2.executionEnv.fork
       s2.executionEnv.codeAddr = false := by
     simpa [s2, afterClear2048, s1, afterClear1024, s0, afterClear0,
       BigHelpers.clearReturned, State.fork] using hnp
-  have hnp3 : Precompile.isPrecompile s3.executionEnv.fork
+  have hnp3 : Precompile.isPrecompileWithConfig s3.executionEnv.precompileConfig s3.executionEnv.fork
       s3.executionEnv.codeAddr = false := by
     simpa [s3, afterClear6144, s2, afterClear2048, s1, afterClear1024,
       s0, afterClear0, BigHelpers.clearReturned, State.fork] using hnp

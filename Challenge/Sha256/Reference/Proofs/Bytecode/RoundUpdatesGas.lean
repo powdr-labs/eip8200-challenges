@@ -43,7 +43,7 @@ private theorem shift_cost_potential
     (hcap : context.length < 1016)
     (hcode : q.executionEnv.code = referenceBytecode)
     (hfork : q.fork = .Osaka) (hrun : q.halt = .Running)
-    (hnp : Precompile.isPrecompile q.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false)
     (hloadWork : Challenge.EvmProof.Meter.runLocatedBlockStaticCost loadPath =
       loadWork)
@@ -137,7 +137,7 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
     simpa [q0] using hcode
   have q0fork : q0.fork = .Osaka := by simpa [q0, State.fork] using hfork
   have q0run : q0.halt = .Running := by simpa [q0] using hrun
-  have q0np : Precompile.isPrecompile q0.executionEnv.fork
+  have q0np : Precompile.isPrecompileWithConfig q0.executionEnv.precompileConfig q0.executionEnv.fork
       q0.executionEnv.codeAddr = false := by simpa [q0] using hnp
   have hs7 := shift_cost_potential Compression.shift76Path
     Compression.store7Path q0 6 7 796 803 783 22 15 ctx
@@ -157,7 +157,7 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
     simpa [q1, q0, Compression.afterShift7, Compression.shiftReturned,
       Accessors.storeReturned, Compression.shiftLoaded,
       Accessors.loadReturned] using q0run
-  have q1np : Precompile.isPrecompile q1.executionEnv.fork
+  have q1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by
     simpa [q1, q0, Compression.afterShift7, Compression.shiftReturned,
       Accessors.storeReturned, Compression.shiftLoaded,
@@ -180,7 +180,7 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
     simpa [q2, q1, Compression.afterShift6, Compression.shiftReturned,
       Accessors.storeReturned, Compression.shiftLoaded,
       Accessors.loadReturned] using q1run
-  have q2np : Precompile.isPrecompile q2.executionEnv.fork
+  have q2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, q1, Compression.afterShift6, Compression.shiftReturned,
       Accessors.storeReturned, Compression.shiftLoaded,
@@ -196,7 +196,7 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
       using q2fork
   have q3run : q3.halt = .Running := by
     simpa [q3, Compression.afterStoreE, Compression.directStored] using q2run
-  have q3np : Precompile.isPrecompile q3.executionEnv.fork
+  have q3np : Precompile.isPrecompileWithConfig q3.executionEnv.precompileConfig q3.executionEnv.fork
       q3.executionEnv.codeAddr = false := by
     simpa [q3, Compression.afterStoreE, Compression.directStored] using q2np
   have hsetupH4 := blockCost_potential_of_static
@@ -234,7 +234,7 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
   have q4run : q4.halt = .Running := by
     simpa [q4, Compression.afterStoreH4, Accessors.storeReturned,
       Compression.h4Loaded, Accessors.loadReturned] using q3run
-  have q4np : Precompile.isPrecompile q4.executionEnv.fork
+  have q4np : Precompile.isPrecompileWithConfig q4.executionEnv.precompileConfig q4.executionEnv.fork
       q4.executionEnv.codeAddr = false := by
     simpa [q4, Compression.afterStoreH4, Accessors.storeReturned,
       Compression.h4Loaded, Accessors.loadReturned] using q3np
@@ -256,7 +256,7 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
     simpa [q5, Compression.afterShift3, Compression.shiftReturned,
       Accessors.storeReturned, Compression.shiftLoaded,
       Accessors.loadReturned] using q4run
-  have q5np : Precompile.isPrecompile q5.executionEnv.fork
+  have q5np : Precompile.isPrecompileWithConfig q5.executionEnv.precompileConfig q5.executionEnv.fork
       q5.executionEnv.codeAddr = false := by
     simpa [q5, Compression.afterShift3, Compression.shiftReturned,
       Accessors.storeReturned, Compression.shiftLoaded,
@@ -271,7 +271,7 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
   have q5rawRun : q5rawState.halt = .Running := by
     simpa [q5rawState, Compression.shiftReturned, Accessors.storeReturned,
       Compression.shiftLoaded, Accessors.loadReturned] using q4run
-  have q5rawNp : Precompile.isPrecompile q5rawState.executionEnv.fork
+  have q5rawNp : Precompile.isPrecompileWithConfig q5rawState.executionEnv.precompileConfig q5rawState.executionEnv.fork
       q5rawState.executionEnv.codeAddr = false := by
     simpa [q5rawState, Compression.shiftReturned, Accessors.storeReturned,
       Compression.shiftLoaded, Accessors.loadReturned] using q4np

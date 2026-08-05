@@ -365,7 +365,7 @@ def gasSteps_iteration_of_compress (s next : State) (input : ByteArray)
       s.executionEnv.codeAddr = false)
     (hcodeNext : next.executionEnv.code = referenceBytecode)
     (hforkNext : next.fork = .Osaka) (hrunNext : next.halt = .Running)
-    (hnpNext : Precompile.isPrecompile next.executionEnv.fork
+    (hnpNext : Precompile.isPrecompileWithConfig next.executionEnv.precompileConfig next.executionEnv.fork
       next.executionEnv.codeAddr = false)
     (hcompress : Challenge.EvmProof.GasSteps (compressEntry s input i)
       (compressReturned next input i)) :

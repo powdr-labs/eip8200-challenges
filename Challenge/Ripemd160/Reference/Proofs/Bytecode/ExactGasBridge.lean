@@ -127,7 +127,7 @@ theorem iteration_cost_potential (s next : State) (input : ByteArray)
       s.executionEnv.codeAddr = false)
     (hcodeNext : next.executionEnv.code = referenceBytecode)
     (hforkNext : next.fork = .Osaka) (hrunNext : next.halt = .Running)
-    (hnpNext : Precompile.isPrecompile next.executionEnv.fork
+    (hnpNext : Precompile.isPrecompileWithConfig next.executionEnv.precompileConfig next.executionEnv.fork
       next.executionEnv.codeAddr = false)
     (compress : GasSteps (DriverTrace.compressEntry s input i)
       (DriverTrace.compressReturned next input i))

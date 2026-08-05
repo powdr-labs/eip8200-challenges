@@ -41,7 +41,7 @@ theorem gasSteps_compress_cost_potential (s : State)
     simpa [prepared, State.fork] using hfork
   have preparedRun : prepared.halt = .Running := by
     simpa [prepared] using hrun
-  have preparedNp : Precompile.isPrecompile prepared.executionEnv.fork
+  have preparedNp : Precompile.isPrecompileWithConfig prepared.executionEnv.precompileConfig prepared.executionEnv.fork
       prepared.executionEnv.codeAddr = false := by
     simpa [prepared] using hnp
   have hprepare := prepare_cost_potential s msgOff returnDest rest hcap hcode
@@ -55,7 +55,7 @@ theorem gasSteps_compress_cost_potential (s : State)
     simpa [afterRounds, State.fork] using preparedFork
   have roundsRun : afterRounds.halt = .Running := by
     simpa [afterRounds] using preparedRun
-  have roundsNp : Precompile.isPrecompile afterRounds.executionEnv.fork
+  have roundsNp : Precompile.isPrecompileWithConfig afterRounds.executionEnv.precompileConfig afterRounds.executionEnv.fork
       afterRounds.executionEnv.codeAddr = false := by
     simpa [afterRounds] using preparedNp
   have hexit := roundsExit_cost_potential afterRounds msgOff returnDest rest
@@ -69,7 +69,7 @@ theorem gasSteps_compress_cost_potential (s : State)
     simpa [afterFold, State.fork] using roundsFork
   have foldRun : afterFold.halt = .Running := by
     simpa [afterFold] using roundsRun
-  have foldNp : Precompile.isPrecompile afterFold.executionEnv.fork
+  have foldNp : Precompile.isPrecompileWithConfig afterFold.executionEnv.precompileConfig afterFold.executionEnv.fork
       afterFold.executionEnv.codeAddr = false := by
     simpa [afterFold] using roundsNp
   have hreturnCost := foldExit_cost_potential afterFold msgOff returnDest rest

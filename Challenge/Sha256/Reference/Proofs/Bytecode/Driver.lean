@@ -487,7 +487,7 @@ def gasSteps_blockLoopIteration (input : ByteArray) (hfit : CalldataFits input)
     simp [q]
   have qfork : q.fork = .Osaka := by simp [q, State.fork]
   have qrun : q.halt = .Running := by simp [q]
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, State.fork] using PaddingTrace.padReturned_noPrecompile input
   have g := gasSteps_iteration q input hfit i hi qcode qfork qrun qnp
@@ -556,7 +556,7 @@ def gasSteps_reference (input : ByteArray) (hfit : CalldataFits input) :
     simp [final]
   have finalFork : final.fork = .Osaka := by simp [final, State.fork]
   have finalRun : final.halt = .Running := by simp [final]
-  have finalNp : Precompile.isPrecompile final.executionEnv.fork
+  have finalNp : Precompile.isPrecompileWithConfig final.executionEnv.precompileConfig final.executionEnv.fork
       final.executionEnv.codeAddr = false := by
     simpa [final, State.fork] using PaddingTrace.padReturned_noPrecompile input
   have output := Output.gasSteps_output final
