@@ -111,3 +111,28 @@ Measured for the re-derived SHA-256 padding paths, for reference:
 `computePaddedLength` 23 (was 26), `lengthSetup` 75, `lengthCondition` 23
 (was 25), `lengthByte` 31 (was 27), `lengthStore` 12, `lengthIncrement` 6
 (was 14), `lengthBack` 11 (was 12), `lengthExit` 42, whole `lengthIteration` 83.
+
+## Inlined helpers: two different shapes
+
+Both challenges' Yul helpers are now inlined rather than compiled to internal
+jumps, but they do not all inline the same way, and the difference decides how
+the summary module can be restated.
+
+**Uniform sites — one lemma covers all of them.** SHA-256's memory accessors
+splice an identical five-instruction sequence at every use
+(`PUSH1 5; SHL; PUSH2 base; ADD; MLOAD|MSTORE`); only `base` and the site index
+vary. `Accessors.lean` keeps its `hmatch`-disjunction shape, one proof discharges
+all eleven sites, and the consuming interface survives.
+
+**Non-uniform sites — the conclusion itself varies.** SHA-256's `rotr` is
+inlined at 16 sites (`PUSH4 0xffffffff` at instructions 237, 249, 261, 285, 323,
+368, 431, 469, 564, 576, 617, 782, 794, 829, 841, 853), each an eleven
+instruction run, but the `DUP` depths differ per site (`DUP5`, `DUP6`, `DUP7`, …)
+because the surrounding stack differs, and the rotation amount is a per-site
+literal. The operand therefore comes from a different stack slot at each site,
+so a single shared conclusion is impossible: `Functions.lean` needs its summary
+stated over a stack split at a parameterised depth, or one lemma per site.
+
+Check which shape you are dealing with *before* restating a summary module —
+assuming uniformity and discovering otherwise wastes a full elaboration cycle
+per site.
