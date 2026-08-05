@@ -237,6 +237,13 @@ def initialWord (memory : ByteArray) (msgOff j : UInt256) : UInt256 :=
   rw [← pc507]
   exact Artifact.isValidJumpDest_index 507 (by rfl)
 
+/-- `smallSigma1`'s entry, which the middle segment jumps to. -/
+@[simp] private theorem valid1501 :
+    Decode.isValidJumpDest referenceBytecode 1501 = true := by
+  have h : Artifact.referenceArtifact.instructionPC 777 = 1501 := by decide
+  rw [← h]
+  exact Artifact.isValidJumpDest_index 777 (by rfl)
+
 @[simp] private theorem valid1125 :
     Decode.isValidJumpDest referenceBytecode 1125 = true := by
   rw [← pc543]
@@ -368,7 +375,6 @@ theorem run_firstCondition (s : State) (msgOff : UInt256)
     simp only [UInt256.lt, hjWord, Challenge.EvmProof.Word.word_toNat_ofNat,
       Nat.mod_eq_of_lt (by norm_num : (16 : Nat) < 2 ^ 256)]
     simp [hj]
-  have g1 : rest.length + 1 < 1024 := by omega
   have g2 : rest.length + 1 + 1 < 1024 := by omega
   have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
   have g4 : rest.length + 1 + 1 + 1 + 1 < 1024 := by omega
@@ -1071,5 +1077,73 @@ theorem run_extLoads (s : State) (rest : List UInt256) (n : Nat)
     Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
     extBodyState, extLoopState, extAfterLoads, extK, wRead, wSlotAddr, awStep,
     State.activeWordsAfterUInt256, g1, g2, g3, g4, hrun]
+
+/-- The state the two loads leave behind, before sigma-0 runs on top of it.
+Naming it lets `extAfterLoads` be literally `Functions.smallSigma0Entry` of this
+state, so the certified sigma-0 run composes without a cast. -/
+def extLoadedBase (s : State) (n : Nat) : State :=
+  { s with
+    memory := extMemory s.memory n
+    activeWords := awStep
+      (awStep (extActiveWords s.activeWords s.memory n)
+        (wSlotAddr (extK n - UInt256.ofNat 16)))
+      (wSlotAddr (extK n - UInt256.ofNat 15)) }
+
+theorem extAfterLoads_eq (s : State) (rest : List UInt256) (n : Nat) :
+    extAfterLoads s rest n =
+      Functions.smallSigma0Entry (extLoadedBase s n)
+        (wRead (extMemory s.memory n) (extK n) 15)
+        (wRead (extMemory s.memory n) (extK n) 16)
+        (extK n :: rest) := by
+  rfl
+
+/-- After the inlined sigma-0, at instruction 591. -/
+def extAfterSigma0 (s : State) (rest : List UInt256) (n : Nat) : State :=
+  Functions.smallSigma0Result (extLoadedBase s n)
+    (wRead (extMemory s.memory n) (extK n) 15)
+    (wRead (extMemory s.memory n) (extK n) 16)
+    (extK n :: rest)
+
+/-- The partial sum the middle segment carries: `sigma0 W[k-15] + W[k-16]`. -/
+def extSum1 (s : State) (n : Nat) : UInt256 :=
+  Functions.smallSigma0Word (wRead (extMemory s.memory n) (extK n) 15) +
+    wRead (extMemory s.memory n) (extK n) 16
+
+/-- Active words after all four of the iteration's reads. -/
+def extAfterFourReads (s : State) (n : Nat) : UInt256 :=
+  awStep (awStep (extLoadedBase s n).activeWords
+    (wSlotAddr (extK n - UInt256.ofNat 7)))
+    (wSlotAddr (extK n - UInt256.ofNat 2))
+
+/-- Base state entering the `smallSigma1` call: memory unchanged, active words
+grown by the iteration's four reads. -/
+def extCallBase (s : State) (n : Nat) : State :=
+  { extLoadedBase s n with activeWords := extAfterFourReads s n }
+
+set_option maxHeartbeats 4000000 in
+theorem run_extMiddle (s : State) (rest : List UInt256) (n : Nat)
+    (hcap : rest.length < 1000) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode) :
+    Challenge.EvmProof.Stepper.runLocatedBlock extMiddlePath
+      (extAfterSigma0 s rest n) =
+        some (Functions.smallSigma1Entry (extCallBase s n)
+          (wRead (extMemory s.memory n) (extK n) 2)
+          (UInt256.ofNat 1227)
+          (wRead (extMemory s.memory n) (extK n) 2 ::
+            wRead (extMemory s.memory n) (extK n) 7 ::
+            extSum1 s n :: extK n :: rest)) := by
+  have g1 : rest.length + 1 < 1024 := by omega
+  have g2 : rest.length + 1 + 1 < 1024 := by omega
+  have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  have g4 : rest.length + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g5 : rest.length + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g6 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g7 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  simp [extMiddlePath, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    extAfterSigma0, Functions.smallSigma0Result, Functions.smallSigma1Entry,
+    extLoadedBase, extCallBase, extAfterFourReads, extSum1, extK, wRead,
+    wSlotAddr, awStep, State.activeWordsAfterUInt256,
+    g2, g3, g4, g5, g6, g7, hrun, hcode]
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
