@@ -1295,4 +1295,59 @@ def gasSteps_extLoop (s : State) (rest : List UInt256)
       hvalidRet1227 hvalidRet1247 hnp)
 
 
+/-! ### Exit into the compression loop
+
+The condition falls through at `k = 64`, an `MCOPY` copies the eight chaining
+values (`0x100` bytes at `0x120`) into the working area at `0x220`, and the jump
+hands control to the compression loop at `0x23f`. -/
+
+/-- The compression loop's entry, which the exit jumps to. -/
+@[simp] private theorem pc191 :
+    Artifact.referenceArtifact.instructionPC 191 = 575 := by decide
+
+@[simp] private theorem valid575 :
+    Decode.isValidJumpDest referenceBytecode 575 = true := by
+  rw [← pc191]
+  exact Artifact.isValidJumpDest_index 191 (by rfl)
+
+def scheduleMemory (s : State) : ByteArray :=
+  MachineState.writeBytes (extMemory s.memory 48)
+    (MachineState.readPadded (extMemory s.memory 48) 288 256) 544
+
+/-- `MCOPY` charges both ranges at once, and for the copy length rather than a
+word.  Stated over the active-word count directly rather than over a state, since
+`activeWordsAfterUInt256_2` reads nothing else — carrying a state here just makes
+the two sides differ in `pc` and `stack`. -/
+def scheduleActiveWords (s : State) : UInt256 :=
+  UInt256.ofNat
+    (MachineState.activeWordsAfter
+      (MachineState.activeWordsAfter
+        (extActiveWords s.activeWords s.memory 48).toNat 544 256) 288 256)
+
+/-- The state the schedule hands to the compression loop. -/
+def scheduleResult (s : State) (rest : List UInt256) : State :=
+  { s with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 191)
+    stack := ⟨0⟩ :: rest
+    memory := scheduleMemory s
+    activeWords := scheduleActiveWords s }
+
+set_option maxHeartbeats 4000000 in
+theorem run_extExit (s : State) (rest : List UInt256)
+    (hcap : rest.length < 990) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode) :
+    Challenge.EvmProof.Stepper.runLocatedBlock extExitPath
+      (extLoopState s rest 48) = some (scheduleResult s rest) := by
+  have hlt : UInt256.lt (UInt256.ofNat 64) (UInt256.ofNat 64) =
+      (⟨0⟩ : UInt256) := by decide
+  have g0 : rest.length < 1024 := by omega
+  have g1 : rest.length + 1 < 1024 := by omega
+  have g2 : rest.length + 1 + 1 < 1024 := by omega
+  have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  simp [extExitPath, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    extLoopState, scheduleResult, scheduleMemory, scheduleActiveWords,
+    State.activeWordsAfterUInt256_2, hlt, UInt256.isTrue,
+    g0, g1, g2, g3, hrun, hcode]
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
