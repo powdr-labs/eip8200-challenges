@@ -201,7 +201,7 @@ theorem firstLoopState_initialWord (s : State) (msgOff : UInt256)
         (Schedule.firstLoopState s msgOff rest n).memory msgOff k =
       Schedule.initialWord s.memory msgOff k := by
   induction n with
-  | zero => rfl
+  | zero => simp [Schedule.firstLoopState_memory, Schedule.firstMemory_zero]
   | succ n ih =>
       rw [Schedule.firstLoopState_memory, firstMemory_succ_slot]
       rw [initialWord_write_schedule _ _ k n (by omega) hseparated]
@@ -225,12 +225,12 @@ theorem firstLoopState_slots (s : State) (msgOff : UInt256)
       omega
   | succ n ih =>
       intro k hk
-      rw [Schedule.firstLoopState]
-      simp only [Schedule.wValue, firstMemory_succ_slot]
+      simp only [Schedule.wValue, Schedule.firstLoopState_memory,
+        firstMemory_succ_slot]
       by_cases hkn : k = n
       · subst k
         rw [Challenge.EvmProof.Memory.readWord_writeWord]
-        rw [firstLoopState_initialWord s msgOff returnDest rest n n
+        rw [firstLoopState_initialWord s msgOff rest n n
           (by omega) (hseparated n (by omega))]
         rw [scheduleWord_of_lt padded blockOff n (by omega)]
         exact hread n (by omega)
@@ -244,7 +244,7 @@ set_option maxHeartbeats 4000000 in
 theorem secondLoopState_slots (s : State) (msgOff : UInt256)
     (rest : List UInt256) (padded : ByteArray) (blockOff n : Nat)
     (hn : n ≤ 48) (hbase : SlotsCorrect s padded blockOff 16) :
-    SlotsCorrect (Schedule.secondLoopState s msgOff rest n)
+    SlotsCorrect (Schedule.secondLoopState s rest n)
       padded blockOff (16 + n) := by
   induction n with
   | zero =>

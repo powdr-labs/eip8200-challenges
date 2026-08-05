@@ -1426,6 +1426,14 @@ def gasSteps_schedule (s : State) (msgOff : UInt256) (rest : List UInt256)
 /-! The models are `irreducible`, so their recursion equations are exposed here
 for the correctness bridge to rewrite with. -/
 
+theorem firstMemory_zero (base : ByteArray) (msgOff : UInt256) :
+    firstMemory base msgOff 0 = base := by
+  rw [firstMemory]
+
+theorem extMemory_zero (base : ByteArray) :
+    extMemory base 0 = base := by
+  rw [extMemory]
+
 theorem firstMemory_succ (base : ByteArray) (msgOff : UInt256) (j : Nat) :
     firstMemory base msgOff (j + 1) =
       MachineState.writeBytes (firstMemory base msgOff j)
