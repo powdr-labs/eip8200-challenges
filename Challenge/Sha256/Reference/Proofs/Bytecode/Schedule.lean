@@ -237,6 +237,13 @@ def initialWord (memory : ByteArray) (msgOff j : UInt256) : UInt256 :=
   rw [← pc507]
   exact Artifact.isValidJumpDest_index 507 (by rfl)
 
+/-- `wSet`'s entry, which the combine segment jumps to. -/
+@[simp] private theorem valid1667 :
+    Decode.isValidJumpDest referenceBytecode 1667 = true := by
+  have h : Artifact.referenceArtifact.instructionPC 912 = 1667 := by decide
+  rw [← h]
+  exact Artifact.isValidJumpDest_index 912 (by rfl)
+
 /-- `smallSigma1`'s entry, which the middle segment jumps to. -/
 @[simp] private theorem valid1501 :
     Decode.isValidJumpDest referenceBytecode 1501 = true := by
@@ -1145,5 +1152,59 @@ theorem run_extMiddle (s : State) (rest : List UInt256) (n : Nat)
     extLoadedBase, extCallBase, extAfterFourReads, extSum1, extK, wRead,
     wSlotAddr, awStep, State.activeWordsAfterUInt256,
     g2, g3, g4, g5, g6, g7, hrun, hcode]
+
+set_option maxHeartbeats 4000000 in
+theorem run_extCombine (s : State) (rest : List UInt256) (n : Nat)
+    (hcap : rest.length < 1000) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode) :
+    Challenge.EvmProof.Stepper.runLocatedBlock extCombinePath
+      (Functions.smallSigma1Returned (extCallBase s n)
+        (wRead (extMemory s.memory n) (extK n) 2) (UInt256.ofNat 1227)
+        (wRead (extMemory s.memory n) (extK n) 2 ::
+          wRead (extMemory s.memory n) (extK n) 7 ::
+          extSum1 s n :: extK n :: rest)) =
+        some (Accessors.wSetEntry (extCallBase s n) (extK n)
+          (extWord (extMemory s.memory n) (extK n)) (UInt256.ofNat 1247)
+          (extWord (extMemory s.memory n) (extK n) :: extK n :: rest)) := by
+  have g2 : rest.length + 1 + 1 < 1024 := by omega
+  have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  have g4 : rest.length + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g5 : rest.length + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g6 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  simp [extCombinePath, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    Functions.smallSigma1Returned, Accessors.wSetEntry, extCallBase,
+    extLoadedBase, extWord, extSum1, extK, wRead, wSlotAddr,
+    List.exchange, g2, g3, g4, g5, g6, hrun, hcode]
+
+/-- The bytecode's `ADD` puts the base first (`0x320 + (j << 5)`) while
+`Accessors.slotOffset` states the shift first, so the two address forms need
+reconciling wherever a `wSet` call meets this module's memory model. -/
+theorem wSlotAddr_toNat (j : UInt256) :
+    (wSlotAddr j).toNat = Accessors.slotOffset 800 j := by
+  simp only [wSlotAddr, Accessors.slotOffset]
+  rw [Challenge.EvmProof.Word.word_add_comm]
+
+set_option maxHeartbeats 4000000 in
+theorem run_extAdvance (s : State) (rest : List UInt256) (n : Nat)
+    (hn : n < 48) (hcap : rest.length < 1000) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode) :
+    Challenge.EvmProof.Stepper.runLocatedBlock extAdvancePath
+      (Accessors.wSetReturned (extCallBase s n) (extK n)
+        (extWord (extMemory s.memory n) (extK n)) (UInt256.ofNat 1247)
+        (extWord (extMemory s.memory n) (extK n) :: extK n :: rest)) =
+        some (extLoopState s rest (n + 1)) := by
+  have hsucc : UInt256.ofNat 1 + UInt256.ofNat (16 + n) =
+      UInt256.ofNat (16 + (n + 1)) := by
+    simp only [show 16 + (n + 1) = 16 + n + 1 from by omega]
+    rw [Challenge.EvmProof.Word.word_add_comm]
+    exact Challenge.EvmProof.Word.ofNat_add_ofNat (by omega)
+  have g1 : rest.length + 1 < 1024 := by omega
+  have g2 : rest.length + 1 + 1 < 1024 := by omega
+  simp [extAdvancePath, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    Accessors.wSetReturned, extLoopState, extCallBase, extLoadedBase,
+    extMemory, extActiveWords, extAfterFourReads, extK, wSlotAddr_toNat,
+    State.activeWordsAfterUInt256, awStep, hsucc, g1, g2, hrun, hcode]
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
