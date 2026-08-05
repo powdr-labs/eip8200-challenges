@@ -1,4 +1,5 @@
 import YulParser.Compile
+import YulEvmCompiler.Optimizer.Implementation.Pipeline
 
 set_option warningAsError true
 
@@ -6,6 +7,8 @@ namespace Challenge.Ripemd160
 
 open YulSemantics (Block)
 open YulSemantics.EVM (Op)
+open YulSemantics.EVM (ExternalCalls ExternalCreates evmWithExternal)
+open YulEvmCompiler
 
 /-- The reference implementation, verbatim. -/
 def referenceSource : String := include_str "reference.yul"
@@ -21,6 +24,15 @@ def referenceBlock? : Option (Block Op) :=
 
 /-- Bytecode emitted by the pinned verified Yul compiler. -/
 def referenceBytecode? : Option ByteArray :=
-  YulParser.compileSource referenceSource
+  match referenceBlock? with
+  | none => none
+  | some block =>
+    let normalized : Block Op := @Optimizer.Normalize.normalize
+      (evmWithExternal ExternalCalls.none ExternalCreates.none) block
+    let optimized := (Optimizer.optimizerPipeline
+      (calls := ExternalCalls.none) (creates := ExternalCreates.none)).run normalized
+    match compile optimized with
+    | some is => some (assemble is)
+    | none => none
 
 end Challenge.Ripemd160
