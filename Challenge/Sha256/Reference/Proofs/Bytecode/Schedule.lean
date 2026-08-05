@@ -1350,4 +1350,63 @@ theorem run_extExit (s : State) (rest : List UInt256)
     State.activeWordsAfterUInt256_2, hlt, UInt256.isTrue,
     g0, g1, g2, g3, hrun, hcode]
 
+/-! ### Exports and top-level assembly -/
+
+/-- The extension loop's state, under the name its consumers use. -/
+abbrev secondLoopState (s : State) (rest : List UInt256) (n : Nat) : State :=
+  extLoopState s rest n
+
+/-- `W[j]` as it stands in `memory`. -/
+def wValue (memory : ByteArray) (j : UInt256) : UInt256 :=
+  MachineState.readWord memory (wSlotAddr j).toNat
+
+/-- The state the schedule hands on, under the name its consumers use. -/
+abbrev scheduleReturned (s : State) (rest : List UInt256) : State :=
+  scheduleResult s rest
+
+set_option maxHeartbeats 4000000 in
+/-- The first loop's handover is the extension loop's zeroth state.  Proved by
+`simp` rather than `rfl`: the two descriptions are definitionally equal but the
+kernel does not check that inside four million heartbeats. -/
+theorem extensionStart_eq (s : State) (msgOff : UInt256)
+    (rest : List UInt256) :
+    extensionStart s msgOff rest =
+      extLoopState (firstLoopState s msgOff rest 16) rest 0 := by
+  simp [extensionStart, extLoopState, extMemory, extActiveWords]
+
+/-! The four recursive state models are marked irreducible: the top-level
+composition otherwise asks `whnf` to unfold `firstMemory … 16` and
+`extMemory … 48` while unifying state types, and since each step mentions the
+previous memory twice — once in the write and once inside the word it computes —
+that unfolding is exponential.  The proofs that need them cite them by name in
+`simp`, which uses their equations rather than reduction. -/
+
+attribute [irreducible] firstMemory firstActiveWords extMemory extActiveWords
+
+set_option maxHeartbeats 8000000 in
+/-- The complete compiled schedule: sixteen words copied from the padded message,
+forty-eight extended from them, and the chaining values staged for compression. -/
+def gasSteps_schedule (s : State) (msgOff : UInt256) (rest : List UInt256)
+    (hcap : rest.length < 990) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka)
+    (hvalidRet1227 : Decode.isValidJumpDest referenceBytecode 1227 = true)
+    (hvalidRet1247 : Decode.isValidJumpDest referenceBytecode 1247 = true)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig
+      s.executionEnv.fork s.executionEnv.codeAddr = false) :
+    Challenge.EvmProof.GasSteps (firstLoopState s msgOff rest 0)
+      (scheduleResult (firstLoopState s msgOff rest 16) rest) := by
+  have hmid : s.halt = .Running := hrun
+  refine (gasSteps_firstLoop s msgOff rest (by omega) hrun hcode hfork hnp).trans
+    ?_
+  refine (soundStep firstExitPath
+      (run_firstExit s msgOff rest (by omega) hrun hcode)
+      hcode hfork hrun hnp).trans ?_
+  refine Challenge.EvmProof.GasSteps.cast ?_ (extensionStart_eq s msgOff rest).symm rfl
+  exact (gasSteps_extLoop (firstLoopState s msgOff rest 16) rest hcap hmid
+      hcode hfork hvalidRet1227 hvalidRet1247 hnp).trans
+    (soundStep extExitPath
+      (run_extExit (firstLoopState s msgOff rest 16) rest hcap hmid hcode)
+      hcode hfork hmid hnp)
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
