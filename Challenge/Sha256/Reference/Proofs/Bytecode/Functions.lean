@@ -1126,4 +1126,136 @@ theorem run_rotr853 (s : State) (count w1 w2 w3 : UInt256) (rest : List UInt256)
     rotrEntry853, rotrResult853, maskedRotr, List.exchange,
     h4, h5, h6, h7, hrun]
 
+/-! ### The schedule's small sigma-1
+
+Unlike `rotr`, this one is still a called function: entry `JUMPDEST` at 777,
+returning `JUMP` at 810, on the frame `[x, returnAddress]`.  Its two rotations
+are the inlined sites 782 and 794 certified above, and it finishes with a plain
+right shift rather than a third rotation:
+
+  smallSigma1 x = rotr x 17 ^^^ rotr x 19 ^^^ (x >>> 10)
+-/
+
+def smallSigma1Word (x : UInt256) : UInt256 :=
+  UInt256.xor
+    (UInt256.xor (maskedRotr x (UInt256.ofNat 17) 0xf)
+      (maskedRotr x (UInt256.ofNat 19) 0xd))
+    (UInt256.shiftRight x (UInt256.ofNat 10))
+
+@[simp] private theorem pc777 :
+    Artifact.referenceArtifact.instructionPC 777 = 1501 := by decide
+
+@[simp] private theorem pc778 :
+    Artifact.referenceArtifact.instructionPC 778 = 1502 := by decide
+
+@[simp] private theorem pc779 :
+    Artifact.referenceArtifact.instructionPC 779 = 1503 := by decide
+
+@[simp] private theorem pc780 :
+    Artifact.referenceArtifact.instructionPC 780 = 1505 := by decide
+
+@[simp] private theorem pc781 :
+    Artifact.referenceArtifact.instructionPC 781 = 1506 := by decide
+
+@[simp] private theorem pc808 :
+    Artifact.referenceArtifact.instructionPC 808 = 1545 := by decide
+
+@[simp] private theorem pc809 :
+    Artifact.referenceArtifact.instructionPC 809 = 1546 := by decide
+
+@[simp] private theorem pc810 :
+    Artifact.referenceArtifact.instructionPC 810 = 1547 := by decide
+
+@[simp] private theorem pc811 :
+    Artifact.referenceArtifact.instructionPC 811 = 1548 := by decide
+
+@[simp] private theorem toNat1501 : (UInt256.ofNat 1501).toNat = 1501 := by decide
+@[simp] private theorem toNat1502 : (UInt256.ofNat 1502).toNat = 1502 := by decide
+@[simp] private theorem toNat1503 : (UInt256.ofNat 1503).toNat = 1503 := by decide
+@[simp] private theorem toNat1505 : (UInt256.ofNat 1505).toNat = 1505 := by decide
+@[simp] private theorem toNat1506 : (UInt256.ofNat 1506).toNat = 1506 := by decide
+@[simp] private theorem toNat1545 : (UInt256.ofNat 1545).toNat = 1545 := by decide
+@[simp] private theorem toNat1546 : (UInt256.ofNat 1546).toNat = 1546 := by decide
+@[simp] private theorem toNat1547 : (UInt256.ofNat 1547).toNat = 1547 := by decide
+@[simp] private theorem toNat1548 : (UInt256.ofNat 1548).toNat = 1548 := by decide
+
+@[simp] private theorem next777 : (UInt256.ofNat 1501).succ = UInt256.ofNat 1502 := by decide
+@[simp] private theorem next778 : (UInt256.ofNat 1502).succ = UInt256.ofNat 1503 := by decide
+@[simp] private theorem next779 : UInt256.ofNat 1503 + UInt256.ofNat 2 = UInt256.ofNat 1505 := by decide
+@[simp] private theorem next780 : (UInt256.ofNat 1505).succ = UInt256.ofNat 1506 := by decide
+@[simp] private theorem next781 : UInt256.ofNat 1506 + UInt256.ofNat 2 = UInt256.ofNat 1508 := by decide
+@[simp] private theorem next807 : (UInt256.ofNat 1544).succ = UInt256.ofNat 1545 := by decide
+@[simp] private theorem next808 : (UInt256.ofNat 1545).succ = UInt256.ofNat 1546 := by decide
+@[simp] private theorem next809 : (UInt256.ofNat 1546).succ = UInt256.ofNat 1547 := by decide
+@[simp] private theorem next810 : (UInt256.ofNat 1547).succ = UInt256.ofNat 1548 := by decide
+
+def smallSigma1Path :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨777, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨778, .op (.Dup ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨779, .push ⟨1, by decide⟩ (UInt256.ofNat 10), by rfl, by decide⟩,
+   ⟨780, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨781, .push ⟨1, by decide⟩ (UInt256.ofNat 19), by rfl, by decide⟩,
+   ⟨782, .push ⟨4, by decide⟩ (UInt256.ofNat 4294967295), by rfl, by decide⟩,
+   ⟨783, .op (.Dup ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨784, .push ⟨1, by decide⟩ (UInt256.ofNat 13), by rfl, by decide⟩,
+   ⟨785, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨786, .op (.Dup ⟨4, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨787, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨788, .op (.Swap ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨789, .op (.Swap ⟨2, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨790, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨791, .op .OR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨792, .op .AND, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨793, .push ⟨1, by decide⟩ (UInt256.ofNat 17), by rfl, by decide⟩,
+   ⟨794, .push ⟨4, by decide⟩ (UInt256.ofNat 4294967295), by rfl, by decide⟩,
+   ⟨795, .op (.Dup ⟨4, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨796, .push ⟨1, by decide⟩ (UInt256.ofNat 15), by rfl, by decide⟩,
+   ⟨797, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨798, .op (.Swap ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨799, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨800, .op (.Swap ⟨2, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨801, .op (.Swap ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨802, .op (.Swap ⟨4, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨803, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨804, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨805, .op .OR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨806, .op .AND, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨807, .op .XOR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨808, .op .XOR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨809, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨810, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
+
+def smallSigma1Entry (s : State) (x returnDest : UInt256)
+    (rest : List UInt256) : State :=
+  { s with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 777)
+    stack := x :: returnDest :: rest }
+
+def smallSigma1Returned (s : State) (x returnDest : UInt256)
+    (rest : List UInt256) : State :=
+  { s with
+    pc := returnDest
+    stack := smallSigma1Word x :: rest }
+
+set_option maxHeartbeats 4000000 in
+theorem run_smallSigma1 (s : State) (x returnDest : UInt256)
+    (rest : List UInt256) (hcap : rest.length < 1000) (hrun : s.halt = .Running)
+    (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true)
+    (hcode : s.executionEnv.code = referenceBytecode) :
+    Challenge.EvmProof.Stepper.runLocatedBlock smallSigma1Path
+      (smallSigma1Entry s x returnDest rest) =
+        some (smallSigma1Returned s x returnDest rest) := by
+  have g2 : rest.length + 1 + 1 < 1024 := by omega
+  have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  have g4 : rest.length + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g5 : rest.length + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g6 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g7 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have g8 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  simp [smallSigma1Path, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    smallSigma1Entry, smallSigma1Returned, smallSigma1Word, maskedRotr,
+    List.exchange, g2, g3, g4, g5, g6, g7, g8, hrun, hvalid, hcode]
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Functions
