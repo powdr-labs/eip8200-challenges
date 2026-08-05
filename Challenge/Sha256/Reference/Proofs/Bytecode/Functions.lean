@@ -1369,4 +1369,23 @@ theorem run_smallSigma0 (s : State) (x other : UInt256) (rest : List UInt256)
     smallSigma0Entry, smallSigma0Result, smallSigma0Word, maskedRotr,
     List.exchange, q2, q3, q4, q5, q6, q7, q8, hrun]
 
+/-! ### Bridge to the specification's rotation
+
+`Word.evmRotr32 x n` is `mask32 (x >>> n ||| x <<< (32 - n))`, which is exactly
+`maskedRotr x n (32 - n)`.  The literal complements the backend emits are
+therefore the spec's rotations, and the two sigma helpers are the spec's
+`evmSmallSigma0`/`evmSmallSigma1` outright. -/
+
+theorem maskedRotr_eq_evmRotr32 (x : UInt256) (n : Nat) :
+    maskedRotr x (UInt256.ofNat n) (32 - n) = Word.evmRotr32 x n := by
+  rfl
+
+theorem smallSigma0Word_eq (x : UInt256) :
+    smallSigma0Word x = Word.evmSmallSigma0 x := by
+  rfl
+
+theorem smallSigma1Word_eq (x : UInt256) :
+    smallSigma1Word x = Word.evmSmallSigma1 x := by
+  rfl
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Functions

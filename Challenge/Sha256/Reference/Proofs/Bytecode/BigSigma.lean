@@ -653,4 +653,18 @@ def gasSteps_sigma0 (s : State) (x returnDest : UInt256) (rest : List UInt256)
   · exact hhalt
   · exact hnp
 
+/-! ### Bridge to the specification
+
+Both blocks compute the spec's big sigmas outright: the literal complements the
+backend emits (0x1a/0x15/0x07 and 0x1e/0x13/0x0a) are `32 - n` for the spec's
+rotation amounts, so `maskedRotr` *is* `Word.evmRotr32`. -/
+
+theorem sigma1Word_eq (x : UInt256) :
+    sigma1Word x = Word.evmBigSigma1 x := by
+  rfl
+
+theorem sigma0Word_eq (x : UInt256) :
+    sigma0Word x = Word.evmBigSigma0 x := by
+  rfl
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.BigSigma

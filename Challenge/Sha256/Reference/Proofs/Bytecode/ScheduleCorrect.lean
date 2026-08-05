@@ -1,4 +1,5 @@
 import Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
+import Mathlib.Data.Nat.Bitwise
 
 set_option warningAsError true
 set_option maxRecDepth 10000
@@ -103,8 +104,19 @@ private theorem recurrence_of_words (a b c d : UInt32) :
     mask32_add_distrib, Challenge.EvmProof.Word.mask32_add,
     Challenge.EvmProof.Word.mask32_add, Challenge.EvmProof.Word.mask32_add]
 
-theorem recurrenceWord_eq (s : State) (msgOff returnDest : UInt256)
-    (rest : List UInt256) (padded : ByteArray) (blockOff j : Nat)
+/-- The recurrence's `AND` puts the mask first — the backend pushes it last —
+while `mask32` is stated value-first. -/
+private theorem land_mask32 (y : UInt256) :
+    UInt256.land (UInt256.ofNat 4294967295) y =
+      Challenge.EvmProof.Word.mask32 y := by
+  apply Challenge.EvmProof.Word.word_ext
+  show (Fin.land (UInt256.ofNat 4294967295).val y.val).val =
+    (Fin.land y.val (UInt256.ofNat 4294967295).val).val
+  simp only [Fin.land]
+  congr 1
+  exact Nat.land_comm _ _
+
+theorem recurrenceWord_eq (s : State) (padded : ByteArray) (blockOff j : Nat)
     (hj16 : 16 ≤ j)
     (h2 : Schedule.wValue s (j - 2) =
       Challenge.EvmProof.Word.ofUInt32 (scheduleWord padded blockOff (j - 2)))
@@ -114,18 +126,13 @@ theorem recurrenceWord_eq (s : State) (msgOff returnDest : UInt256)
       Challenge.EvmProof.Word.ofUInt32 (scheduleWord padded blockOff (j - 15)))
     (h16 : Schedule.wValue s (j - 16) =
       Challenge.EvmProof.Word.ofUInt32 (scheduleWord padded blockOff (j - 16))) :
-    Schedule.recurrenceWord s msgOff returnDest rest j =
+    Schedule.recurrenceWord s j =
       Challenge.EvmProof.Word.ofUInt32 (scheduleWord padded blockOff j) := by
   rw [scheduleWord_of_ge padded blockOff j hj16]
-  simp only [Schedule.recurrenceWord, Schedule.firstSum, Schedule.gotW2,
-    Schedule.gotW7, Schedule.gotSsig0, Schedule.gotW15, Schedule.gotW16,
-    Functions.unaryReturned, Accessors.loadReturned, Schedule.wValue]
-  have h2' := h2
-  have h7' := h7
-  have h15' := h15
-  have h16' := h16
-  simp only [Schedule.wValue] at h2' h7' h15' h16'
-  rw [h2', h7', h15', h16']
+  -- the inlined sigma blocks *are* the spec's, so the recurrence reduces to it
+  simp only [Schedule.recurrenceWord, Functions.smallSigma0Word_eq,
+    Functions.smallSigma1Word_eq, land_mask32]
+  rw [h2, h7, h15, h16]
   exact recurrence_of_words _ _ _ _
 
 /-- Correctness of all schedule slots below an exclusive upper bound. -/
