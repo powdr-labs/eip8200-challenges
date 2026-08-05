@@ -631,4 +631,68 @@ def gasSteps_kAt (s : State) (slot : UInt256) (rest : List UInt256)
   · exact hhalt
   · exact hnp
 
+/-! ### The `W`-array store, still a function
+
+The schedule's write helper survived as a call: entry `JUMPDEST` at 912,
+returning `JUMP` at 918, on the frame `[index, value, returnAddress]`.  Seven
+instructions — it shares the `PUSH1 5; SHL; PUSH2 0x320; ADD` address
+computation with the inlined store sites above, then `MSTORE`s and returns. -/
+
+@[simp] private theorem pc912 :
+    Artifact.referenceArtifact.instructionPC 912 = 1667 := by decide
+
+@[simp] private theorem toNat1667 : (UInt256.ofNat 1667).toNat = 1667 := by decide
+@[simp] private theorem toNat1668 : (UInt256.ofNat 1668).toNat = 1668 := by decide
+@[simp] private theorem toNat1670 : (UInt256.ofNat 1670).toNat = 1670 := by decide
+@[simp] private theorem toNat1671 : (UInt256.ofNat 1671).toNat = 1671 := by decide
+@[simp] private theorem toNat1674 : (UInt256.ofNat 1674).toNat = 1674 := by decide
+@[simp] private theorem toNat1675 : (UInt256.ofNat 1675).toNat = 1675 := by decide
+@[simp] private theorem toNat1676 : (UInt256.ofNat 1676).toNat = 1676 := by decide
+
+@[simp] private theorem next912 : (UInt256.ofNat 1667).succ = UInt256.ofNat 1668 := by decide
+
+def wSetPath :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨912, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨913, .push ⟨1, by decide⟩ (UInt256.ofNat 5), by rfl, by decide⟩,
+   ⟨914, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨915, .push ⟨2, by decide⟩ (UInt256.ofNat 0x320), by rfl, by decide⟩,
+   ⟨916, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨917, .op .MSTORE, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨918, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
+
+def wSetEntry (s : State) (index value returnDest : UInt256)
+    (rest : List UInt256) : State :=
+  { s with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 912)
+    stack := index :: value :: returnDest :: rest }
+
+def wSetReturned (s : State) (index value returnDest : UInt256)
+    (rest : List UInt256) : State :=
+  { s with
+    pc := returnDest
+    stack := rest
+    memory := MachineState.writeBytes s.memory
+      (Data.Bytes.natToBytesPadded value.toNat 32) (slotOffset 800 index)
+    activeWords := s.activeWordsAfterUInt256 (slotOffset 800 index) 32 }
+
+set_option maxHeartbeats 2000000 in
+theorem run_wSet (s : State) (index value returnDest : UInt256)
+    (rest : List UInt256) (hcap : rest.length < 1000) (hrun : s.halt = .Running)
+    (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true)
+    (hcode : s.executionEnv.code = referenceBytecode) :
+    Challenge.EvmProof.Stepper.runLocatedBlock wSetPath
+      (wSetEntry s index value returnDest rest) =
+        some (wSetReturned s index value returnDest rest) := by
+  have g1 : rest.length + 1 < 1024 := by omega
+  have g3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  have g4 : rest.length + 1 + 1 + 1 + 1 < 1024 := by omega
+  have hoff : UInt256.ofNat 800 + UInt256.shiftLeft index (UInt256.ofNat 5) =
+      UInt256.shiftLeft index (UInt256.ofNat 5) + UInt256.ofNat 800 :=
+    Challenge.EvmProof.Word.word_add_comm _ _
+  simp [wSetPath, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    wSetEntry, wSetReturned, slotOffset, State.activeWordsAfterUInt256,
+    g1, g3, g4, hoff, hrun, hvalid, hcode]
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Accessors
