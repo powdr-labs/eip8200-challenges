@@ -481,4 +481,517 @@ theorem run_firstExit (s : State) (msgOff : UInt256) (rest : List UInt256)
     firstLoopState, extensionStart, hlt, UInt256.isTrue,
     g0, g1, g2, g3, g4, hrun, hcode]
 
+/-! ### Second loop: extending `W[16..63]`
+
+Each iteration reads `W[k-16]`, `W[k-15]`, `W[k-7]` and `W[k-2]`, applies the
+inlined sigma-0 to `W[k-15]` and the called `smallSigma1` to `W[k-2]`, sums the
+four terms modulo 2^32, and writes the result through the called `wSet`.  Its body
+therefore splits at the two calls into four straight segments.
+-/
+
+@[simp] private theorem pc527 :
+    Artifact.referenceArtifact.instructionPC 527 = 1096 := by decide
+
+@[simp] private theorem pc528 :
+    Artifact.referenceArtifact.instructionPC 528 = 1098 := by decide
+
+@[simp] private theorem pc529 :
+    Artifact.referenceArtifact.instructionPC 529 = 1099 := by decide
+
+@[simp] private theorem pc530 :
+    Artifact.referenceArtifact.instructionPC 530 = 1100 := by decide
+
+@[simp] private theorem pc531 :
+    Artifact.referenceArtifact.instructionPC 531 = 1103 := by decide
+
+@[simp] private theorem pc532 :
+    Artifact.referenceArtifact.instructionPC 532 = 1104 := by decide
+
+@[simp] private theorem pc533 :
+    Artifact.referenceArtifact.instructionPC 533 = 1105 := by decide
+
+@[simp] private theorem pc534 :
+    Artifact.referenceArtifact.instructionPC 534 = 1108 := by decide
+
+@[simp] private theorem pc535 :
+    Artifact.referenceArtifact.instructionPC 535 = 1111 := by decide
+
+@[simp] private theorem pc536 :
+    Artifact.referenceArtifact.instructionPC 536 = 1114 := by decide
+
+@[simp] private theorem pc537 :
+    Artifact.referenceArtifact.instructionPC 537 = 1115 := by decide
+
+@[simp] private theorem pc538 :
+    Artifact.referenceArtifact.instructionPC 538 = 1116 := by decide
+
+@[simp] private theorem pc539 :
+    Artifact.referenceArtifact.instructionPC 539 = 1119 := by decide
+
+@[simp] private theorem pc540 :
+    Artifact.referenceArtifact.instructionPC 540 = 1120 := by decide
+
+@[simp] private theorem pc541 :
+    Artifact.referenceArtifact.instructionPC 541 = 1121 := by decide
+
+@[simp] private theorem pc542 :
+    Artifact.referenceArtifact.instructionPC 542 = 1124 := by decide
+
+@[simp] private theorem pc545 :
+    Artifact.referenceArtifact.instructionPC 545 = 1128 := by decide
+
+@[simp] private theorem pc546 :
+    Artifact.referenceArtifact.instructionPC 546 = 1129 := by decide
+
+@[simp] private theorem pc547 :
+    Artifact.referenceArtifact.instructionPC 547 = 1130 := by decide
+
+@[simp] private theorem pc548 :
+    Artifact.referenceArtifact.instructionPC 548 = 1132 := by decide
+
+@[simp] private theorem pc549 :
+    Artifact.referenceArtifact.instructionPC 549 = 1133 := by decide
+
+@[simp] private theorem pc550 :
+    Artifact.referenceArtifact.instructionPC 550 = 1136 := by decide
+
+@[simp] private theorem pc551 :
+    Artifact.referenceArtifact.instructionPC 551 = 1137 := by decide
+
+@[simp] private theorem pc552 :
+    Artifact.referenceArtifact.instructionPC 552 = 1138 := by decide
+
+@[simp] private theorem pc553 :
+    Artifact.referenceArtifact.instructionPC 553 = 1140 := by decide
+
+@[simp] private theorem pc554 :
+    Artifact.referenceArtifact.instructionPC 554 = 1141 := by decide
+
+@[simp] private theorem pc555 :
+    Artifact.referenceArtifact.instructionPC 555 = 1142 := by decide
+
+@[simp] private theorem pc556 :
+    Artifact.referenceArtifact.instructionPC 556 = 1144 := by decide
+
+@[simp] private theorem pc557 :
+    Artifact.referenceArtifact.instructionPC 557 = 1145 := by decide
+
+@[simp] private theorem pc558 :
+    Artifact.referenceArtifact.instructionPC 558 = 1148 := by decide
+
+@[simp] private theorem pc559 :
+    Artifact.referenceArtifact.instructionPC 559 = 1149 := by decide
+
+@[simp] private theorem pc591 :
+    Artifact.referenceArtifact.instructionPC 591 = 1194 := by decide
+
+@[simp] private theorem pc592 :
+    Artifact.referenceArtifact.instructionPC 592 = 1195 := by decide
+
+@[simp] private theorem pc593 :
+    Artifact.referenceArtifact.instructionPC 593 = 1197 := by decide
+
+@[simp] private theorem pc594 :
+    Artifact.referenceArtifact.instructionPC 594 = 1198 := by decide
+
+@[simp] private theorem pc595 :
+    Artifact.referenceArtifact.instructionPC 595 = 1199 := by decide
+
+@[simp] private theorem pc596 :
+    Artifact.referenceArtifact.instructionPC 596 = 1201 := by decide
+
+@[simp] private theorem pc597 :
+    Artifact.referenceArtifact.instructionPC 597 = 1202 := by decide
+
+@[simp] private theorem pc598 :
+    Artifact.referenceArtifact.instructionPC 598 = 1205 := by decide
+
+@[simp] private theorem pc599 :
+    Artifact.referenceArtifact.instructionPC 599 = 1206 := by decide
+
+@[simp] private theorem pc600 :
+    Artifact.referenceArtifact.instructionPC 600 = 1207 := by decide
+
+@[simp] private theorem pc601 :
+    Artifact.referenceArtifact.instructionPC 601 = 1209 := by decide
+
+@[simp] private theorem pc602 :
+    Artifact.referenceArtifact.instructionPC 602 = 1210 := by decide
+
+@[simp] private theorem pc603 :
+    Artifact.referenceArtifact.instructionPC 603 = 1211 := by decide
+
+@[simp] private theorem pc604 :
+    Artifact.referenceArtifact.instructionPC 604 = 1213 := by decide
+
+@[simp] private theorem pc605 :
+    Artifact.referenceArtifact.instructionPC 605 = 1214 := by decide
+
+@[simp] private theorem pc606 :
+    Artifact.referenceArtifact.instructionPC 606 = 1217 := by decide
+
+@[simp] private theorem pc607 :
+    Artifact.referenceArtifact.instructionPC 607 = 1218 := by decide
+
+@[simp] private theorem pc608 :
+    Artifact.referenceArtifact.instructionPC 608 = 1219 := by decide
+
+@[simp] private theorem pc609 :
+    Artifact.referenceArtifact.instructionPC 609 = 1222 := by decide
+
+@[simp] private theorem pc610 :
+    Artifact.referenceArtifact.instructionPC 610 = 1223 := by decide
+
+@[simp] private theorem pc611 :
+    Artifact.referenceArtifact.instructionPC 611 = 1226 := by decide
+
+@[simp] private theorem pc612 :
+    Artifact.referenceArtifact.instructionPC 612 = 1227 := by decide
+
+@[simp] private theorem pc613 :
+    Artifact.referenceArtifact.instructionPC 613 = 1228 := by decide
+
+@[simp] private theorem pc614 :
+    Artifact.referenceArtifact.instructionPC 614 = 1229 := by decide
+
+@[simp] private theorem pc615 :
+    Artifact.referenceArtifact.instructionPC 615 = 1230 := by decide
+
+@[simp] private theorem pc616 :
+    Artifact.referenceArtifact.instructionPC 616 = 1231 := by decide
+
+@[simp] private theorem pc617 :
+    Artifact.referenceArtifact.instructionPC 617 = 1232 := by decide
+
+@[simp] private theorem pc618 :
+    Artifact.referenceArtifact.instructionPC 618 = 1237 := by decide
+
+@[simp] private theorem pc619 :
+    Artifact.referenceArtifact.instructionPC 619 = 1238 := by decide
+
+@[simp] private theorem pc620 :
+    Artifact.referenceArtifact.instructionPC 620 = 1241 := by decide
+
+@[simp] private theorem pc621 :
+    Artifact.referenceArtifact.instructionPC 621 = 1242 := by decide
+
+@[simp] private theorem pc622 :
+    Artifact.referenceArtifact.instructionPC 622 = 1243 := by decide
+
+@[simp] private theorem pc623 :
+    Artifact.referenceArtifact.instructionPC 623 = 1246 := by decide
+
+@[simp] private theorem pc624 :
+    Artifact.referenceArtifact.instructionPC 624 = 1247 := by decide
+
+@[simp] private theorem pc625 :
+    Artifact.referenceArtifact.instructionPC 625 = 1248 := by decide
+
+@[simp] private theorem pc626 :
+    Artifact.referenceArtifact.instructionPC 626 = 1249 := by decide
+
+@[simp] private theorem pc627 :
+    Artifact.referenceArtifact.instructionPC 627 = 1251 := by decide
+
+@[simp] private theorem pc628 :
+    Artifact.referenceArtifact.instructionPC 628 = 1252 := by decide
+
+@[simp] private theorem pc629 :
+    Artifact.referenceArtifact.instructionPC 629 = 1255 := by decide
+
+@[simp] private theorem toNat1096 : (UInt256.ofNat 1096).toNat = 1096 := by decide
+@[simp] private theorem toNat1098 : (UInt256.ofNat 1098).toNat = 1098 := by decide
+@[simp] private theorem toNat1099 : (UInt256.ofNat 1099).toNat = 1099 := by decide
+@[simp] private theorem toNat1100 : (UInt256.ofNat 1100).toNat = 1100 := by decide
+@[simp] private theorem toNat1103 : (UInt256.ofNat 1103).toNat = 1103 := by decide
+@[simp] private theorem toNat1104 : (UInt256.ofNat 1104).toNat = 1104 := by decide
+@[simp] private theorem toNat1105 : (UInt256.ofNat 1105).toNat = 1105 := by decide
+@[simp] private theorem toNat1108 : (UInt256.ofNat 1108).toNat = 1108 := by decide
+@[simp] private theorem toNat1111 : (UInt256.ofNat 1111).toNat = 1111 := by decide
+@[simp] private theorem toNat1114 : (UInt256.ofNat 1114).toNat = 1114 := by decide
+@[simp] private theorem toNat1115 : (UInt256.ofNat 1115).toNat = 1115 := by decide
+@[simp] private theorem toNat1116 : (UInt256.ofNat 1116).toNat = 1116 := by decide
+@[simp] private theorem toNat1119 : (UInt256.ofNat 1119).toNat = 1119 := by decide
+@[simp] private theorem toNat1120 : (UInt256.ofNat 1120).toNat = 1120 := by decide
+@[simp] private theorem toNat1121 : (UInt256.ofNat 1121).toNat = 1121 := by decide
+@[simp] private theorem toNat1124 : (UInt256.ofNat 1124).toNat = 1124 := by decide
+@[simp] private theorem toNat1128 : (UInt256.ofNat 1128).toNat = 1128 := by decide
+@[simp] private theorem toNat1129 : (UInt256.ofNat 1129).toNat = 1129 := by decide
+@[simp] private theorem toNat1130 : (UInt256.ofNat 1130).toNat = 1130 := by decide
+@[simp] private theorem toNat1132 : (UInt256.ofNat 1132).toNat = 1132 := by decide
+@[simp] private theorem toNat1133 : (UInt256.ofNat 1133).toNat = 1133 := by decide
+@[simp] private theorem toNat1136 : (UInt256.ofNat 1136).toNat = 1136 := by decide
+@[simp] private theorem toNat1137 : (UInt256.ofNat 1137).toNat = 1137 := by decide
+@[simp] private theorem toNat1138 : (UInt256.ofNat 1138).toNat = 1138 := by decide
+@[simp] private theorem toNat1140 : (UInt256.ofNat 1140).toNat = 1140 := by decide
+@[simp] private theorem toNat1141 : (UInt256.ofNat 1141).toNat = 1141 := by decide
+@[simp] private theorem toNat1142 : (UInt256.ofNat 1142).toNat = 1142 := by decide
+@[simp] private theorem toNat1144 : (UInt256.ofNat 1144).toNat = 1144 := by decide
+@[simp] private theorem toNat1145 : (UInt256.ofNat 1145).toNat = 1145 := by decide
+@[simp] private theorem toNat1148 : (UInt256.ofNat 1148).toNat = 1148 := by decide
+@[simp] private theorem toNat1149 : (UInt256.ofNat 1149).toNat = 1149 := by decide
+@[simp] private theorem toNat1194 : (UInt256.ofNat 1194).toNat = 1194 := by decide
+@[simp] private theorem toNat1195 : (UInt256.ofNat 1195).toNat = 1195 := by decide
+@[simp] private theorem toNat1197 : (UInt256.ofNat 1197).toNat = 1197 := by decide
+@[simp] private theorem toNat1198 : (UInt256.ofNat 1198).toNat = 1198 := by decide
+@[simp] private theorem toNat1199 : (UInt256.ofNat 1199).toNat = 1199 := by decide
+@[simp] private theorem toNat1201 : (UInt256.ofNat 1201).toNat = 1201 := by decide
+@[simp] private theorem toNat1202 : (UInt256.ofNat 1202).toNat = 1202 := by decide
+@[simp] private theorem toNat1205 : (UInt256.ofNat 1205).toNat = 1205 := by decide
+@[simp] private theorem toNat1206 : (UInt256.ofNat 1206).toNat = 1206 := by decide
+@[simp] private theorem toNat1207 : (UInt256.ofNat 1207).toNat = 1207 := by decide
+@[simp] private theorem toNat1209 : (UInt256.ofNat 1209).toNat = 1209 := by decide
+@[simp] private theorem toNat1210 : (UInt256.ofNat 1210).toNat = 1210 := by decide
+@[simp] private theorem toNat1211 : (UInt256.ofNat 1211).toNat = 1211 := by decide
+@[simp] private theorem toNat1213 : (UInt256.ofNat 1213).toNat = 1213 := by decide
+@[simp] private theorem toNat1214 : (UInt256.ofNat 1214).toNat = 1214 := by decide
+@[simp] private theorem toNat1217 : (UInt256.ofNat 1217).toNat = 1217 := by decide
+@[simp] private theorem toNat1218 : (UInt256.ofNat 1218).toNat = 1218 := by decide
+@[simp] private theorem toNat1219 : (UInt256.ofNat 1219).toNat = 1219 := by decide
+@[simp] private theorem toNat1222 : (UInt256.ofNat 1222).toNat = 1222 := by decide
+@[simp] private theorem toNat1223 : (UInt256.ofNat 1223).toNat = 1223 := by decide
+@[simp] private theorem toNat1226 : (UInt256.ofNat 1226).toNat = 1226 := by decide
+@[simp] private theorem toNat1227 : (UInt256.ofNat 1227).toNat = 1227 := by decide
+@[simp] private theorem toNat1228 : (UInt256.ofNat 1228).toNat = 1228 := by decide
+@[simp] private theorem toNat1229 : (UInt256.ofNat 1229).toNat = 1229 := by decide
+@[simp] private theorem toNat1230 : (UInt256.ofNat 1230).toNat = 1230 := by decide
+@[simp] private theorem toNat1231 : (UInt256.ofNat 1231).toNat = 1231 := by decide
+@[simp] private theorem toNat1232 : (UInt256.ofNat 1232).toNat = 1232 := by decide
+@[simp] private theorem toNat1237 : (UInt256.ofNat 1237).toNat = 1237 := by decide
+@[simp] private theorem toNat1238 : (UInt256.ofNat 1238).toNat = 1238 := by decide
+@[simp] private theorem toNat1241 : (UInt256.ofNat 1241).toNat = 1241 := by decide
+@[simp] private theorem toNat1242 : (UInt256.ofNat 1242).toNat = 1242 := by decide
+@[simp] private theorem toNat1243 : (UInt256.ofNat 1243).toNat = 1243 := by decide
+@[simp] private theorem toNat1246 : (UInt256.ofNat 1246).toNat = 1246 := by decide
+@[simp] private theorem toNat1247 : (UInt256.ofNat 1247).toNat = 1247 := by decide
+@[simp] private theorem toNat1248 : (UInt256.ofNat 1248).toNat = 1248 := by decide
+@[simp] private theorem toNat1249 : (UInt256.ofNat 1249).toNat = 1249 := by decide
+@[simp] private theorem toNat1251 : (UInt256.ofNat 1251).toNat = 1251 := by decide
+@[simp] private theorem toNat1252 : (UInt256.ofNat 1252).toNat = 1252 := by decide
+@[simp] private theorem toNat1255 : (UInt256.ofNat 1255).toNat = 1255 := by decide
+
+@[simp] private theorem next526 : (UInt256.ofNat 1095).succ = UInt256.ofNat 1096 := by decide
+@[simp] private theorem next527 : UInt256.ofNat 1096 + UInt256.ofNat 2 = UInt256.ofNat 1098 := by decide
+@[simp] private theorem next528 : (UInt256.ofNat 1098).succ = UInt256.ofNat 1099 := by decide
+@[simp] private theorem next529 : (UInt256.ofNat 1099).succ = UInt256.ofNat 1100 := by decide
+@[simp] private theorem next530 : UInt256.ofNat 1100 + UInt256.ofNat 3 = UInt256.ofNat 1103 := by decide
+@[simp] private theorem next531 : (UInt256.ofNat 1103).succ = UInt256.ofNat 1104 := by decide
+@[simp] private theorem next532 : (UInt256.ofNat 1104).succ = UInt256.ofNat 1105 := by decide
+@[simp] private theorem next533 : UInt256.ofNat 1105 + UInt256.ofNat 3 = UInt256.ofNat 1108 := by decide
+@[simp] private theorem next534 : UInt256.ofNat 1108 + UInt256.ofNat 3 = UInt256.ofNat 1111 := by decide
+@[simp] private theorem next535 : UInt256.ofNat 1111 + UInt256.ofNat 3 = UInt256.ofNat 1114 := by decide
+@[simp] private theorem next536 : (UInt256.ofNat 1114).succ = UInt256.ofNat 1115 := by decide
+@[simp] private theorem next537 : (UInt256.ofNat 1115).succ = UInt256.ofNat 1116 := by decide
+@[simp] private theorem next538 : UInt256.ofNat 1116 + UInt256.ofNat 3 = UInt256.ofNat 1119 := by decide
+@[simp] private theorem next539 : (UInt256.ofNat 1119).succ = UInt256.ofNat 1120 := by decide
+@[simp] private theorem next540 : (UInt256.ofNat 1120).succ = UInt256.ofNat 1121 := by decide
+@[simp] private theorem next541 : UInt256.ofNat 1121 + UInt256.ofNat 3 = UInt256.ofNat 1124 := by decide
+@[simp] private theorem next542 : (UInt256.ofNat 1124).succ = UInt256.ofNat 1125 := by decide
+@[simp] private theorem next544 : UInt256.ofNat 1126 + UInt256.ofNat 2 = UInt256.ofNat 1128 := by decide
+@[simp] private theorem next545 : (UInt256.ofNat 1128).succ = UInt256.ofNat 1129 := by decide
+@[simp] private theorem next546 : (UInt256.ofNat 1129).succ = UInt256.ofNat 1130 := by decide
+@[simp] private theorem next547 : UInt256.ofNat 1130 + UInt256.ofNat 2 = UInt256.ofNat 1132 := by decide
+@[simp] private theorem next548 : (UInt256.ofNat 1132).succ = UInt256.ofNat 1133 := by decide
+@[simp] private theorem next549 : UInt256.ofNat 1133 + UInt256.ofNat 3 = UInt256.ofNat 1136 := by decide
+@[simp] private theorem next550 : (UInt256.ofNat 1136).succ = UInt256.ofNat 1137 := by decide
+@[simp] private theorem next551 : (UInt256.ofNat 1137).succ = UInt256.ofNat 1138 := by decide
+@[simp] private theorem next552 : UInt256.ofNat 1138 + UInt256.ofNat 2 = UInt256.ofNat 1140 := by decide
+@[simp] private theorem next553 : (UInt256.ofNat 1140).succ = UInt256.ofNat 1141 := by decide
+@[simp] private theorem next554 : (UInt256.ofNat 1141).succ = UInt256.ofNat 1142 := by decide
+@[simp] private theorem next555 : UInt256.ofNat 1142 + UInt256.ofNat 2 = UInt256.ofNat 1144 := by decide
+@[simp] private theorem next556 : (UInt256.ofNat 1144).succ = UInt256.ofNat 1145 := by decide
+@[simp] private theorem next557 : UInt256.ofNat 1145 + UInt256.ofNat 3 = UInt256.ofNat 1148 := by decide
+@[simp] private theorem next558 : (UInt256.ofNat 1148).succ = UInt256.ofNat 1149 := by decide
+@[simp] private theorem next559 : (UInt256.ofNat 1149).succ = UInt256.ofNat 1150 := by decide
+@[simp] private theorem next591 : (UInt256.ofNat 1194).succ = UInt256.ofNat 1195 := by decide
+@[simp] private theorem next592 : UInt256.ofNat 1195 + UInt256.ofNat 2 = UInt256.ofNat 1197 := by decide
+@[simp] private theorem next593 : (UInt256.ofNat 1197).succ = UInt256.ofNat 1198 := by decide
+@[simp] private theorem next594 : (UInt256.ofNat 1198).succ = UInt256.ofNat 1199 := by decide
+@[simp] private theorem next595 : UInt256.ofNat 1199 + UInt256.ofNat 2 = UInt256.ofNat 1201 := by decide
+@[simp] private theorem next596 : (UInt256.ofNat 1201).succ = UInt256.ofNat 1202 := by decide
+@[simp] private theorem next597 : UInt256.ofNat 1202 + UInt256.ofNat 3 = UInt256.ofNat 1205 := by decide
+@[simp] private theorem next598 : (UInt256.ofNat 1205).succ = UInt256.ofNat 1206 := by decide
+@[simp] private theorem next599 : (UInt256.ofNat 1206).succ = UInt256.ofNat 1207 := by decide
+@[simp] private theorem next600 : UInt256.ofNat 1207 + UInt256.ofNat 2 = UInt256.ofNat 1209 := by decide
+@[simp] private theorem next601 : (UInt256.ofNat 1209).succ = UInt256.ofNat 1210 := by decide
+@[simp] private theorem next602 : (UInt256.ofNat 1210).succ = UInt256.ofNat 1211 := by decide
+@[simp] private theorem next603 : UInt256.ofNat 1211 + UInt256.ofNat 2 = UInt256.ofNat 1213 := by decide
+@[simp] private theorem next604 : (UInt256.ofNat 1213).succ = UInt256.ofNat 1214 := by decide
+@[simp] private theorem next605 : UInt256.ofNat 1214 + UInt256.ofNat 3 = UInt256.ofNat 1217 := by decide
+@[simp] private theorem next606 : (UInt256.ofNat 1217).succ = UInt256.ofNat 1218 := by decide
+@[simp] private theorem next607 : (UInt256.ofNat 1218).succ = UInt256.ofNat 1219 := by decide
+@[simp] private theorem next608 : UInt256.ofNat 1219 + UInt256.ofNat 3 = UInt256.ofNat 1222 := by decide
+@[simp] private theorem next609 : (UInt256.ofNat 1222).succ = UInt256.ofNat 1223 := by decide
+@[simp] private theorem next610 : UInt256.ofNat 1223 + UInt256.ofNat 3 = UInt256.ofNat 1226 := by decide
+@[simp] private theorem next611 : (UInt256.ofNat 1226).succ = UInt256.ofNat 1227 := by decide
+@[simp] private theorem next612 : (UInt256.ofNat 1227).succ = UInt256.ofNat 1228 := by decide
+@[simp] private theorem next613 : (UInt256.ofNat 1228).succ = UInt256.ofNat 1229 := by decide
+@[simp] private theorem next614 : (UInt256.ofNat 1229).succ = UInt256.ofNat 1230 := by decide
+@[simp] private theorem next615 : (UInt256.ofNat 1230).succ = UInt256.ofNat 1231 := by decide
+@[simp] private theorem next616 : (UInt256.ofNat 1231).succ = UInt256.ofNat 1232 := by decide
+@[simp] private theorem next617 : UInt256.ofNat 1232 + UInt256.ofNat 5 = UInt256.ofNat 1237 := by decide
+@[simp] private theorem next618 : (UInt256.ofNat 1237).succ = UInt256.ofNat 1238 := by decide
+@[simp] private theorem next619 : UInt256.ofNat 1238 + UInt256.ofNat 3 = UInt256.ofNat 1241 := by decide
+@[simp] private theorem next620 : (UInt256.ofNat 1241).succ = UInt256.ofNat 1242 := by decide
+@[simp] private theorem next621 : (UInt256.ofNat 1242).succ = UInt256.ofNat 1243 := by decide
+@[simp] private theorem next622 : UInt256.ofNat 1243 + UInt256.ofNat 3 = UInt256.ofNat 1246 := by decide
+@[simp] private theorem next623 : (UInt256.ofNat 1246).succ = UInt256.ofNat 1247 := by decide
+@[simp] private theorem next624 : (UInt256.ofNat 1247).succ = UInt256.ofNat 1248 := by decide
+@[simp] private theorem next625 : (UInt256.ofNat 1248).succ = UInt256.ofNat 1249 := by decide
+@[simp] private theorem next626 : UInt256.ofNat 1249 + UInt256.ofNat 2 = UInt256.ofNat 1251 := by decide
+@[simp] private theorem next627 : (UInt256.ofNat 1251).succ = UInt256.ofNat 1252 := by decide
+@[simp] private theorem next628 : UInt256.ofNat 1252 + UInt256.ofNat 3 = UInt256.ofNat 1255 := by decide
+
+def extConditionPath :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨526, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨527, .push ⟨1, by decide⟩ (UInt256.ofNat 64), by rfl, by decide⟩,
+   ⟨528, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨529, .op .LT, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨530, .push ⟨2, by decide⟩ (UInt256.ofNat 0x465), by rfl, by decide⟩,
+   ⟨531, .op .JUMPI, by rfl, wfOp (by decide) trivial rfl⟩]
+
+/-- Loads `W[k-16]` then `W[k-15]`, leaving the latter on top for sigma-0. -/
+def extLoadsPath :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨543, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨544, .push ⟨1, by decide⟩ (UInt256.ofNat 16), by rfl, by decide⟩,
+   ⟨545, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨546, .op .SUB, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨547, .push ⟨1, by decide⟩ (UInt256.ofNat 5), by rfl, by decide⟩,
+   ⟨548, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨549, .push ⟨2, by decide⟩ (UInt256.ofNat 0x320), by rfl, by decide⟩,
+   ⟨550, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨551, .op .MLOAD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨552, .push ⟨1, by decide⟩ (UInt256.ofNat 15), by rfl, by decide⟩,
+   ⟨553, .op (.Dup ⟨2, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨554, .op .SUB, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨555, .push ⟨1, by decide⟩ (UInt256.ofNat 5), by rfl, by decide⟩,
+   ⟨556, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨557, .push ⟨2, by decide⟩ (UInt256.ofNat 0x320), by rfl, by decide⟩,
+   ⟨558, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨559, .op .MLOAD, by rfl, wfOp (by decide) trivial rfl⟩]
+
+/-- Adds `W[k-16]`, loads `W[k-7]` and `W[k-2]`, and sets up the `smallSigma1`
+call. -/
+def extMiddlePath :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨591, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨592, .push ⟨1, by decide⟩ (UInt256.ofNat 7), by rfl, by decide⟩,
+   ⟨593, .op (.Dup ⟨2, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨594, .op .SUB, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨595, .push ⟨1, by decide⟩ (UInt256.ofNat 5), by rfl, by decide⟩,
+   ⟨596, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨597, .push ⟨2, by decide⟩ (UInt256.ofNat 0x320), by rfl, by decide⟩,
+   ⟨598, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨599, .op .MLOAD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨600, .push ⟨1, by decide⟩ (UInt256.ofNat 2), by rfl, by decide⟩,
+   ⟨601, .op (.Dup ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨602, .op .SUB, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨603, .push ⟨1, by decide⟩ (UInt256.ofNat 5), by rfl, by decide⟩,
+   ⟨604, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨605, .push ⟨2, by decide⟩ (UInt256.ofNat 0x320), by rfl, by decide⟩,
+   ⟨606, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨607, .op .MLOAD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨608, .push ⟨2, by decide⟩ (UInt256.ofNat 0x4cb), by rfl, by decide⟩,
+   ⟨609, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨610, .push ⟨2, by decide⟩ (UInt256.ofNat 0x5dd), by rfl, by decide⟩,
+   ⟨611, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
+
+/-- Folds sigma-1's result in, masks to 32 bits, and sets up the `wSet` call. -/
+def extCombinePath :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨612, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨613, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨614, .op .POP, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨615, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨616, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨617, .push ⟨4, by decide⟩ (UInt256.ofNat 4294967295), by rfl, by decide⟩,
+   ⟨618, .op .AND, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨619, .push ⟨2, by decide⟩ (UInt256.ofNat 0x4df), by rfl, by decide⟩,
+   ⟨620, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨621, .op (.Dup ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨622, .push ⟨2, by decide⟩ (UInt256.ofNat 0x683), by rfl, by decide⟩,
+   ⟨623, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
+
+/-- Drops the stored word and advances the counter. -/
+def extAdvancePath :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨624, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨625, .op .POP, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨626, .push ⟨1, by decide⟩ (UInt256.ofNat 1), by rfl, by decide⟩,
+   ⟨627, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨628, .push ⟨2, by decide⟩ (UInt256.ofNat 0x447), by rfl, by decide⟩,
+   ⟨629, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
+
+/-- The exit: the condition falling through at `k = 64`, then the `MCOPY` of the
+chaining values into the working area and the jump to the compression loop. -/
+def extExitPath :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨526, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨527, .push ⟨1, by decide⟩ (UInt256.ofNat 64), by rfl, by decide⟩,
+   ⟨528, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨529, .op .LT, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨530, .push ⟨2, by decide⟩ (UInt256.ofNat 0x465), by rfl, by decide⟩,
+   ⟨531, .op .JUMPI, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨532, .op .POP, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨533, .push ⟨2, by decide⟩ (UInt256.ofNat 0x100), by rfl, by decide⟩,
+   ⟨534, .push ⟨2, by decide⟩ (UInt256.ofNat 0x120), by rfl, by decide⟩,
+   ⟨535, .push ⟨2, by decide⟩ (UInt256.ofNat 0x220), by rfl, by decide⟩,
+   ⟨536, .op .MCOPY, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨537, .push ⟨0, by decide⟩ ⟨0⟩, by rfl, by decide⟩,
+   ⟨538, .push ⟨2, by decide⟩ (UInt256.ofNat 0x23f), by rfl, by decide⟩,
+   ⟨539, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
+
+/-! ### Extension-loop state model
+
+The four reads are at `W[k-16]`, `W[k-15]`, `W[k-7]` and `W[k-2]`, and the write
+is at `W[k]`.  As in the first loop each read is taken from memory as it stands
+when the iteration runs — which here is not merely equivalent to reading the
+original but *required*: `W[k-2]` is a word this loop wrote two iterations ago. -/
+
+/-- `W[k - off]`, read from `memory`. -/
+def wRead (memory : ByteArray) (k : UInt256) (off : Nat) : UInt256 :=
+  MachineState.readWord memory (wSlotAddr (k - UInt256.ofNat off)).toNat
+
+/-- The word iteration `k` stores: the four terms summed and truncated to 32
+bits, in the association and operand order the bytecode uses. -/
+def extWord (memory : ByteArray) (k : UInt256) : UInt256 :=
+  UInt256.land (UInt256.ofNat 4294967295)
+    ((Functions.smallSigma1Word (wRead memory k 2) + wRead memory k 7) +
+      (Functions.smallSigma0Word (wRead memory k 15) + wRead memory k 16))
+
+/-- Memory after the extension loop has written `n` words, starting at `W[16]`. -/
+def extMemory (base : ByteArray) : Nat → ByteArray
+  | 0 => base
+  | n + 1 =>
+      let prev := extMemory base n
+      MachineState.writeBytes prev
+        (Data.Bytes.natToBytesPadded
+          (extWord prev (UInt256.ofNat (16 + n))).toNat 32)
+        (wSlotAddr (UInt256.ofNat (16 + n))).toNat
+
+/-- Active words after `n` extension iterations.  Each iteration touches memory
+five times: the four reads, then the write. -/
+def extActiveWords (base : UInt256) (mem : ByteArray) : Nat → UInt256
+  | 0 => base
+  | n + 1 =>
+      let k := UInt256.ofNat (16 + n)
+      let step (aw : UInt256) (addr : UInt256) : UInt256 :=
+        UInt256.ofNat (MachineState.activeWordsAfter aw.toNat addr.toNat 32)
+      let aw := extActiveWords base mem n
+      step (step (step (step (step aw (wSlotAddr (k - UInt256.ofNat 16)))
+        (wSlotAddr (k - UInt256.ofNat 15)))
+        (wSlotAddr (k - UInt256.ofNat 7)))
+        (wSlotAddr (k - UInt256.ofNat 2)))
+        (wSlotAddr k)
+
+/-- The extension loop's state at counter `16 + n`. -/
+def extLoopState (s : State) (rest : List UInt256) (n : Nat) : State :=
+  { s with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 526)
+    stack := UInt256.ofNat (16 + n) :: rest
+    memory := extMemory s.memory n
+    activeWords := extActiveWords s.activeWords s.memory n }
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
