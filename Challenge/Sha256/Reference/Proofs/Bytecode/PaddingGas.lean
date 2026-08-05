@@ -36,7 +36,7 @@ private theorem lengthSetup_cost_run (input : ByteArray) (hfit : CalldataFits in
 
 theorem lengthSetup_cost (input : ByteArray) (hfit : CalldataFits input) :
     (PaddingTrace.gasSteps_lengthSetup input hfit).cost =
-      2 + 3 * ((input.size + 31) / 32) +
+      24 + 3 * ((input.size + 31) / 32) +
         MachineState.memCost
           (PaddingTrace.padSentinel input).activeWords.toNat := by
   have hsize : input.size < 2 ^ 256 := by
@@ -50,10 +50,16 @@ theorem lengthSetup_cost (input : ByteArray) (hfit : CalldataFits input) :
     unfold CalldataFits at hfit
     norm_num [Padding.messageOffset] at hfit ⊢
     omega
-  have hadd : (UInt256.ofNat Padding.messageOffset +
-      UInt256.ofNat input.size).toNat = Padding.messageOffset + input.size := by
-    rw [Challenge.EvmProof.Word.ofNat_add_ofNat hsum,
-      Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt hsum]
+  -- the new schedule computes the sentinel offset as `size + messageOffset`;
+  -- without this the goal carries both orders as distinct atoms and `omega`
+  -- cannot relate them
+  have hsum' : input.size + Padding.messageOffset < 2 ^ 256 := by omega
+  have hadd : (UInt256.ofNat input.size +
+      UInt256.ofNat Padding.messageOffset).toNat =
+      Padding.messageOffset + input.size := by
+    rw [Challenge.EvmProof.Word.ofNat_add_ofNat hsum',
+      Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt hsum',
+      Nat.add_comm]
   have hsizeWord : (UInt256.ofNat input.size).toNat = input.size := by
     rw [Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt hsize]
   have hoffWord : (UInt256.ofNat Padding.messageOffset).toNat =
@@ -104,7 +110,8 @@ theorem lengthSetup_cost (input : ByteArray) (hfit : CalldataFits input) :
     Gas.totalCost, Gas.calldatacopyTotal, Gas.mstore8Total,
     MachineState.memExpansionDelta, Gas.copyWordCost,
     PaddingTrace.padSentinel, PaddingTrace.padCopied,
-    State.activeWordsAfterUInt256, hsizeWord, hoffWord, hzero, hadd,
+    State.activeWordsAfterUInt256, List.exchange, hsizeWord, hoffWord, hzero,
+    hadd,
     Gas.baseCost, show (PaddingTrace.padLengthReady input).activeWords.toNat = 17
       by rfl]
   change MachineState.activeWordsAfter 17 Padding.messageOffset input.size <
@@ -117,37 +124,39 @@ theorem lengthSetup_cost (input : ByteArray) (hfit : CalldataFits input) :
   dsimp [aw₁, aw₂] at hmem₁ hmem₂
   have hmem17 : MachineState.memCost 17 = 51 := by decide
   rw [hmem17] at hmem₁ ⊢
+  -- the copy-word count is stated over `input.size`, while the residual goal
+  -- still carries it as `(UInt256.ofNat input.size).toNat`
+  simp only [hsizeWord] at *
   omega
 
 private theorem lengthCondition_cost (input : ByteArray)
     (i : Nat) (hi : i < 8) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost
       PaddingTrace.lengthConditionPath
-      (PaddingTrace.lengthLoopState input i) = 25 := by
+      (PaddingTrace.lengthLoopState input i) = 23 := by
   have hi256 : i < 2 ^ 256 := by omega
   have hiWord : (UInt256.ofNat i).toNat = i := by
     rw [Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt hi256]
   have hlt : UInt256.lt (UInt256.ofNat i) (UInt256.ofNat 8) =
       UInt256.ofNat 1 := by
     simp [UInt256.lt, hiWord, Challenge.EvmProof.Word.word_toNat_ofNat, hi]
-  have hzero : UInt256.isZero (UInt256.ofNat 1) = (⟨0⟩ : UInt256) := by decide
   have hzeroToNat : (⟨0⟩ : UInt256).toNat = 0 := rfl
   simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthConditionPath, PaddingTrace.lengthIterationPath,
+    PaddingTrace.lengthConditionPath,
     Challenge.EvmProof.Stepper.instrCost,
     Challenge.EvmProof.Stepper.runLocated,
     Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
-    PaddingTrace.lengthLoopState, hlt, hzero]
+    PaddingTrace.lengthLoopState, hlt]
 
 private theorem lengthByte_cost (input : ByteArray) (i : Nat) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost
-      PaddingTrace.lengthBytePath (PaddingTrace.lengthBodyState input i) = 27 := by
+      PaddingTrace.lengthBytePath (PaddingTrace.lengthBodyState input i) = 31 := by
   simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthBytePath, PaddingTrace.lengthIterationPath,
+    PaddingTrace.lengthBytePath,
     Challenge.EvmProof.Stepper.instrCost,
     Challenge.EvmProof.Stepper.runLocated,
     Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
-    PaddingTrace.lengthBodyState, PaddingTrace.lengthLoopState]
+    PaddingTrace.lengthBodyState, PaddingTrace.lengthLoopState, List.exchange]
 
 private theorem lengthStore_cost (input : ByteArray) (hfit : CalldataFits input)
     (i : Nat) (hi : i < 8) :
@@ -158,6 +167,12 @@ private theorem lengthStore_cost (input : ByteArray) (hfit : CalldataFits input)
         MachineState.memCost
           (PaddingTrace.lengthLoopActiveWords input i).toNat) := by
   have hoff := PaddingTrace.lengthOffset_add_toNat input hfit i (by omega)
+  -- the store site adds `i + lengthOffset`, the other order
+  have hoffc : (UInt256.ofNat i +
+      PaddingTrace.lengthOffsetWord input).toNat =
+      Padding.messageOffset + Padding.paddedLength input.size - 8 + i := by
+    rw [Challenge.EvmProof.Word.word_add_comm]
+    exact hoff
   have haddr : Padding.messageOffset + Padding.paddedLength input.size - 8 + i + 1 <
       2 ^ 256 := by
     have hlt := Padding.paddedLength_lt input.size
@@ -179,13 +194,14 @@ private theorem lengthStore_cost (input : ByteArray) (hfit : CalldataFits input)
           Nat.div_le_self _ _
       omega
   simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthStorePath, PaddingTrace.lengthIterationPath,
+    PaddingTrace.lengthStorePath,
     Challenge.EvmProof.Stepper.instrCost,
     Challenge.EvmProof.Stepper.runLocated,
     Challenge.EvmProof.Stepper.runInstr,
     Gas.totalCost, Gas.mstore8Total, MachineState.memExpansionDelta,
     Gas.baseCost, PaddingTrace.lengthByteState,
-    PaddingTrace.lengthLoopState, PaddingTrace.lengthLoopActiveWords, hoff]
+    PaddingTrace.lengthLoopState, PaddingTrace.lengthLoopActiveWords, hoff,
+    hoffc]
   norm_num at haw_lt
   rw [Nat.mod_eq_of_lt haw_lt]
   omega
@@ -194,24 +210,23 @@ private theorem lengthIncrement_cost (input : ByteArray)
     (i : Nat) (hi : i < 8) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost
       PaddingTrace.lengthIncrementPath
-      (PaddingTrace.lengthStoredState input i) = 14 := by
+      (PaddingTrace.lengthStoredState input i) = 6 := by
   have hiSucc : i + 1 < 2 ^ 256 := by omega
   have hadd : UInt256.ofNat i + UInt256.ofNat 1 = UInt256.ofNat (i + 1) :=
     Challenge.EvmProof.Word.ofNat_add_ofNat hiSucc
   simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthIncrementPath, PaddingTrace.lengthIterationPath,
+    PaddingTrace.lengthIncrementPath,
     Challenge.EvmProof.Stepper.instrCost,
     Challenge.EvmProof.Stepper.runLocated,
     Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
-    PaddingTrace.lengthStoredState, PaddingTrace.lengthLoopState, hadd,
-    List.exchange]
+    PaddingTrace.lengthStoredState, PaddingTrace.lengthLoopState]
 
 private theorem lengthBack_cost (input : ByteArray) (i : Nat) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost
       PaddingTrace.lengthBackPath
-      (PaddingTrace.lengthIncrementedState input i) = 12 := by
+      (PaddingTrace.lengthIncrementedState input i) = 11 := by
   simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthBackPath, PaddingTrace.lengthIterationPath,
+    PaddingTrace.lengthBackPath,
     Challenge.EvmProof.Stepper.instrCost,
     Challenge.EvmProof.Stepper.runLocated,
     Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
@@ -221,7 +236,7 @@ private theorem lengthBack_cost (input : ByteArray) (i : Nat) :
 theorem lengthIteration_cost (input : ByteArray) (hfit : CalldataFits input)
     (i : Nat) (hi : i < 8) :
     (PaddingTrace.gasSteps_lengthIteration input i hi).cost =
-      90 + (MachineState.memCost
+      83 + (MachineState.memCost
           (PaddingTrace.lengthLoopActiveWords input (i + 1)).toNat -
         MachineState.memCost
           (PaddingTrace.lengthLoopActiveWords input i).toNat) := by
@@ -297,10 +312,10 @@ theorem lengthLoop_cost_add (input : ByteArray) (hfit : CalldataFits input) :
     (PaddingTrace.gasSteps_lengthLoop input).cost +
         MachineState.memCost
           (PaddingTrace.lengthLoopActiveWords input 0).toNat =
-      720 + MachineState.memCost
+      664 + MachineState.memCost
         (PaddingTrace.lengthLoopActiveWords input 8).toNat := by
   unfold PaddingTrace.gasSteps_lengthLoop
-  apply iterateBounded_cost_of_potential_add 8 90
+  apply iterateBounded_cost_of_potential_add 8 83
     (fun i => MachineState.memCost
       (PaddingTrace.lengthLoopActiveWords input i).toNat)
   intro i hi
@@ -415,89 +430,33 @@ theorem lengthLoopActiveWords_eight (input : ByteArray)
     (paddingTargetWords input) = paddingTargetWords input
   exact Nat.max_eq_right hupper7
 
-private theorem padReadSize_cost (input : ByteArray) :
-    (PaddingTrace.gasSteps_padReadSize input).cost = 3 := by
-  rfl
-
-private theorem enterPad_cost (input : ByteArray) :
-    (PaddingTrace.gasSteps_enterPad input).cost = 16 := by
-  simp only [PaddingTrace.gasSteps_enterPad,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasStep.pushN,
-    Challenge.EvmProof.GasStep.push0,
-    Challenge.EvmProof.GasStep.jump,
-    Challenge.EvmProof.GasStep.of_running,
-    id_eq,
-    Challenge.EvmProof.GasSteps.one_cost]
-  norm_num [PaddingTrace.pushedPad, PaddingTrace.pushedOutput,
-    PaddingTrace.pushedReturn, Main.initializedState, Main.initStart,
-    Main.applyInitStore, initialState, State.fork, Gas.baseCost]
-
-private theorem lengthExitCompare_cost (input : ByteArray) :
-    Challenge.EvmProof.Stepper.runLocatedBlockCost
-      PaddingTrace.lengthExitComparePath
-      (PaddingTrace.lengthLoopState input 8) = 9 := by
-  simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthExitComparePath, PaddingTrace.lengthExitPath,
-    Challenge.EvmProof.Stepper.instrCost,
-    Challenge.EvmProof.Stepper.runLocated,
-    Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
-    PaddingTrace.lengthLoopState]
-
-private theorem lengthExitBranch_cost (input : ByteArray) :
-    Challenge.EvmProof.Stepper.runLocatedBlockCost
-      PaddingTrace.lengthExitBranchPath
-      (PaddingTrace.lengthExitComparedState input) = 16 := by
-  have hzero : UInt256.isZero (⟨0⟩ : UInt256) = UInt256.ofNat 1 := by decide
-  simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthExitBranchPath, PaddingTrace.lengthExitPath,
-    Challenge.EvmProof.Stepper.instrCost,
-    Challenge.EvmProof.Stepper.runLocated,
-    Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
-    PaddingTrace.lengthExitComparedState, PaddingTrace.lengthLoopState,
-    hzero]
-
-private theorem lengthExitPop_cost (input : ByteArray) :
-    Challenge.EvmProof.Stepper.runLocatedBlockCost
-      PaddingTrace.lengthExitPopPath
-      (PaddingTrace.lengthExitBodyState input) = 9 := by
-  simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthExitPopPath, PaddingTrace.lengthExitPath,
-    Challenge.EvmProof.Stepper.instrCost,
-    Challenge.EvmProof.Stepper.runLocated,
-    Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
-    PaddingTrace.lengthExitBodyState, PaddingTrace.lengthLoopState]
-
-private theorem lengthExitReturn_cost (input : ByteArray) :
-    Challenge.EvmProof.Stepper.runLocatedBlockCost
-      PaddingTrace.lengthExitReturnPath
-      (PaddingTrace.lengthExitPoppedState input) = 11 := by
-  simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
-    PaddingTrace.lengthExitReturnPath, PaddingTrace.lengthExitPath,
-    Challenge.EvmProof.Stepper.instrCost,
-    Challenge.EvmProof.Stepper.runLocated,
-    Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
-    PaddingTrace.lengthExitPoppedState, PaddingTrace.lengthLoopState,
-    List.exchange]
-
+/-- The exit is one block now: the condition falling through at `i = 8`, three
+pops, the block counter, and the jump to the driver loop.  The old proof summed
+four sub-paths (9 + 16 + 9 + 11 = 45); the inverted branch and the absent return
+frame bring it to 42. -/
 private theorem lengthExit_cost (input : ByteArray) :
-    (PaddingTrace.gasSteps_lengthExit input).cost = 45 := by
+    (PaddingTrace.gasSteps_lengthExit input).cost = 42 := by
   simp only [PaddingTrace.gasSteps_lengthExit,
-    Challenge.EvmProof.GasSteps.trans_cost,
     Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  rw [lengthExitCompare_cost input, lengthExitBranch_cost input,
-    lengthExitPop_cost input, lengthExitReturn_cost input]
+  have hlt : UInt256.lt (UInt256.ofNat 8) (UInt256.ofNat 8) =
+      (⟨0⟩ : UInt256) := by decide
+  simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
+    PaddingTrace.lengthExitPath,
+    Challenge.EvmProof.Stepper.instrCost,
+    Challenge.EvmProof.Stepper.runLocated,
+    Challenge.EvmProof.Stepper.runInstr, Gas.baseCost,
+    PaddingTrace.lengthLoopState, hlt, UInt256.isTrue]
 
 theorem lengthSetupLoop_cost (input : ByteArray) (hfit : CalldataFits input) :
     (PaddingTrace.gasSteps_lengthSetup input hfit).cost +
         (PaddingTrace.gasSteps_lengthLoop input).cost =
-      722 + 3 * ((input.size + 31) / 32) +
+      688 + 3 * ((input.size + 31) / 32) +
         MachineState.memCost (89 + 2 * ((input.size + 72) / 64)) := by
   have hsetup := lengthSetup_cost input hfit
   have hloop := lengthLoop_cost_add input hfit
   change (PaddingTrace.gasSteps_lengthLoop input).cost +
       MachineState.memCost (PaddingTrace.padSentinel input).activeWords.toNat =
-    720 + MachineState.memCost
+    664 + MachineState.memCost
       (PaddingTrace.lengthLoopActiveWords input 8).toNat at hloop
   rw [lengthLoopActiveWords_eight input hfit] at hloop
   rw [hsetup]
@@ -505,23 +464,22 @@ theorem lengthSetupLoop_cost (input : ByteArray) (hfit : CalldataFits input) :
 
 theorem gasSteps_pad_cost_of_fixed (input : ByteArray)
     (hfit : CalldataFits input)
-    (hinit : (Main.gasSteps_initialize input).cost = 375)
-    (hcompute : (PaddingTrace.gasSteps_computePaddedLength input).cost = 26) :
+    (hinit : (Main.gasSteps_initialize input).cost = 195)
+    (hcompute : (PaddingTrace.gasSteps_computePaddedLength input).cost = 23) :
     (PaddingTrace.gasSteps_pad input hfit).cost =
-      1187 + 3 * ((input.size + 31) / 32) +
+      948 + 3 * ((input.size + 31) / 32) +
         MachineState.memCost (89 + 2 * ((input.size + 72) / 64)) := by
   unfold PaddingTrace.gasSteps_pad
   simp only [Challenge.EvmProof.GasSteps.trans_cost]
-  rw [hinit, enterPad_cost input, padReadSize_cost input, hcompute,
-    lengthExit_cost input]
+  rw [hinit, hcompute, lengthExit_cost input]
   have hsetupLoop := lengthSetupLoop_cost input hfit
   omega
+/-- Reaching the body is free: `gasSteps_to_main` is a cast of reflexivity now
+that the artifact emits no entry trampolines.  The old chain cost 179, and the
+main-body `JUMPDEST` it landed on cost another 1; the new entry is a `PUSH32`
+that the initialization run itself accounts for. -/
 private theorem toMain_cost (input : ByteArray) :
-    (Reference.gasSteps_to_main input).cost = 179 := by
-  rfl
-
-private theorem mainJumpdest_cost (input : ByteArray) :
-    (Main.gasSteps_mainJumpdest input).cost = 1 := by
+    (Reference.gasSteps_to_main input).cost = 0 := by
   rfl
 
 @[simp] theorem initStore_cost (s : State) (w : Artifact.InitStore)
@@ -668,16 +626,16 @@ theorem initStores_full_cost (input : ByteArray)
   omega
 
 theorem initialize_cost (input : ByteArray) :
-    (Main.gasSteps_initialize input).cost = 375 := by
-  simp only [Main.gasSteps_initialize,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
-  rw [toMain_cost, mainJumpdest_cost, initStores_full_cost]
+    (Main.gasSteps_initialize input).cost = 195 := by
+  -- `gasSteps_initialize` is the store run under two casts now; the old proof
+  -- also had to strip the entry chain's `trans`
+  simp only [Main.gasSteps_initialize, Challenge.EvmProof.GasSteps.cast_cost]
+  rw [initStores_full_cost]
 
 
 theorem gasSteps_pad_cost (input : ByteArray) (hfit : CalldataFits input) :
     (PaddingTrace.gasSteps_pad input hfit).cost =
-      1187 + 3 * ((input.size + 31) / 32) +
+      948 + 3 * ((input.size + 31) / 32) +
         MachineState.memCost (89 + 2 * ((input.size + 72) / 64)) := by
   exact gasSteps_pad_cost_of_fixed input hfit (initialize_cost input)
     (PaddingTrace.gasSteps_computePaddedLength_cost input)
