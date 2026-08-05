@@ -1356,9 +1356,26 @@ theorem run_extExit (s : State) (rest : List UInt256)
 abbrev secondLoopState (s : State) (rest : List UInt256) (n : Nat) : State :=
   extLoopState s rest n
 
-/-- `W[j]` as it stands in `memory`. -/
-def wValue (memory : ByteArray) (j : UInt256) : UInt256 :=
-  MachineState.readWord memory (wSlotAddr j).toNat
+/-- Byte offset of `W[j]`, at the `Nat` index the correctness bridge uses.
+Stated through `Accessors.slotOffset` so it agrees with what a `wSet` call
+writes. -/
+def scheduleSlot (j : Nat) : Nat :=
+  Accessors.slotOffset 800 (UInt256.ofNat j)
+
+/-- Byte offset of the `j`-th message word. -/
+def loadOffset (msgOff : UInt256) (j : Nat) : Nat :=
+  (UInt256.shiftLeft (UInt256.ofNat j) (UInt256.ofNat 2) + msgOff).toNat
+
+/-- `W[j]` as it stands in `s`. -/
+def wValue (s : State) (j : Nat) : UInt256 :=
+  MachineState.readWord s.memory (scheduleSlot j)
+
+/-- The recurrence the extension loop computes, at the `Nat` index the
+correctness bridge uses. -/
+def recurrenceWord (s : State) (j : Nat) : UInt256 :=
+  UInt256.land (UInt256.ofNat 4294967295)
+    ((Functions.smallSigma1Word (wValue s (j - 2)) + wValue s (j - 7)) +
+      (Functions.smallSigma0Word (wValue s (j - 15)) + wValue s (j - 16)))
 
 /-- The state the schedule hands on, under the name its consumers use. -/
 abbrev scheduleReturned (s : State) (rest : List UInt256) : State :=
