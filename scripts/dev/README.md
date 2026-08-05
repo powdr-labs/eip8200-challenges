@@ -84,3 +84,30 @@ during this re-derivation:
     written for because the modules above fold `pc` advances with them.
   - A missing PC-table entry surfaces as a `simp` that stalls on
     `instructionPC <n>` with no obvious cause. Extend the table first.
+
+## Getting the new gas constants
+
+The gas modules assert a static cost per located path. Don't recompute those by
+hand from an opcode table — ask Lean, which is authoritative and takes a couple
+of minutes:
+
+    -- scratch.lean
+    import Challenge.Sha256.Reference.Proofs.Bytecode.PaddingTrace
+    open Challenge.Sha256.Reference.Proofs.Bytecode
+    #eval show IO Unit from do
+      let p := Challenge.EvmProof.Meter.runLocatedBlockStaticCost
+      IO.println s!"lengthCondition = {p PaddingTrace.lengthConditionPath}"
+      -- … one line per path
+
+    lake build Challenge.Sha256.Reference.Proofs.Bytecode.PaddingTrace
+    lake env lean scratch.lean
+
+`runLocatedBlockStaticCost` is state-independent, so it gives the figure the
+`_cost` theorems need for every path with no memory-expansion term. For the
+memory-touching paths it gives the static part and the theorem carries the
+`memCost` difference separately.
+
+Measured for the re-derived SHA-256 padding paths, for reference:
+`computePaddedLength` 23 (was 26), `lengthSetup` 75, `lengthCondition` 23
+(was 25), `lengthByte` 31 (was 27), `lengthStore` 12, `lengthIncrement` 6
+(was 14), `lengthBack` 11 (was 12), `lengthExit` 42, whole `lengthIteration` 83.
