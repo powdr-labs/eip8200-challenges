@@ -1207,4 +1207,92 @@ theorem run_extAdvance (s : State) (rest : List UInt256) (n : Nat)
     extMemory, extActiveWords, extAfterFourReads, extK, wSlotAddr_toNat,
     State.activeWordsAfterUInt256, awStep, hsucc, g1, g2, hrun, hcode]
 
+/-! ### Composing one extension iteration
+
+Seven links: condition, loads, the inlined sigma-0, middle, the called sigma-1,
+combine, the called `wSet`, advance.  Every link's run lemma is already proved —
+here or in `Functions`/`Accessors` — so each `GasSteps` is just
+`runLocatedBlock_sound` over it. -/
+
+private def soundStep {t u : State}
+    (path : List (Challenge.EvmProof.Stepper.Located
+      Artifact.referenceArtifact .Osaka))
+    (hres : Challenge.EvmProof.Stepper.runLocatedBlock path t = some u)
+    (hcode : t.executionEnv.code = Artifact.referenceArtifact.code)
+    (hfork : t.fork = .Osaka)
+    (hrun : t.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig t.executionEnv.precompileConfig
+      t.executionEnv.fork t.executionEnv.codeAddr = false) :
+    Challenge.EvmProof.GasSteps t u := by
+  apply Challenge.EvmProof.Stepper.runLocatedBlock_sound
+    Artifact.referenceArtifact .Osaka path
+  · exact hcode
+  · exact hfork
+  · exact hres
+  · exact hrun
+  · exact hnp
+
+/-- One complete extension iteration: eight links, every one of them a run
+lemma proved here or in `Functions`/`Accessors`. -/
+def gasSteps_extIteration (s : State) (rest : List UInt256) (n : Nat)
+    (hn : n < 48) (hcap : rest.length < 990) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka)
+    (hvalidRet1227 : Decode.isValidJumpDest referenceBytecode 1227 = true)
+    (hvalidRet1247 : Decode.isValidJumpDest referenceBytecode 1247 = true)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig
+      s.executionEnv.fork s.executionEnv.codeAddr = false) :
+    Challenge.EvmProof.GasSteps (extLoopState s rest n)
+      (extLoopState s rest (n + 1)) := by
+  have hs0 : Challenge.EvmProof.Stepper.runLocatedBlock
+      Functions.smallSigma0Path (extAfterLoads s rest n) =
+        some (extAfterSigma0 s rest n) := by
+    rw [extAfterLoads_eq]
+    exact Functions.run_smallSigma0 (extLoadedBase s n)
+      (wRead (extMemory s.memory n) (extK n) 15)
+      (wRead (extMemory s.memory n) (extK n) 16) (extK n :: rest)
+      (by simp; omega) hrun
+  have hs1 := Functions.run_smallSigma1 (extCallBase s n)
+    (wRead (extMemory s.memory n) (extK n) 2) (UInt256.ofNat 1227)
+    (wRead (extMemory s.memory n) (extK n) 2 ::
+      wRead (extMemory s.memory n) (extK n) 7 ::
+      extSum1 s n :: extK n :: rest)
+    (by simp; omega) hrun hvalidRet1227 hcode
+  have hws := Accessors.run_wSet (extCallBase s n) (extK n)
+    (extWord (extMemory s.memory n) (extK n)) (UInt256.ofNat 1247)
+    (extWord (extMemory s.memory n) (extK n) :: extK n :: rest)
+    (by simp; omega) hrun hvalidRet1247 hcode
+  exact
+    (soundStep extConditionPath
+        (run_extCondition s rest n hn (by omega) hrun hcode)
+        hcode hfork hrun hnp).trans
+    ((soundStep extLoadsPath (run_extLoads s rest n (by omega) hrun)
+        hcode hfork hrun hnp).trans
+    ((soundStep Functions.smallSigma0Path hs0 hcode hfork hrun hnp).trans
+    ((soundStep extMiddlePath (run_extMiddle s rest n (by omega) hrun hcode)
+        hcode hfork hrun hnp).trans
+    ((soundStep Functions.smallSigma1Path hs1 hcode hfork hrun hnp).trans
+    ((soundStep extCombinePath (run_extCombine s rest n (by omega) hrun hcode)
+        hcode hfork hrun hnp).trans
+    ((soundStep Accessors.wSetPath hws hcode hfork hrun hnp).trans
+    (soundStep extAdvancePath (run_extAdvance s rest n hn (by omega) hrun hcode)
+        hcode hfork hrun hnp)))))))
+
+/-- All forty-eight extension iterations. -/
+def gasSteps_extLoop (s : State) (rest : List UInt256)
+    (hcap : rest.length < 990) (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka)
+    (hvalidRet1227 : Decode.isValidJumpDest referenceBytecode 1227 = true)
+    (hvalidRet1247 : Decode.isValidJumpDest referenceBytecode 1247 = true)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig
+      s.executionEnv.fork s.executionEnv.codeAddr = false) :
+    Challenge.EvmProof.GasSteps (extLoopState s rest 0)
+      (extLoopState s rest 48) :=
+  Challenge.EvmProof.GasSteps.iterateBounded (count := 48)
+    (I := extLoopState s rest)
+    (fun n hn => gasSteps_extIteration s rest n hn hcap hrun hcode hfork
+      hvalidRet1227 hvalidRet1247 hnp)
+
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
