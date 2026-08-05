@@ -1258,4 +1258,115 @@ theorem run_smallSigma1 (s : State) (x returnDest : UInt256)
     smallSigma1Entry, smallSigma1Returned, smallSigma1Word, maskedRotr,
     List.exchange, g2, g3, g4, g5, g6, g7, g8, hrun, hvalid, hcode]
 
+/-! ### The schedule's small sigma-0, inlined
+
+The backend inlined this one — unlike `smallSigma1`, there is no function to
+call.  It occupies instructions 560..590 inside the extension loop's body and
+replaces the word on top of the stack with its sigma-0:
+
+  smallSigma0 x = rotr x 7 ^^^ rotr x 18 ^^^ (x >>> 3)
+-/
+
+def smallSigma0Word (x : UInt256) : UInt256 :=
+  UInt256.xor
+    (UInt256.xor (maskedRotr x (UInt256.ofNat 7) 0x19)
+      (maskedRotr x (UInt256.ofNat 18) 0xe))
+    (UInt256.shiftRight x (UInt256.ofNat 3))
+
+@[simp] private theorem pc560 :
+    Artifact.referenceArtifact.instructionPC 560 = 1150 := by decide
+
+@[simp] private theorem pc561 :
+    Artifact.referenceArtifact.instructionPC 561 = 1151 := by decide
+
+@[simp] private theorem pc562 :
+    Artifact.referenceArtifact.instructionPC 562 = 1153 := by decide
+
+@[simp] private theorem pc563 :
+    Artifact.referenceArtifact.instructionPC 563 = 1154 := by decide
+
+@[simp] private theorem pc590 :
+    Artifact.referenceArtifact.instructionPC 590 = 1193 := by decide
+
+@[simp] private theorem pc591 :
+    Artifact.referenceArtifact.instructionPC 591 = 1194 := by decide
+
+@[simp] private theorem toNat1150 : (UInt256.ofNat 1150).toNat = 1150 := by decide
+@[simp] private theorem toNat1151 : (UInt256.ofNat 1151).toNat = 1151 := by decide
+@[simp] private theorem toNat1153 : (UInt256.ofNat 1153).toNat = 1153 := by decide
+@[simp] private theorem toNat1154 : (UInt256.ofNat 1154).toNat = 1154 := by decide
+@[simp] private theorem toNat1193 : (UInt256.ofNat 1193).toNat = 1193 := by decide
+@[simp] private theorem toNat1194 : (UInt256.ofNat 1194).toNat = 1194 := by decide
+
+@[simp] private theorem next560 : (UInt256.ofNat 1150).succ = UInt256.ofNat 1151 := by decide
+@[simp] private theorem next561 : UInt256.ofNat 1151 + UInt256.ofNat 2 = UInt256.ofNat 1153 := by decide
+@[simp] private theorem next562 : (UInt256.ofNat 1153).succ = UInt256.ofNat 1154 := by decide
+@[simp] private theorem next563 : UInt256.ofNat 1154 + UInt256.ofNat 2 = UInt256.ofNat 1156 := by decide
+@[simp] private theorem next589 : (UInt256.ofNat 1192).succ = UInt256.ofNat 1193 := by decide
+@[simp] private theorem next590 : (UInt256.ofNat 1193).succ = UInt256.ofNat 1194 := by decide
+
+def smallSigma0Path :
+    List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka) :=
+  [⟨560, .op (.Dup ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨561, .push ⟨1, by decide⟩ (UInt256.ofNat 3), by rfl, by decide⟩,
+   ⟨562, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨563, .push ⟨1, by decide⟩ (UInt256.ofNat 18), by rfl, by decide⟩,
+   ⟨564, .push ⟨4, by decide⟩ (UInt256.ofNat 4294967295), by rfl, by decide⟩,
+   ⟨565, .op (.Dup ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨566, .push ⟨1, by decide⟩ (UInt256.ofNat 14), by rfl, by decide⟩,
+   ⟨567, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨568, .op (.Dup ⟨4, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨569, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨570, .op (.Swap ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨571, .op (.Swap ⟨2, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨572, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨573, .op .OR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨574, .op .AND, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨575, .push ⟨1, by decide⟩ (UInt256.ofNat 7), by rfl, by decide⟩,
+   ⟨576, .push ⟨4, by decide⟩ (UInt256.ofNat 4294967295), by rfl, by decide⟩,
+   ⟨577, .op (.Dup ⟨4, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨578, .push ⟨1, by decide⟩ (UInt256.ofNat 25), by rfl, by decide⟩,
+   ⟨579, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨580, .op (.Swap ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨581, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨582, .op (.Swap ⟨2, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨583, .op (.Swap ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨584, .op (.Swap ⟨4, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨585, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨586, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨587, .op .OR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨588, .op .AND, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨589, .op .XOR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨590, .op .XOR, by rfl, wfOp (by decide) trivial rfl⟩]
+
+def smallSigma0Entry (s : State) (x other : UInt256)
+    (rest : List UInt256) : State :=
+  { s with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 560)
+    stack := x :: other :: rest }
+
+def smallSigma0Result (s : State) (x other : UInt256)
+    (rest : List UInt256) : State :=
+  { s with
+    pc := UInt256.ofNat (Artifact.referenceArtifact.instructionPC 591)
+    stack := smallSigma0Word x :: other :: rest }
+
+set_option maxHeartbeats 4000000 in
+theorem run_smallSigma0 (s : State) (x other : UInt256) (rest : List UInt256)
+    (hcap : rest.length < 1000) (hrun : s.halt = .Running) :
+    Challenge.EvmProof.Stepper.runLocatedBlock smallSigma0Path
+      (smallSigma0Entry s x other rest) =
+        some (smallSigma0Result s x other rest) := by
+  have q2 : rest.length + 1 + 1 < 1024 := by omega
+  have q3 : rest.length + 1 + 1 + 1 < 1024 := by omega
+  have q4 : rest.length + 1 + 1 + 1 + 1 < 1024 := by omega
+  have q5 : rest.length + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have q6 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have q7 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  have q8 : rest.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  simp [smallSigma0Path, Challenge.EvmProof.Stepper.runLocatedBlock,
+    Challenge.EvmProof.Stepper.runLocated, Challenge.EvmProof.Stepper.runInstr,
+    smallSigma0Entry, smallSigma0Result, smallSigma0Word, maskedRotr,
+    List.exchange, q2, q3, q4, q5, q6, q7, q8, hrun]
+
 end Challenge.Sha256.Reference.Proofs.Bytecode.Functions
