@@ -2,6 +2,7 @@ import Challenge.Ripemd160.ProofSupport.Yul
 import Challenge.Ripemd160.Reference.Source
 import Challenge.Ripemd160.Reference.Bytecode
 import YulEvmCompiler.Optimizer.Implementation.Pipeline
+import YulEvmCompiler.SsaCfg.Spec.Backend
 
 set_option warningAsError true
 set_option maxRecDepth 10000
@@ -46,13 +47,24 @@ def referenceOptimizedBlock : Block Op :=
     (calls := ExternalCalls.none) (creates := ExternalCreates.none)).run
       referenceNormalizedBlock
 
+/-- The backend `compileSource` selects for this source.
+
+Both verified backends accept the optimized block; `compileSource` keeps both
+artifacts and emits whichever the static stack-traffic proxy `SsaCfg.instrCost`
+scores lower.  Here the SSA-CFG backend wins (cost 2371 against the classic
+chain's 2646), so it — not `YulEvmCompiler.compile` — is the backend that
+produced the frozen bytes, and it is the one this route must be discharged
+against.  `referenceInstructions_assemble` below is what pins that claim. -/
+abbrev referenceBackend : Optimizer.EvmBackend := SsaCfg.evmBackend
+
 /-- The concrete instruction list accepted by the verified backend. -/
 theorem referenceCompileSucceeded :
-    (compile referenceOptimizedBlock).isSome := by
+    (referenceBackend.compile referenceOptimizedBlock unpatchedImmutables).isSome := by
   native_decide
 
 def referenceInstructions : List Instr :=
-  (compile referenceOptimizedBlock).get referenceCompileSucceeded
+  (referenceBackend.compile referenceOptimizedBlock unpatchedImmutables).get
+    referenceCompileSucceeded
 
 /-- Parsing succeeds and returns `referenceParsedBlock`. -/
 theorem referenceBlock?_eq : referenceBlock? = some referenceParsedBlock := by
@@ -79,7 +91,8 @@ theorem referenceBytecode?_eq : referenceBytecode? = some referenceBytecode := b
 
 /-- The verified backend accepts the successful optimizer candidate. -/
 theorem referenceOptimized_compile :
-    compile referenceOptimizedBlock = some referenceInstructions := by
+    referenceBackend.compile referenceOptimizedBlock unpatchedImmutables =
+      some referenceInstructions := by
   exact Option.eq_some_of_isSome referenceCompileSucceeded
 
 /-- Assembling that accepted instruction list is byte-for-byte the frozen
@@ -121,7 +134,7 @@ theorem reference_correct_of_yul
     (habs : AbstractsInitialState referenceBytecode) :
     Correct referenceBytecode := by
   rw [← referenceInstructions_assemble] at habs ⊢
-  apply correct_of_computesDigest referenceOptimized_compile
+  apply correct_of_computesDigest_of_backend referenceBackend referenceOptimized_compile
   · rw [referenceInstructions_assemble, referenceBytecode_size]
     norm_num
   · exact habs
