@@ -1,7 +1,7 @@
 import Challenge.EvmProof.Stepper
 import Challenge.Ripemd160.Reference.Bytecode
 set_option warningAsError true
-set_option maxRecDepth 10000
+set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
 /-!
 # Structural certificate for the frozen RIPEMD-160 artifact
@@ -1317,96 +1317,212 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 @[simp] theorem referenceArtifact_pc_682 :
     referenceArtifact.instructionPC 682 = 0x5b8 := by rfl
 
-@[simp] theorem validJumpDest_1b :
-    Decode.isValidJumpDest referenceBytecode 0x1b = true := by
-  have h := referenceArtifact.isValidJumpDest_index 20 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 20) = true at h
-  simpa using h
+/-! ### Jump-destination certificates
 
-@[simp] theorem validJumpDest_2e :
-    Decode.isValidJumpDest referenceBytecode 0x2e = true := by
-  have h := referenceArtifact.isValidJumpDest_index 35 (by rfl)
-  change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 35) = true at h
-  simpa using h
+One per `JUMPDEST` the new artifact actually contains, generated from the
+instruction list.  The old set named the previous layout's targets, none of
+which survive the re-schedule.  Each certificate reduces the artifact's own
+`isValidJumpDest_index` at that instruction to the concrete PC. -/
 
-@[simp] theorem validJumpDest_46 :
-    Decode.isValidJumpDest referenceBytecode 0x46 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 52 (by rfl)
+@[simp] theorem validJumpDest_263 :
+    Decode.isValidJumpDest referenceBytecode 0x263 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 113 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 52) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 113) = true at h
+  have hpc : referenceArtifact.instructionPC 113 = 0x263 := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_5a :
-    Decode.isValidJumpDest referenceBytecode 0x5a = true := by
-  have h := referenceArtifact.isValidJumpDest_index 67 (by rfl)
+@[simp] theorem validJumpDest_27a :
+    Decode.isValidJumpDest referenceBytecode 0x27a = true := by
+  have h := referenceArtifact.isValidJumpDest_index 130 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 67) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 130) = true at h
+  have hpc : referenceArtifact.instructionPC 130 = 0x27a := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_73 :
-    Decode.isValidJumpDest referenceBytecode 0x73 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 83 (by rfl)
+@[simp] theorem validJumpDest_285 :
+    Decode.isValidJumpDest referenceBytecode 0x285 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 137 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 83) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 137) = true at h
+  have hpc : referenceArtifact.instructionPC 137 = 0x285 := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_8e :
-    Decode.isValidJumpDest referenceBytecode 0x8e = true := by
-  have h := referenceArtifact.isValidJumpDest_index 105 (by rfl)
+@[simp] theorem validJumpDest_29c :
+    Decode.isValidJumpDest referenceBytecode 0x29c = true := by
+  have h := referenceArtifact.isValidJumpDest_index 152 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 105) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 152) = true at h
+  have hpc : referenceArtifact.instructionPC 152 = 0x29c := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_10f :
-    Decode.isValidJumpDest referenceBytecode 0x10f = true := by
-  have h := referenceArtifact.isValidJumpDest_index 205 (by rfl)
+@[simp] theorem validJumpDest_2b6 :
+    Decode.isValidJumpDest referenceBytecode 0x2b6 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 170 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 205) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 170) = true at h
+  have hpc : referenceArtifact.instructionPC 170 = 0x2b6 := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_1b2 :
-    Decode.isValidJumpDest referenceBytecode 0x1b2 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 313 (by rfl)
+@[simp] theorem validJumpDest_2cc :
+    Decode.isValidJumpDest referenceBytecode 0x2cc = true := by
+  have h := referenceArtifact.isValidJumpDest_index 185 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 313) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 185) = true at h
+  have hpc : referenceArtifact.instructionPC 185 = 0x2cc := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_1db :
-    Decode.isValidJumpDest referenceBytecode 0x1db = true := by
-  have h := referenceArtifact.isValidJumpDest_index 346 (by rfl)
+@[simp] theorem validJumpDest_2ec :
+    Decode.isValidJumpDest referenceBytecode 0x2ec = true := by
+  have h := referenceArtifact.isValidJumpDest_index 208 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 346) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 208) = true at h
+  have hpc : referenceArtifact.instructionPC 208 = 0x2ec := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_231 :
-    Decode.isValidJumpDest referenceBytecode 0x231 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 410 (by rfl)
+@[simp] theorem validJumpDest_300 :
+    Decode.isValidJumpDest referenceBytecode 0x300 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 221 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 410) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 221) = true at h
+  have hpc : referenceArtifact.instructionPC 221 = 0x300 := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_268 :
-    Decode.isValidJumpDest referenceBytecode 0x268 = true := by
-  have h := referenceArtifact.isValidJumpDest_index 448 (by rfl)
+@[simp] theorem validJumpDest_33e :
+    Decode.isValidJumpDest referenceBytecode 0x33e = true := by
+  have h := referenceArtifact.isValidJumpDest_index 264 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 448) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 264) = true at h
+  have hpc : referenceArtifact.instructionPC 264 = 0x33e := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_3c1 :
-    Decode.isValidJumpDest referenceBytecode 0x3c1 = true := by
+@[simp] theorem validJumpDest_34c :
+    Decode.isValidJumpDest referenceBytecode 0x34c = true := by
+  have h := referenceArtifact.isValidJumpDest_index 275 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 275) = true at h
+  have hpc : referenceArtifact.instructionPC 275 = 0x34c := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_3f1 :
+    Decode.isValidJumpDest referenceBytecode 0x3f1 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 359 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 359) = true at h
+  have hpc : referenceArtifact.instructionPC 359 = 0x3f1 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_438 :
+    Decode.isValidJumpDest referenceBytecode 0x438 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 409 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 409) = true at h
+  have hpc : referenceArtifact.instructionPC 409 = 0x438 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_45a :
+    Decode.isValidJumpDest referenceBytecode 0x45a = true := by
+  have h := referenceArtifact.isValidJumpDest_index 432 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 432) = true at h
+  have hpc : referenceArtifact.instructionPC 432 = 0x45a := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_486 :
+    Decode.isValidJumpDest referenceBytecode 0x486 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 458 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 458) = true at h
+  have hpc : referenceArtifact.instructionPC 458 = 0x486 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_4e0 :
+    Decode.isValidJumpDest referenceBytecode 0x4e0 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 519 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 519) = true at h
+  have hpc : referenceArtifact.instructionPC 519 = 0x4e0 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_4f8 :
+    Decode.isValidJumpDest referenceBytecode 0x4f8 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 535 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 535) = true at h
+  have hpc : referenceArtifact.instructionPC 535 = 0x4f8 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_53b :
+    Decode.isValidJumpDest referenceBytecode 0x53b = true := by
+  have h := referenceArtifact.isValidJumpDest_index 579 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 579) = true at h
+  have hpc : referenceArtifact.instructionPC 579 = 0x53b := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_579 :
+    Decode.isValidJumpDest referenceBytecode 0x579 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 630 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 630) = true at h
+  have hpc : referenceArtifact.instructionPC 630 = 0x579 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_58c :
+    Decode.isValidJumpDest referenceBytecode 0x58c = true := by
   have h := referenceArtifact.isValidJumpDest_index 647 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
     (referenceArtifact.instructionPC 647) = true at h
-  simpa using h
+  have hpc : referenceArtifact.instructionPC 647 = 0x58c := by rfl
+  rwa [hpc] at h
 
-@[simp] theorem validJumpDest_3ee :
-    Decode.isValidJumpDest referenceBytecode 0x3ee = true := by
-  have h := referenceArtifact.isValidJumpDest_index 682 (by rfl)
+@[simp] theorem validJumpDest_619 :
+    Decode.isValidJumpDest referenceBytecode 0x619 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 745 (by rfl)
   change Decode.isValidJumpDest referenceBytecode
-    (referenceArtifact.instructionPC 682) = true at h
-  simpa using h
+    (referenceArtifact.instructionPC 745) = true at h
+  have hpc : referenceArtifact.instructionPC 745 = 0x619 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_62e :
+    Decode.isValidJumpDest referenceBytecode 0x62e = true := by
+  have h := referenceArtifact.isValidJumpDest_index 764 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 764) = true at h
+  have hpc : referenceArtifact.instructionPC 764 = 0x62e := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_646 :
+    Decode.isValidJumpDest referenceBytecode 0x646 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 783 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 783) = true at h
+  have hpc : referenceArtifact.instructionPC 783 = 0x646 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_662 :
+    Decode.isValidJumpDest referenceBytecode 0x662 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 802 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 802) = true at h
+  have hpc : referenceArtifact.instructionPC 802 = 0x662 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_679 :
+    Decode.isValidJumpDest referenceBytecode 0x679 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 820 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 820) = true at h
+  have hpc : referenceArtifact.instructionPC 820 = 0x679 := by rfl
+  rwa [hpc] at h
+
+@[simp] theorem validJumpDest_698 :
+    Decode.isValidJumpDest referenceBytecode 0x698 = true := by
+  have h := referenceArtifact.isValidJumpDest_index 845 (by rfl)
+  change Decode.isValidJumpDest referenceBytecode
+    (referenceArtifact.instructionPC 845) = true at h
+  have hpc : referenceArtifact.instructionPC 845 = 0x698 := by rfl
+  rwa [hpc] at h
 
 @[simp] theorem refPc349 :
     referenceArtifact.instructionPC 349 = 0x3e1 := by rfl
@@ -1720,51 +1836,57 @@ private def wfOp {op : Operation}
     Challenge.EvmProof.Stepper.WellFormed .Osaka (.op op) :=
   ⟨hopcode, hplain, havailable⟩
 
-/-- Cached located path for the main-body call into `pad`. -/
-def padEnterPath : List
-    (Challenge.EvmProof.Stepper.Located referenceArtifact .Osaka) :=
-  [⟨764, .push ⟨2, by decide⟩ (UInt256.ofNat 0x62c), by rfl, by decide⟩,
-   ⟨765, .push ⟨0, by decide⟩ ⟨0⟩, by rfl, by decide⟩,
-   ⟨766, .push ⟨2, by decide⟩ (UInt256.ofNat 0x1e0), by rfl, by decide⟩,
-   ⟨767, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
+/-! ### Padding paths
 
-/-- Cached located path for RIPEMD padded-length arithmetic. -/
+The new backend inlines `pad` into the program entry: initialization runs
+straight into the padded-length arithmetic with an empty stack, so there is no
+call sequence, no return address, and no output slot.  The old `padEnterPath`
+(`PUSH2 0x62c; PUSH0; PUSH2 0x1e0; JUMP`) has no counterpart and is gone; the
+two remaining paths start where initialization ends, at instruction 81. -/
+
+/-- Cached located path for RIPEMD padded-length arithmetic.  Runs on the empty
+stack left by initialization and leaves `[paddedWord, calldatasize]`. -/
 def padLengthPath : List
     (Challenge.EvmProof.Stepper.Located referenceArtifact .Osaka) :=
-  [⟨349, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨350, .op .CALLDATASIZE, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨351, .push ⟨1, by decide⟩ (UInt256.ofNat 72), by rfl, by decide⟩,
-   ⟨352, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨353, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨354, .push ⟨1, by decide⟩ (UInt256.ofNat 6), by rfl, by decide⟩,
-   ⟨355, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨356, .push ⟨1, by decide⟩ (UInt256.ofNat 6), by rfl, by decide⟩,
-   ⟨357, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨358, .op (.Swap ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨359, .op .POP, by rfl, wfOp (by decide) trivial rfl⟩]
+  [⟨81, .op .CALLDATASIZE, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨82, .push ⟨1, by decide⟩ (UInt256.ofNat 72), by rfl, by decide⟩,
+   ⟨83, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨84, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨85, .push ⟨1, by decide⟩ (UInt256.ofNat 6), by rfl, by decide⟩,
+   ⟨86, .op .SHR, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨87, .push ⟨1, by decide⟩ (UInt256.ofNat 6), by rfl, by decide⟩,
+   ⟨88, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩]
 
-/-- Cached located path for copying calldata and setting up the footer loop. -/
+/-- Cached located path for copying calldata, writing the `0x80` sentinel, and
+entering the footer loop.  Unlike the old layout this path ends with the jump to
+the loop *condition* at `0x2b6`; the backend no longer falls through into a
+`JUMPDEST`. -/
 def padSetupPath : List
     (Challenge.EvmProof.Stepper.Located referenceArtifact .Osaka) :=
-  [⟨360, .op (.Dup ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨361, .push ⟨0, by decide⟩ ⟨0⟩, by rfl, by decide⟩,
-   ⟨362, .push ⟨2, by decide⟩ (UInt256.ofNat 0x800), by rfl, by decide⟩,
-   ⟨363, .op .CALLDATACOPY, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨364, .push ⟨1, by decide⟩ (UInt256.ofNat 128), by rfl, by decide⟩,
-   ⟨365, .op (.Dup ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨366, .push ⟨2, by decide⟩ (UInt256.ofNat 0x800), by rfl, by decide⟩,
-   ⟨367, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨368, .op .MSTORE8, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨369, .op (.Dup ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨370, .push ⟨1, by decide⟩ (UInt256.ofNat 3), by rfl, by decide⟩,
-   ⟨371, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨372, .push ⟨1, by decide⟩ (UInt256.ofNat 8), by rfl, by decide⟩,
-   ⟨373, .op (.Dup ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨374, .op .SUB, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨375, .push ⟨2, by decide⟩ (UInt256.ofNat 0x800), by rfl, by decide⟩,
-   ⟨376, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
-   ⟨377, .push ⟨0, by decide⟩ ⟨0⟩, by rfl, by decide⟩,
-   ⟨378, .op .JUMPDEST, by rfl, wfOp (by decide) trivial rfl⟩]
+  [⟨89, .push ⟨0, by decide⟩ ⟨0⟩, by rfl, by decide⟩,
+   ⟨90, .push ⟨2, by decide⟩ (UInt256.ofNat 0x800), by rfl, by decide⟩,
+   ⟨91, .op (.Dup ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨92, .op (.Swap ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨93, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨94, .op .CALLDATACOPY, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨95, .push ⟨1, by decide⟩ (UInt256.ofNat 128), by rfl, by decide⟩,
+   ⟨96, .push ⟨2, by decide⟩ (UInt256.ofNat 0x800), by rfl, by decide⟩,
+   ⟨97, .op (.Dup ⟨3, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨98, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨99, .op .MSTORE8, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨100, .push ⟨1, by decide⟩ (UInt256.ofNat 3), by rfl, by decide⟩,
+   ⟨101, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨102, .op (.Swap ⟨1, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨103, .op (.Swap ⟨0, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨104, .op .SHL, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨105, .push ⟨1, by decide⟩ (UInt256.ofNat 8), by rfl, by decide⟩,
+   ⟨106, .op (.Dup ⟨2, by decide⟩), by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨107, .op .SUB, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨108, .push ⟨2, by decide⟩ (UInt256.ofNat 0x800), by rfl, by decide⟩,
+   ⟨109, .op .ADD, by rfl, wfOp (by decide) trivial rfl⟩,
+   ⟨110, .push ⟨0, by decide⟩ ⟨0⟩, by rfl, by decide⟩,
+   ⟨111, .push ⟨2, by decide⟩ (UInt256.ofNat 0x2b6), by rfl, by decide⟩,
+   ⟨112, .op .JUMP, by rfl, wfOp (by decide) trivial rfl⟩]
 
 
 end Challenge.Ripemd160.Reference.Proofs.Bytecode.Artifact
