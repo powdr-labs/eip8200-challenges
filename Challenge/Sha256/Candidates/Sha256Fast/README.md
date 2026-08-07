@@ -270,6 +270,10 @@ re-elaborating it, so composition work recompiles against a finished object.
 This is also why the two remaining files are the resource problem: they sit
 downstream of a very large import.
 
+The reusable residue of all of this — seven tactics and lemma shapes plus eight
+practical traps, each with the experiment that found it, none of them specific
+to this artifact — is in [`docs/TECHNIQUES.md`](docs/TECHNIQUES.md).
+
 ---
 
 ## Proof status
@@ -289,6 +293,11 @@ then `correct_of_directProof`.
 | 32-bit words | `proofs/Sha256Fast/Word.lean` | `toUInt32` as a homomorphism — lazy masking stated formally; `bit_blast32` | seconds |
 | block machinery | `proofs/Sha256Fast/Block.lean` | the `evm_block` simp set, `stackCap`, `runLocatedBlock_append`, watermark pinning, pointer-relative read-over-write | seconds |
 | block lemmas | `proofs/Rounds8.lean` | the 8 round shapes and 8 schedule shapes of the loop body, plus loop control | **15 m 29 s**, 0 errors, 447 MB `.olean` |
+
+The footprint is not asserted here: `proofs/AxCheckRounds.lean` prints it for all
+fourteen of these results, and `verify.sh` fails the run if any line names
+anything beyond the three admitted axioms — or if a result is missing, so a check
+that silently did not run is a failure rather than a pass.
 
 ### Written and sorry-free, but **not yet machine-checked**
 
