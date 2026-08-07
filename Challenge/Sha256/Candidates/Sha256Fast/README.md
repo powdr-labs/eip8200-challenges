@@ -36,15 +36,20 @@ both pass 306 fuzzed input lengths against Python's `hashlib`.
 
 **Everything Lean in this repository is memory-hungry, starting with the
 repository itself.** On a 62 GB machine, a plain `lake build` fanned out to five
-concurrent `lean` workers holding 2.7, 3.4, 3.9, 4.8 and 6.2 GB simultaneously —
-over 20 GB for the *repository's own* reference proofs, before any file of this
-candidate is touched. A machine with less RAM than that, or one running anything
-else substantial, will be OOM-killed rather than told it ran out of memory. Cap
-the parallelism:
+concurrent `lean` workers elaborating the *repository's own* reference proofs —
+individually 3.6 to 8.5 GB, together over 36 GB and still climbing when the run
+was stopped — before any file of this candidate is touched. A machine with less
+RAM than that, or one running anything else substantial, gets OOM-killed rather
+than told it ran out of memory, and the kernel does not necessarily pick `lean`
+as its victim. Cap the parallelism — this version of Lake has no `--jobs`
+option, but it does respect the environment variable:
 
 ```sh
-lake build -j2 sha256challenge      # instead of a bare `lake build`
+LEAN_NUM_THREADS=2 lake build sha256challenge   # instead of a bare `lake build`
 ```
+
+Measured here: two workers, 6.7 GB total, against five workers and 36 GB+
+unconstrained.
 
 This candidate's own proof files then add their own requirements, listed
 per-file under [Proof status](#proof-status). Two of them have never been run to
@@ -65,29 +70,39 @@ than the one before it, and each is worth running on its own.
 
 ```sh
 cd Challenge/Sha256/Candidates/Sha256Fast/generators
+python3 check_hex.py        # the committed .hex files are the generators' output
 python3 validate_ref.py     # calibrate: the mini-EVM's gas model against
                             # the reference's published gas
-python3 run2.py sha256gen4  # loop-of-8: regenerate, 19 vectors + 306 fuzzed lengths
-python3 run2.py sha256gen3  # unrolled:  regenerate, 19 vectors + 306 fuzzed lengths
+python3 run2.py sha256gen4  # loop-of-8: 19 vectors + 306 fuzzed lengths
+python3 run2.py sha256gen3  # unrolled:  19 vectors + 306 fuzzed lengths
 ```
 
-`validate_ref.py` is the reason the other two are trustworthy: it runs the
-bundled reference artifact in the same Python mini-EVM and reproduces the gas
-this repository publishes for it, `delta=0` on every vector. A gas model that
-reproduces someone else's numbers exactly is one you can quote your own numbers
-from.
+`check_hex.py` regenerates both artifacts and compares them byte for byte with
+the committed files. The `.hex` files are outputs of the committed source, not
+hand-maintained data, and this is what says so mechanically.
 
-`run2.py` regenerates the artifact from its generator, so it also checks that
-the committed `.hex` really is what the committed source emits — the hex files
-are outputs, not hand-maintained data.
+`validate_ref.py` is why the numbers below are worth anything: it runs the
+*bundled reference* artifact through the same Python mini-EVM and reproduces the
+gas this repository publishes for it, `delta=0` on every vector. A gas model
+that reproduces someone else's numbers exactly is one you can quote your own
+numbers from.
 
-Expected tail of each run:
+`run2.py` builds each artifact from its generator, checks every digest against
+Python's `hashlib`, and reports gas per vector.
+
+Expected output:
 
 ```
-ALL OK                                                  # validate_ref.py
-TOTAL   gas=  1404867 ref= 10179119   7.25x             # sha256gen4
+bytecode.hex   <- sha256gen4.generate()   2622 bytes  match     # check_hex.py
+unrolled.hex   <- sha256gen3.generate()   9595 bytes  match
+ALL OK
+
+ALL OK                                                          # validate_ref.py
+
+TOTAL   gas=  1404867 ref= 10179119   7.25x                     # sha256gen4
 fuzz clean | vectors correct
-TOTAL   gas=  1202692 ref= 10179119   8.46x             # sha256gen3
+
+TOTAL   gas=  1202692 ref= 10179119   8.46x                     # sha256gen3
 fuzz clean | vectors correct
 ```
 
@@ -97,7 +112,7 @@ This replaces the Python mini-EVM with this repository's executable EVM
 semantics, which is the authority for the leaderboard.
 
 ```sh
-lake build -j2 sha256challenge      # see the resource warning above
+LEAN_NUM_THREADS=2 lake build sha256challenge   # see the resource warning above
 lake exe sha256challenge --hex=Challenge/Sha256/Candidates/Sha256Fast/bytecode.hex
 lake exe sha256challenge --hex=Challenge/Sha256/Candidates/Sha256Fast/unrolled.hex
 ```

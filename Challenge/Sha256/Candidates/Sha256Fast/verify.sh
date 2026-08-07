@@ -30,10 +30,11 @@
 # Prerequisite: `lake build` must have completed once so the pinned
 # EvmSemantics / Challenge.EvmProof .oleans exist.  Note that the repository's
 # own build is itself the biggest memory hazard here: a bare `lake build` was
-# measured fanning out to five concurrent `lean` workers holding 2.7-6.2 GB
-# each, over 20 GB in total.  Prefer:
+# measured fanning out to five concurrent `lean` workers holding 3.6-8.5 GB
+# each, over 36 GB in total and still climbing.  This Lake has no --jobs
+# option, but it respects the environment:
 #
-#   lake build -j2
+#   LEAN_NUM_THREADS=2 lake build      # measured: 2 workers, 6.7 GB
 #
 # MEM_MB caps lean's own allocator so an undersized machine fails with a clean
 # "maximum memory exceeded" instead of inviting the kernel OOM killer, which
