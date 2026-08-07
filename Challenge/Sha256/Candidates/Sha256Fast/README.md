@@ -27,8 +27,11 @@ gas unit. For the reference it is not constant, because its memory grows with
 the message and it pays an expansion term that these artifacts do not have at
 all.
 
-Both artifacts pass all 19 scored vectors under the pinned Lean semantics, and
-both pass 306 fuzzed input lengths against Python's `hashlib`.
+Both artifacts pass all 19 scored vectors under the pinned Lean semantics
+(`lake exe sha256challenge`, the source of the gas figures above), and both pass
+306 fuzzed input lengths against Python's `hashlib`. The fuzzing and the
+gas-model calibration are re-runnable in about two minutes without Lean; see
+Tier 1 below.
 
 ---
 
@@ -286,18 +289,30 @@ then `correct_of_directProof`.
 ### Machine-checked here, axiom-clean
 
 `propext`, `Classical.choice`, `Quot.sound` and nothing else. Re-checkable with
-`verify.sh`; the timings are from this development machine.
+`verify.sh`; the costs are measured on this development machine.
 
 | layer | file | contents | observed cost |
 |---|---|---|---|
-| 32-bit words | `proofs/Sha256Fast/Word.lean` | `toUInt32` as a homomorphism — lazy masking stated formally; `bit_blast32` | seconds |
-| block machinery | `proofs/Sha256Fast/Block.lean` | the `evm_block` simp set, `stackCap`, `runLocatedBlock_append`, watermark pinning, pointer-relative read-over-write | seconds |
-| block lemmas | `proofs/Rounds8.lean` | the 8 round shapes and 8 schedule shapes of the loop body, plus loop control | **15 m 29 s**, 0 errors, 447 MB `.olean` |
+| 32-bit words | `proofs/Sha256Fast/Word.lean` | `toUInt32` as a homomorphism — lazy masking stated formally; `bit_blast32` | 10 s |
+| block machinery | `proofs/Sha256Fast/Block.lean` | the `evm_block` simp set, `stackCap`, `runLocatedBlock_append`, watermark pinning, pointer-relative read-over-write | 8 s |
+| block lemmas | `proofs/Rounds8.lean` | the 8 round shapes and 8 schedule shapes of the loop body, plus loop control | **15 m 29 s**, 0 errors, 447 MB `.olean` — under a 24 GB cap |
+
+`Rounds8.lean` is the memory floor for this tier, and it is a cliff rather than
+a slope: under a 12 GB cap the same file fails partway through the round lemmas
+with `(kernel) excessive memory consumption`, having spent 38 minutes getting
+there. `verify.sh` defaults `MEM_MB` to 24576 for that reason. A failure of this
+kind means "raise the cap or find a bigger machine", not "the proof is wrong" —
+the script says so in its own output.
 
 The footprint is not asserted here: `proofs/AxCheckRounds.lean` prints it for all
 fourteen of these results, and `verify.sh` fails the run if any line names
 anything beyond the three admitted axioms — or if a result is missing, so a check
-that silently did not run is a failure rather than a pass.
+that silently did not run is a failure rather than a pass. Each step also deletes
+its own `.olean` before elaborating and is skipped when a prerequisite failed,
+so a stale artifact from an earlier attempt cannot make a later check pass. (That
+last property is there because the first version of the script did not have it,
+and a failed `Rounds8.lean` run duly produced a green axiom gate against a
+previous day's `.olean`.)
 
 ### Written and sorry-free, but **not yet machine-checked**
 

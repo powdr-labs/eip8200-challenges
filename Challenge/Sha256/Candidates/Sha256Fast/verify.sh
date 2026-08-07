@@ -13,8 +13,13 @@
 # The default tier is everything that has been observed to pass on the
 # development machine: the 32-bit layer, the block machinery, all sixteen block
 # lemmas of the loop body plus loop control, and the axiom-footprint gate over
-# all of them.  Budget ~20 minutes and ~8 GB; `Rounds8.lean` alone took
-# 15 m 29 s and writes a 447 MB .olean.
+# all of them.  `Rounds8.lean` dominates it: 15 m 29 s and a 447 MB .olean under
+# a 24 GB cap, and an outright failure under a 12 GB one.  Budget ~20 minutes
+# and a machine that can spare 24 GB.
+#
+# Each step deletes its own .olean before elaborating and is skipped if a
+# prerequisite failed, so a stale artifact from an earlier attempt can never
+# make a later check — including the axiom gate — pass.
 #
 # `--heavy` additionally attempts `IterSteps.lean` and `SchedIter.lean` and the
 # two axiom checks that depend on them.  NEITHER OF THOSE TWO FILES HAS EVER
@@ -45,7 +50,9 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../../../.." && pwd)"
 SRC="$HERE/proofs"
-MEM_MB="${MEM_MB:-12288}"
+# Measured: Rounds8.lean fails at MEM_MB=12288 with "(kernel) excessive memory
+# consumption" partway through the round lemmas, and completes under 24576.
+MEM_MB="${MEM_MB:-24576}"
 LOG="${LOG:-$HERE/verify.log}"
 
 HEAVY=false
@@ -69,17 +76,39 @@ fails=0
 
 log() { echo "[$(date +%T)] $*" | tee -a "$LOG"; }
 
-run() {  # run <file.lean> [out.olean]
-  local started elapsed
+# Every file that failed, so a dependent check is skipped rather than run
+# against a stale artifact from an earlier attempt.
+failed_files=""
+
+run() {  # run <file.lean> [out.olean] [prerequisite.lean ...]
+  local file="$1" out="${2:-}" started elapsed prereq
+  shift; [[ $# -gt 0 ]] && shift
+
+  for prereq in "$@"; do
+    case " $failed_files " in
+      *" $prereq "*)
+        log "SKIP $file — its prerequisite $prereq did not pass in this run"
+        failed_files="$failed_files $file"
+        return
+        ;;
+    esac
+  done
+
+  # A previous run's .olean must not be able to satisfy this one.  Without
+  # this, a failed elaboration leaves the old artifact in place and every
+  # downstream check — including the axiom gate — passes against stale input.
+  [[ -n "$out" ]] && rm -f "$SRC/$out"
+
   started=$(date +%s)
-  log "BEGIN $1 (MEM_MB=$MEM_MB)"
+  log "BEGIN $file (MEM_MB=$MEM_MB)"
   if nice -n 19 env LEAN_PATH="$LP" lake env lean --memory="$MEM_MB" \
-      -R "$SRC" ${2:+-o "$SRC/$2"} "$SRC/$1" >> "$LOG" 2>&1; then
+      -R "$SRC" ${out:+-o "$SRC/$out"} "$SRC/$file" >> "$LOG" 2>&1; then
     elapsed=$(( $(date +%s) - started ))
-    log "OK $1 (${elapsed}s)"
+    log "OK $file (${elapsed}s)"
   else
     elapsed=$(( $(date +%s) - started ))
-    log "FAIL $1 (${elapsed}s) — see $LOG; a memory failure here is expected on a small machine"
+    log "FAIL $file (${elapsed}s) — see $LOG; on a small machine expect '(kernel) excessive memory consumption' or 'maximum memory exceeded', which means raise MEM_MB or find a bigger machine, not that the proof is wrong"
+    failed_files="$failed_files $file"
     fails=$((fails + 1))
   fi
 }
@@ -88,17 +117,17 @@ run() {  # run <file.lean> [out.olean]
 # iteration files elaborate against Rounds8.olean rather than re-elaborating
 # the block lemmas.
 run Sha256Fast/Attr.lean  Sha256Fast/Attr.olean
-run Sha256Fast/Word.lean  Sha256Fast/Word.olean
-run Sha256Fast/Block.lean Sha256Fast/Block.olean
-run Rounds8.lean          Rounds8.olean
-run AxCheckRounds.lean
+run Sha256Fast/Word.lean  Sha256Fast/Word.olean  Sha256Fast/Attr.lean
+run Sha256Fast/Block.lean Sha256Fast/Block.olean Sha256Fast/Attr.lean
+run Rounds8.lean          Rounds8.olean          Sha256Fast/Block.lean
+run AxCheckRounds.lean    ""                     Rounds8.lean
 
 if [[ "$HEAVY" == true ]]; then
-  log "--- heavy tier: these two files have never completed on the development machine ---"
-  run IterSteps.lean IterSteps.olean
-  run SchedIter.lean SchedIter.olean
-  run AxCheck.lean
-  run AxCheckSched.lean
+  log "--- heavy tier: neither of these files has ever completed on the development machine ---"
+  run IterSteps.lean IterSteps.olean Rounds8.lean
+  run SchedIter.lean SchedIter.olean Sha256Fast/Block.lean
+  run AxCheck.lean      "" IterSteps.lean
+  run AxCheckSched.lean "" SchedIter.lean
 fi
 
 # The axiom-footprint gate.  Every `#print axioms` line in the log must list
