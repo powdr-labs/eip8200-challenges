@@ -1,0 +1,3 @@
+*.olean
+verify.log
+__pycache__/
