@@ -97,7 +97,7 @@ theorem gasSteps_rotr_cost_potential (s : State) (x : UInt256) (n : Nat)
     (hcap : rest.length < 1016) (hn : n ≤ 32)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Functions.gasSteps_rotr s x n output returnDest rest hcap hn hcode hfork
@@ -119,7 +119,7 @@ theorem gasSteps_rotr_cost (s : State) (x : UInt256) (n : Nat)
     (hcap : rest.length < 1016) (hn : n ≤ 32)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Functions.gasSteps_rotr s x n output returnDest rest hcap hn hcode hfork
@@ -137,7 +137,7 @@ theorem gasSteps_ch_cost_potential (s : State) (x y z output returnDest : UInt25
     (rest : List UInt256) (hcap : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Functions.gasSteps_ch s x y z output returnDest rest hcap hcode hfork
@@ -161,7 +161,7 @@ theorem gasSteps_maj_cost_potential (s : State) (x y z output returnDest : UInt2
     (rest : List UInt256) (hcap : rest.length < 1015)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Functions.gasSteps_maj s x y z output returnDest rest hcap hcode hfork
@@ -193,7 +193,7 @@ theorem gasSteps_ssig0_cost_potential (s : State) (x output returnDest : UInt256
     (rest : List UInt256) (hcap : rest.length < 1011)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Functions.gasSteps_ssig0 s x output returnDest rest hcap hcode hfork
@@ -244,7 +244,7 @@ theorem gasSteps_ssig1_cost_potential (s : State) (x output returnDest : UInt256
     (rest : List UInt256) (hcap : rest.length < 1011)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Functions.gasSteps_ssig1 s x output returnDest rest hcap hcode hfork
@@ -300,7 +300,7 @@ theorem gasSteps_bigSigma0_cost_potential (s : State)
     (hcap : rest.length < 1011)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (BigSigma.gasSteps_bigSigma0 s x output returnDest rest hcap hcode hfork
@@ -371,7 +371,7 @@ theorem gasSteps_bigSigma1_cost_potential (s : State)
     (hcap : rest.length < 1011)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (BigSigma.gasSteps_bigSigma1 s x output returnDest rest hcap hcode hfork

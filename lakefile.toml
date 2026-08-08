@@ -6,10 +6,19 @@ defaultTargets = ["Challenge"]
 # *this* compiler, so a Yul-level proof lands on the bytecode with no
 # bytecode-level reasoning (see Challenge/Sha256/ProofSupport/Yul.lean). It also
 # brings in the two semantics it is proved against.
+#
+# Held one commit off that repository's `main`: this is its #149 plus the
+# single `FrameOK.noPrecompile` field the configured precompile semantics
+# below requires. `main` additionally carries the SSA cost-model work, under
+# which `compileSource` selects the SSA backend for both reference sources
+# and emits different (cheaper) bytecode — 1699 rather than 1524 bytes for
+# SHA-256, 1689 rather than 1671 for RIPEMD-160. Taking that here would
+# re-layout the frozen artifacts and invalidate every direct-bytecode proof,
+# which is a separate piece of work; this pin keeps the artifacts fixed.
 [[require]]
 name = "yul-evm-compiler"
 git = "https://github.com/powdr-labs/yul-compiler"
-rev = "b0b6d6985709dbd007a877befd92ee6c238ff203"
+rev = "00e49b6a59642129c23935aaec701b327591419b"
 
 # The EVM semantics. This is where the *specification* lives: a challenge is
 # equality with `EvmSemantics.Crypto.Sha256.hash`, the function
@@ -21,10 +30,15 @@ rev = "b0b6d6985709dbd007a877befd92ee6c238ff203"
 [[require]]
 name = "evm_semantics"
 git = "https://github.com/powdr-labs/evm-semantics"
-rev = "601183cb2d959748243d59093c144652a6f10716"
+rev = "26fdf59"
 
 [[lean_lib]]
 name = "Challenge"
+
+# CI-only axiom-footprint guards. Kept out of the default targets and in a
+# separate library so each challenge's checks can be built independently.
+[[lean_lib]]
+name = "Checks"
 
 # The Tier-1 scorer: runs a candidate implementation (Yul source or raw
 # bytecode) in the pinned executable EVM semantics over the FIPS and
@@ -33,7 +47,7 @@ name = "Challenge"
 # interpreter's stack allows, and the scored runs are millions of steps.
 [[lean_exe]]
 name = "sha256challenge"
-root = "Main"
+root = "Sha256Main"
 
 [[lean_exe]]
 name = "modexpchallenge"
@@ -42,3 +56,7 @@ root = "ModexpMain"
 [[lean_exe]]
 name = "ripemd160challenge"
 root = "Ripemd160Main"
+
+[[lean_exe]]
+name = "blake2fchallenge"
+root = "Blake2fMain"

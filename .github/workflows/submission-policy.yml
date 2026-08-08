@@ -1,0 +1,52 @@
+name: Submission boundary
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+# This workflow intentionally runs from the trusted base revision. It fetches
+# candidate Git objects for inspection but never checks out or executes them.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  boundary:
+    name: Candidate changes stay outside the trust boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout trusted policy
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test trusted policy controls
+        run: scripts/check-submission-boundary.sh --self-test
+
+      - name: Fetch candidate objects without checking them out
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]] || \
+              [[ ! "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || \
+              [[ ! "$EXPECTED_HEAD" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::invalid pull-request metadata'
+            exit 1
+          fi
+          ref="refs/remotes/pull/$PR_NUMBER/head"
+          git fetch --no-tags origin "+refs/pull/$PR_NUMBER/head:$ref"
+          actual_head="$(git rev-parse "$ref")"
+          if [[ "$actual_head" != "$EXPECTED_HEAD" ]]; then
+            echo '::error::pull-request head moved while the policy was starting; rerun it'
+            exit 1
+          fi
+          scripts/check-submission-boundary.sh \
+            "$BASE_SHA" "$actual_head"

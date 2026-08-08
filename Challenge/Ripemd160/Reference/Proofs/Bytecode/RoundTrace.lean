@@ -243,7 +243,7 @@ def gasSteps_rotl (s : State) (x n returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1015)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (rotlEntry s x n returnDest rest)
@@ -686,7 +686,7 @@ def gasSteps_roundBody (q : State) (base : UInt256) (j : Nat) (hj : j < 5)
     (rest : List UInt256) (hstack : rest.length < 980)
     (hcode : q.executionEnv.code = referenceBytecode)
     (hfork : q.fork = .Osaka) (hrun : q.halt = .Running)
-    (hnp : Precompile.isPrecompile q.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps
@@ -721,7 +721,7 @@ def gasSteps_roundBody (q : State) (base : UInt256) (j : Nat) (hj : j < 5)
     simpa [q2, genericAfterFirstStores, TableTrace.storedWord] using hfork
   have hrun2 : q2.halt = .Running := by
     simpa [q2, genericAfterFirstStores, TableTrace.storedWord] using hrun
-  have hnp2 : Precompile.isPrecompile q2.executionEnv.fork
+  have hnp2 : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, genericAfterFirstStores, TableTrace.storedWord] using hnp
   have gAfterRot1 := Challenge.EvmProof.Stepper.runLocatedBlock_sound
@@ -777,7 +777,7 @@ def gasSteps_round (s : State) (base : UInt256) (j : Nat) (hj : j < 5)
     (hstack : rest.length < 980)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps
@@ -795,7 +795,7 @@ def gasSteps_round (s : State) (base : UInt256) (j : Nat) (hj : j < 5)
     simpa [q0, afterLoads] using hcode
   have hfork0 : q0.fork = .Osaka := by simpa [q0, afterLoads] using hfork
   have hrun0 : q0.halt = .Running := by simpa [q0, afterLoads] using hrun
-  have hnp0 : Precompile.isPrecompile q0.executionEnv.fork
+  have hnp0 : Precompile.isPrecompileWithConfig q0.executionEnv.precompileConfig q0.executionEnv.fork
       q0.executionEnv.codeAddr = false := by simpa [q0, afterLoads] using hnp
   have gX := TableTrace.gasSteps_xAt q0 wordIndex (UInt256.ofNat 0x13a)
     (roundTail s base j wordIndex rotation k returnDest rest)
@@ -807,7 +807,7 @@ def gasSteps_round (s : State) (base : UInt256) (j : Nat) (hj : j < 5)
     simpa [q, xReturnedState, TableTrace.atReturned, q0, afterLoads] using hfork
   have hrunQ : q.halt = .Running := by
     simpa [q, xReturnedState, TableTrace.atReturned, q0, afterLoads] using hrun
-  have hnpQ : Precompile.isPrecompile q.executionEnv.fork
+  have hnpQ : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, xReturnedState, TableTrace.atReturned, q0, afterLoads] using hnp
   have gBody := gasSteps_roundBody q base j hj wordIndex rotation k returnDest

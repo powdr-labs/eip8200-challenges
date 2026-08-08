@@ -423,7 +423,7 @@ def gasSteps_loadIteration (s : State) (offset length : Nat)
     (hlength : length < 2 ^ 256) (hi : i < length)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (loadLoop s (UInt256.ofNat offset) (UInt256.ofNat length) dst i
@@ -494,7 +494,7 @@ theorem gasSteps_loadIteration_cost_potential (s : State)
     (hi : i < length)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_loadIteration s offset length dst returnDest i rest hcap
         hoffset hlength hi hcode hfork hrun hnp).cost +
@@ -559,7 +559,7 @@ def gasSteps_loadLoop (s : State) (offset length : Nat)
     (hlength : length < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (loadLoop s (UInt256.ofNat offset) (UInt256.ofNat length) dst 0
@@ -578,7 +578,7 @@ theorem gasSteps_loadLoop_cost_potential (s : State) (offset length : Nat)
     (hlength : length < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_loadLoop s offset length dst returnDest rest hcap hoffset
         hlength hcode hfork hrun hnp).cost +
@@ -614,7 +614,7 @@ def gasSteps_loadBigEndian (s : State) (offset length : Nat)
     (hlength : length < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest Challenge.Modexp.referenceBytecode
       returnDest.toNat = true) :
@@ -657,7 +657,7 @@ theorem gasSteps_loadBigEndian_cost_potential (s : State)
     (hlength : length < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest Challenge.Modexp.referenceBytecode
       returnDest.toNat = true) :

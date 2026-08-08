@@ -30,7 +30,7 @@ def gasSteps_block (path : List Located) (s t : State)
     (hfork : s.fork = .Osaka)
     (hresult : Challenge.EvmProof.Stepper.runLocatedBlock path s = some t)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps s t :=
   Challenge.EvmProof.Stepper.runLocatedBlock_sound
@@ -41,7 +41,7 @@ def gasSteps_block (path : List Located) (s t : State)
     (hfork : s.fork = .Osaka)
     (hresult : Challenge.EvmProof.Stepper.runLocatedBlock path s = some t)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_block path s t hcode hfork hresult hrun hnp).cost =
       Challenge.EvmProof.Stepper.runLocatedBlockCost path s := by
@@ -52,7 +52,7 @@ def gasSteps_prelude (s : State) (offset : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1022)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       { s with pc := UInt256.ofNat 0x64e, stack := offset :: rest }
@@ -67,7 +67,7 @@ def gasSteps_writeBody (s : State) (offset : Nat) (word : UInt256) (j : Nat)
     (hoff256 : offset + j < 2 ^ 256) (hcap : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       { s with
@@ -130,7 +130,7 @@ def gasSteps_finish (s : State) (rest : List UInt256)
     (hcap : rest.length < 1022)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       { s with pc := UInt256.ofNat 0x681, stack := UInt256.ofNat 5 :: rest }

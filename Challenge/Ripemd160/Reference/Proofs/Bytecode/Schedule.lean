@@ -407,7 +407,7 @@ def gasSteps_readLEPrefix (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (i : Nat) (hstack : rest.length < 1014)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (readEntry s msgOff returnDest rest i)
       (beforeFirstByte s msgOff returnDest rest i) := by
@@ -423,7 +423,7 @@ def gasSteps_readLE (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (i : Nat) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (readEntry s msgOff returnDest rest i)
       (afterRead s msgOff returnDest rest i) := by
@@ -443,7 +443,7 @@ def gasSteps_iteration_of_readLE (s : State) (msgOff returnDest : UInt256)
     (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (gread : Challenge.EvmProof.GasSteps
       (readEntry s msgOff returnDest rest i)
@@ -535,7 +535,7 @@ def gasSteps_loop_of_readLE (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hread : ∀ (i : Nat), i < 16 →
       Challenge.EvmProof.GasSteps
@@ -553,7 +553,7 @@ def gasSteps_loop_of_readLE (s : State) (msgOff returnDest : UInt256)
   have hqfork : q.fork = .Osaka := by
     simpa [q, State.fork] using hfork
   have hqrun : q.halt = .Running := by simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   let gone := gasSteps_iteration_of_readLE q msgOff returnDest rest i hi hstack
     hqcode hqfork hqrun hqnp (by simpa [q] using hread i hi)
@@ -610,7 +610,7 @@ def gasSteps_scheduleStart (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1021)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (scheduleEntry s msgOff returnDest rest)
       (loopState s msgOff returnDest rest 0) := by
@@ -628,7 +628,7 @@ def gasSteps_schedule_of_readLE (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true)
     (hread : ∀ (i : Nat), i < 16 →
@@ -648,7 +648,7 @@ def gasSteps_schedule_of_readLE (s : State) (msgOff returnDest : UInt256)
   have hqcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have hqfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have hqrun : q.halt = .Running := by simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gcondition : Challenge.EvmProof.GasSteps
       (loopAt q msgOff returnDest rest 16)
@@ -681,7 +681,7 @@ def gasSteps_schedule (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (scheduleEntry s msgOff returnDest rest)
@@ -694,7 +694,7 @@ def gasSteps_schedule (s : State) (msgOff returnDest : UInt256)
   have hqcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have hqfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have hqrun : q.halt = .Running := by simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   simpa [q] using gasSteps_readLE q msgOff returnDest rest i hstack
     hqcode hqfork hqrun hqnp

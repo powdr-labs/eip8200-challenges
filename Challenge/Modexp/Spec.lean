@@ -51,6 +51,10 @@ def spec (input : ByteArray) : ByteArray :=
 the post-EIP-8200 fork. -/
 def deployAddress : AccountAddress := AccountAddress.ofNat 0x8205
 
+/-- Disable the native MODEXP precompile for replacement executions. -/
+def executionConfig : PrecompileConfig :=
+  { disabled := [Precompile.modexpAddress] }
+
 /-- Explicit fixed initial state used to judge a MODEXP candidate. -/
 def initialState (code calldata : ByteArray) (gas : Nat) : EVM.State :=
   let account : Account := { Account.empty with code }
@@ -69,6 +73,7 @@ def initialState (code calldata : ByteArray) (gas : Nat) : EVM.State :=
     permitStateMutation := true
     blobVersionedHashes := #[]
     fork := .Osaka
+    precompileConfig := executionConfig
   }
   { (default : EVM.State) with
     pc := 0

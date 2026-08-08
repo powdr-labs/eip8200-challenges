@@ -132,7 +132,7 @@ the exact return seam consumed by `DriverTrace`. -/
 def gasSteps_compress (s : State) (input : ByteArray) (i : Nat)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (DriverTrace.compressEntry s input i)
       (DriverTrace.compressReturned (resultState s input i) input i) := by
@@ -154,10 +154,9 @@ def gasSteps_compress (s : State) (input : ByteArray) (i : Nat)
     change (leftFinalState s messageOffset returnDest rest).halt = _
     rw [leftFinalState_halt]
     exact hrun
-  have hleftNp : Precompile.isPrecompile leftFinal.executionEnv.fork
+  have hleftNp : Precompile.isPrecompileWithConfig leftFinal.executionEnv.precompileConfig leftFinal.executionEnv.fork
       leftFinal.executionEnv.codeAddr = false := by
-    change Precompile.isPrecompile
-      (leftFinalState s messageOffset returnDest rest).executionEnv.fork
+    change Precompile.isPrecompileWithConfig (leftFinalState s messageOffset returnDest rest).executionEnv.precompileConfig (leftFinalState s messageOffset returnDest rest).executionEnv.fork
       (leftFinalState s messageOffset returnDest rest).executionEnv.codeAddr = false
     rw [leftFinalState_executionEnv]
     exact hnp

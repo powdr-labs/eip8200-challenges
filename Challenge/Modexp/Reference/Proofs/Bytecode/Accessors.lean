@@ -83,7 +83,7 @@ def gasSteps_calldataByte (s : State) (offset output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps
@@ -102,7 +102,7 @@ theorem gasSteps_calldataByte_cost_potential (s : State)
     (hcap : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_calldataByte s offset output returnDest rest hcap hcode hfork

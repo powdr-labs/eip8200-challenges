@@ -83,7 +83,7 @@ private theorem wAt_cost_potential (s : State)
     (hcap : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_wAt s index output returnDest rest hcap hcode hfork
@@ -103,7 +103,7 @@ private theorem wSet_cost_potential (s : State)
     (hcap : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_wSet s index value returnDest rest hcap hcode hfork
@@ -123,7 +123,7 @@ theorem firstIteration_cost_potential (s : State)
     (hj : j < 16) (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_firstIteration s msgOff returnDest rest j hj hstack
       hcode hfork hrun hnp).cost +
@@ -160,7 +160,7 @@ theorem firstLoop_cost_potential (s : State)
     (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_firstLoop s msgOff returnDest rest hstack hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -174,7 +174,7 @@ theorem firstLoop_cost_potential (s : State)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have h := firstIteration_cost_potential q msgOff returnDest rest i hi hstack
     qcode qfork qrun qnp
@@ -195,7 +195,7 @@ theorem secondIteration_cost_potential (s : State)
     (hj16 : 16 ≤ j) (hj64 : j < 64) (hstack : rest.length < 990)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_secondIteration s msgOff returnDest rest j hj16 hj64
       hstack hcode hfork hrun hnp).cost + MachineState.memCost
@@ -225,7 +225,7 @@ theorem secondIteration_cost_potential (s : State)
     simpa [q16, Schedule.gotW16, Accessors.loadReturned, State.fork] using hfork
   have q16run : q16.halt = .Running := by
     simpa [q16, Schedule.gotW16, Accessors.loadReturned] using hrun
-  have q16np : Precompile.isPrecompile q16.executionEnv.fork
+  have q16np : Precompile.isPrecompileWithConfig q16.executionEnv.precompileConfig q16.executionEnv.fork
       q16.executionEnv.codeAddr = false := by
     simpa [q16, Schedule.gotW16, Accessors.loadReturned] using hnp
   have hW15 := blockCost_potential_of_static Schedule.setupW15Path 31
@@ -246,7 +246,7 @@ theorem secondIteration_cost_potential (s : State)
       using q16fork
   have q15run : q15.halt = .Running := by
     simpa [q15, Schedule.gotW15, q16, Accessors.loadReturned] using q16run
-  have q15np : Precompile.isPrecompile q15.executionEnv.fork
+  have q15np : Precompile.isPrecompileWithConfig q15.executionEnv.precompileConfig q15.executionEnv.fork
       q15.executionEnv.codeAddr = false := by
     simpa [q15, Schedule.gotW15, q16, Accessors.loadReturned] using q16np
   have hsetupS0 := blockCost_potential_of_static Schedule.setupSsig0Path 12
@@ -265,7 +265,7 @@ theorem secondIteration_cost_potential (s : State)
       using q15fork
   have qs0run : qs0.halt = .Running := by
     simpa [qs0, Schedule.gotSsig0, q15, Functions.unaryReturned] using q15run
-  have qs0np : Precompile.isPrecompile qs0.executionEnv.fork
+  have qs0np : Precompile.isPrecompileWithConfig qs0.executionEnv.precompileConfig qs0.executionEnv.fork
       qs0.executionEnv.codeAddr = false := by
     simpa [qs0, Schedule.gotSsig0, q15, Functions.unaryReturned] using q15np
   have hW7 := blockCost_potential_of_static Schedule.setupW7Path 29
@@ -285,7 +285,7 @@ theorem secondIteration_cost_potential (s : State)
       using qs0fork
   have q7run : q7.halt = .Running := by
     simpa [q7, Schedule.gotW7, qs0, Accessors.loadReturned] using qs0run
-  have q7np : Precompile.isPrecompile q7.executionEnv.fork
+  have q7np : Precompile.isPrecompileWithConfig q7.executionEnv.precompileConfig q7.executionEnv.fork
       q7.executionEnv.codeAddr = false := by
     simpa [q7, Schedule.gotW7, qs0, Accessors.loadReturned] using qs0np
   have hW2 := blockCost_potential_of_static Schedule.setupW2Path 31
@@ -306,7 +306,7 @@ theorem secondIteration_cost_potential (s : State)
       using q7fork
   have q2run : q2.halt = .Running := by
     simpa [q2, Schedule.gotW2, q7, Accessors.loadReturned] using q7run
-  have q2np : Precompile.isPrecompile q2.executionEnv.fork
+  have q2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, Schedule.gotW2, q7, Accessors.loadReturned] using q7np
   have hsetupS1 := blockCost_potential_of_static Schedule.setupSsig1Path 12
@@ -326,7 +326,7 @@ theorem secondIteration_cost_potential (s : State)
       using q2fork
   have qs1run : qs1.halt = .Running := by
     simpa [qs1, Schedule.gotSsig1, q2, Functions.unaryReturned] using q2run
-  have qs1np : Precompile.isPrecompile qs1.executionEnv.fork
+  have qs1np : Precompile.isPrecompileWithConfig qs1.executionEnv.precompileConfig qs1.executionEnv.fork
       qs1.executionEnv.codeAddr = false := by
     simpa [qs1, Schedule.gotSsig1, q2, Functions.unaryReturned] using q2np
   have hfinish := blockCost_potential_of_static Schedule.finishRecurrencePath 24
@@ -431,7 +431,7 @@ theorem secondLoop_cost_potential (s : State)
     (hstack : rest.length < 990)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_secondLoop s msgOff returnDest rest hstack hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -445,7 +445,7 @@ theorem secondLoop_cost_potential (s : State)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have h := secondIteration_cost_potential q msgOff returnDest rest (16 + n)
     (by omega) (by omega) hstack qcode qfork qrun qnp
@@ -466,7 +466,7 @@ theorem scheduleStart_cost_potential (s : State)
     (hstack : rest.length < 1021)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_scheduleStart s msgOff returnDest rest hstack hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -486,7 +486,7 @@ theorem firstExit_cost_potential (s : State)
     (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_firstExit s msgOff returnDest rest hstack hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -507,7 +507,7 @@ theorem secondExit_cost_potential (s : State)
     (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Schedule.gasSteps_secondExit s msgOff returnDest rest hstack hcode hfork
@@ -529,7 +529,7 @@ theorem schedule_cost_potential (s : State)
     (hstack : rest.length < 990)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Schedule.gasSteps_scheduleCost s msgOff returnDest rest hstack hcode hfork
@@ -546,7 +546,7 @@ theorem schedule_cost_potential (s : State)
   have q1code : q1.executionEnv.code = referenceBytecode := by simpa [q1] using hcode
   have q1fork : q1.fork = .Osaka := by simpa [q1, State.fork] using hfork
   have q1run : q1.halt = .Running := by simpa [q1] using hrun
-  have q1np : Precompile.isPrecompile q1.executionEnv.fork
+  have q1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by simpa [q1] using hnp
   have hbridge := firstExit_cost_potential q1 msgOff returnDest rest (by omega)
     q1code q1fork q1run q1np
@@ -555,7 +555,7 @@ theorem schedule_cost_potential (s : State)
   have q2code : q2.executionEnv.code = referenceBytecode := by simpa [q2] using q1code
   have q2fork : q2.fork = .Osaka := by simpa [q2, State.fork] using q1fork
   have q2run : q2.halt = .Running := by simpa [q2] using q1run
-  have q2np : Precompile.isPrecompile q2.executionEnv.fork
+  have q2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by simpa [q2] using q1np
   have hfinish := secondExit_cost_potential q2 msgOff returnDest rest (by omega)
     q2code q2fork q2run q2np hreturn

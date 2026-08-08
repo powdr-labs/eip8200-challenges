@@ -60,7 +60,7 @@ need a second functional-correctness proof.
 
 ## 5. Non-proof tooling
 
-[`Scorer.lean`](Scorer.lean) and the repository-root `Main.lean` implement the
+[`Scorer.lean`](Scorer.lean) and the repository-root `Sha256Main.lean` implement the
 finite Tier-1 test runner. Passing it is useful evidence, never a proof.
 
 The umbrella modules `ProofSupport.lean`, `AdditionalGoals.lean`,

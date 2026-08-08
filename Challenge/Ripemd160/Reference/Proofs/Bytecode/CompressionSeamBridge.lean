@@ -55,7 +55,7 @@ structure CompressionRun (input : ByteArray) where
   running : ∀ i, i ≤ DriverTrace.blockCount input →
     (states i).halt = .Running
   noPrecompile : ∀ i, i ≤ DriverTrace.blockCount input →
-    Precompile.isPrecompile (states i).executionEnv.fork
+    Precompile.isPrecompileWithConfig (states i).executionEnv.precompileConfig (states i).executionEnv.fork
       (states i).executionEnv.codeAddr = false
   callStack : ∀ i, i ≤ DriverTrace.blockCount input →
     (states i).callStack = []

@@ -28,7 +28,7 @@ private theorem rightTestExit_cost (s : State)
     (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_rightTest_exit s messageOffset returnDest rest hstack hcode
       hfork hrun hnp).cost = Stepper.runLocatedBlockCost rightTestLocated
@@ -40,7 +40,7 @@ private theorem rightExit_cost (s : State)
     (hstack : rest.length < 1021)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_rightExit s messageOffset returnDest rest hstack hcode hfork
       hrun hnp).cost = Stepper.runLocatedBlockCost rightExitLocated
@@ -52,7 +52,7 @@ private theorem leftTestExit_cost (s : State)
     (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_leftTest_exit s messageOffset returnDest rest hstack hcode
       hfork hrun hnp).cost = Stepper.runLocatedBlockCost leftTestLocated
@@ -64,7 +64,7 @@ private theorem leftExit_cost (s : State)
     (hstack : rest.length < 1021)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_leftExit s messageOffset returnDest rest hstack hcode hfork
       hrun hnp).cost = Stepper.runLocatedBlockCost leftExitLocated
@@ -76,7 +76,7 @@ private theorem rightInit_cost (s : State)
     (hstack : rest.length < 1021)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (CompressionTrace.gasSteps_rightInit s messageOffset returnDest rest hstack
       hcode hfork hrun hnp).cost =
@@ -94,7 +94,7 @@ theorem rightLoopAndTail_cost_potential (s : State)
     (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (CompressionTailTrace.gasSteps_rightLoopAndTail s messageOffset returnDest
@@ -110,7 +110,7 @@ theorem rightLoopAndTail_cost_potential (s : State)
     rw [State.fork, rightStates_executionEnv]
     exact hfork
   have hqrun : q.halt = .Running := by rw [rightStates_halt]; exact hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, rightStates_executionEnv] using hnp
   have h0 := right80_cost_potential s messageOffset returnDest rest hstack
@@ -192,7 +192,7 @@ theorem compressToRight_cost_potential (s : State)
     (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_compressToRight s messageOffset returnDest rest hstack hcode
       hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -206,7 +206,7 @@ theorem compressToRight_cost_potential (s : State)
     simpa [scheduled, scheduledState, State.fork] using hfork
   have hsRun : scheduled.halt = .Running := by
     simpa [scheduled, scheduledState] using hrun
-  have hsNp : Precompile.isPrecompile scheduled.executionEnv.fork
+  have hsNp : Precompile.isPrecompileWithConfig scheduled.executionEnv.precompileConfig scheduled.executionEnv.fork
       scheduled.executionEnv.codeAddr = false := by
     simpa [scheduled, scheduledState] using hnp
   let initial := leftInitialState s messageOffset returnDest rest
@@ -219,7 +219,7 @@ theorem compressToRight_cost_potential (s : State)
   have hiRun : initial.halt = .Running := by
     simpa [initial, scheduled, leftInitialState, copiedWorkingState,
       copyRegion] using hsRun
-  have hiNp : Precompile.isPrecompile initial.executionEnv.fork
+  have hiNp : Precompile.isPrecompileWithConfig initial.executionEnv.precompileConfig initial.executionEnv.fork
       initial.executionEnv.codeAddr = false := by
     simpa [initial, scheduled, leftInitialState, copiedWorkingState,
       copyRegion] using hsNp
@@ -230,7 +230,7 @@ theorem compressToRight_cost_potential (s : State)
     simpa [final, initial, leftFinalState, State.fork] using hiFork
   have hfRun : final.halt = .Running := by
     simpa [final, leftFinalState, initial, leftStates_halt] using hiRun
-  have hfNp : Precompile.isPrecompile final.executionEnv.fork
+  have hfNp : Precompile.isPrecompileWithConfig final.executionEnv.precompileConfig final.executionEnv.fork
       final.executionEnv.codeAddr = false := by
     simpa [final, leftFinalState, initial, leftStates_executionEnv] using hiNp
   have h0 := scheduleSetup_cost_potential s messageOffset returnDest rest
@@ -331,7 +331,7 @@ theorem compressionWork_eq : compressionWork = ExactGasBridge.compressionWork :=
 theorem compress_cost_potential (s : State) (input : ByteArray) (i : Nat)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (CompressionFullTrace.gasSteps_compress s input i hcode hfork hrun
       hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -350,7 +350,7 @@ theorem compress_cost_potential (s : State) (input : ByteArray) (i : Nat)
   have hleftRun : leftFinal.halt = .Running := by
     simpa [leftFinal, leftFinalState, leftInitialState, copiedWorkingState,
       copyRegion, scheduledState, leftStates_halt] using hrun
-  have hleftNp : Precompile.isPrecompile leftFinal.executionEnv.fork
+  have hleftNp : Precompile.isPrecompileWithConfig leftFinal.executionEnv.precompileConfig leftFinal.executionEnv.fork
       leftFinal.executionEnv.codeAddr = false := by
     simpa [leftFinal, leftFinalState, leftInitialState, copiedWorkingState,
       copyRegion, scheduledState, leftStates_executionEnv] using hnp
@@ -390,7 +390,7 @@ theorem compressionCostFacts (input : ByteArray) (hfit : CalldataFits input) :
     rw [State.fork, CompressionRunTrace.states_executionEnv]
     exact PaddingTrace.padReturned_fork input
   have hrun : s.halt = .Running := CompressionRunTrace.states_halt input i
-  have hnp : Precompile.isPrecompile s.executionEnv.fork
+  have hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false := by
     simpa [s, CompressionRunTrace.states_executionEnv] using
       PaddingTrace.padReturned_noPrecompile input

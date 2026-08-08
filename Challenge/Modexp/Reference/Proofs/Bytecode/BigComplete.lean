@@ -74,7 +74,7 @@ def gasSteps_startExponent (s : State) (accumulatorWord : UInt256)
     (hcap : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (exponentEntry s accumulatorWord count b e m baseOff expOff rest)
@@ -93,7 +93,7 @@ theorem gasSteps_startExponent_cost_potential (s : State)
     (rest : List UInt256) (hcap : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_startExponent s accumulatorWord count b e m baseOff expOff rest
       hcap hcode hfork hrun hnp).cost +
@@ -119,7 +119,7 @@ def gasSteps_nonzero (s : State) (b e m baseOff expOff modOff : Nat)
     (hor : modulusOr s b e m baseOff expOff modOff returnDest rest ≠ 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (BigSetup.setupEntry s b e m baseOff expOff modOff returnDest rest)
@@ -144,7 +144,7 @@ def gasSteps_nonzero (s : State) (b e m baseOff expOff modOff : Nat)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   have hbaseSetup := BigBase.gasSteps_baseSetup loaded accumulator n scanTail
@@ -153,7 +153,7 @@ def gasSteps_nonzero (s : State) (b e m baseOff expOff modOff : Nat)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   have hconversion := BigBaseLoop.gasSteps_baseConversion base accumulator n b e
@@ -162,7 +162,7 @@ def gasSteps_nonzero (s : State) (b e m baseOff expOff modOff : Nat)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   have hExpEnv : expEntry.executionEnv = s.executionEnv := by
@@ -248,7 +248,7 @@ theorem gasSteps_nonzero_cost_potential (s : State)
     (hor : modulusOr s b e m baseOff expOff modOff returnDest rest ≠ 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_nonzero s b e m baseOff expOff modOff returnDest rest hmBound
         hmodOff hinputFit hbase hbaseFit hexp hexpFit hcap hor hcode hfork hrun
@@ -324,7 +324,7 @@ theorem gasSteps_nonzero_cost_potential (s : State)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   let hbaseSetup := BigBase.gasSteps_baseSetup loaded accumulator n scanTail
@@ -333,7 +333,7 @@ theorem gasSteps_nonzero_cost_potential (s : State)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   let hconversion := BigBaseLoop.gasSteps_baseConversion base accumulator n b e
@@ -342,7 +342,7 @@ theorem gasSteps_nonzero_cost_potential (s : State)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   let hstart := gasSteps_startExponent expEntry accumulator n b e m baseOff
@@ -374,7 +374,7 @@ theorem gasSteps_nonzero_cost_potential (s : State)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   have cbase := BigBase.gasSteps_baseSetup_cost_potential loaded accumulator n
@@ -383,7 +383,7 @@ theorem gasSteps_nonzero_cost_potential (s : State)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   have cconversion := BigBaseLoop.gasSteps_baseConversion_cost_potential base
@@ -393,7 +393,7 @@ theorem gasSteps_nonzero_cost_potential (s : State)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   have cstart := gasSteps_startExponent_cost_potential expEntry accumulator n b

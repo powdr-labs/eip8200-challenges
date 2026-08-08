@@ -145,7 +145,7 @@ private def gasSteps_writeIteration (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (writeLoopState s offset word ret tail j)
       (writeLoopState s offset word ret tail (j + 1)) := by
@@ -153,7 +153,7 @@ private def gasSteps_writeIteration (s : State) (offset : Nat)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gtestRaw : GasSteps
       { q with
@@ -185,7 +185,7 @@ private def gasSteps_writeLoop (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (writeLoopState s offset word ret tail 0)
       (writeLoopState s offset word ret tail 4) :=
@@ -198,7 +198,7 @@ private def gasSteps_writeWord (s : State) (offset : Nat) (word ret : UInt256)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode ret.toNat = true) :
     GasSteps
@@ -222,7 +222,7 @@ private def gasSteps_writeWord (s : State) (offset : Nat) (word ret : UInt256)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gtest : GasSteps q
       { q with
@@ -254,14 +254,14 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
     (i : Nat) (hi : i < 5)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (outputLoopState s input i) (outputLoopState s input (i + 1)) := by
   let q := outputLoopState s input i
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gconditionRaw : GasSteps
       { q with
@@ -325,9 +325,9 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
   have loadedRun : loaded.halt = .Running := by
     change q.halt = .Running
     exact qrun
-  have loadedNp : Precompile.isPrecompile loaded.executionEnv.fork
+  have loadedNp : Precompile.isPrecompileWithConfig loaded.executionEnv.precompileConfig loaded.executionEnv.fork
       loaded.executionEnv.codeAddr = false := by
-    change Precompile.isPrecompile q.executionEnv.fork
+    change Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false
     exact qnp
   have gwcall : GasSteps
@@ -358,7 +358,7 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
   have writtenFork : written.fork = .Osaka := by
     simpa [written, State.fork] using loadedFork
   have writtenRun : written.halt = .Running := by simpa [written] using loadedRun
-  have writtenNp : Precompile.isPrecompile written.executionEnv.fork
+  have writtenNp : Precompile.isPrecompileWithConfig written.executionEnv.precompileConfig written.executionEnv.fork
       written.executionEnv.codeAddr = false := by simpa [written] using loadedNp
   have gnext : GasSteps
       { written with
@@ -380,7 +380,7 @@ private def gasSteps_outputIteration (s : State) (input : ByteArray)
 private def gasSteps_outputLoop (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (outputLoopState s input 0) (outputLoopState s input 5) :=
   GasSteps.iterateBounded (count := 5) (I := outputLoopState s input)
@@ -389,7 +389,7 @@ private def gasSteps_outputLoop (s : State) (input : ByteArray)
 private def gasSteps_output (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (DriverTrace.afterExit s input) (outputResult s input) := by
   have gpre := Output.gasSteps_prelude s
@@ -399,7 +399,7 @@ private def gasSteps_output (s : State) (input : ByteArray)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gexitRaw : GasSteps
       { q with
@@ -440,7 +440,7 @@ structure CompressionSeam (input : ByteArray) where
   running : ∀ i, i ≤ DriverTrace.blockCount input →
     (states i).halt = .Running
   noPrecompile : ∀ i, i ≤ DriverTrace.blockCount input →
-    Precompile.isPrecompile (states i).executionEnv.fork
+    Precompile.isPrecompileWithConfig (states i).executionEnv.precompileConfig (states i).executionEnv.fork
       (states i).executionEnv.codeAddr = false
   callStack : ∀ i, i ≤ DriverTrace.blockCount input →
     (states i).callStack = []

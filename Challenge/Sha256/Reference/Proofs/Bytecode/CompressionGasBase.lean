@@ -91,7 +91,7 @@ theorem wAt_cost_potential (s : State) (index output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_wAt s index output returnDest rest hcap hcode hfork
@@ -112,7 +112,7 @@ theorem hAt_cost_potential (s : State) (index output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_hAt s index output returnDest rest hcap hcode hfork
@@ -133,7 +133,7 @@ theorem wSet_cost_potential (s : State) (index value returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_wSet s index value returnDest rest hcap hcode hfork
@@ -154,7 +154,7 @@ theorem hSet_cost_potential (s : State) (index value returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_hSet s index value returnDest rest hcap hcode hfork
@@ -175,7 +175,7 @@ theorem kAt_cost_potential (s : State) (index output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_kAt s index output returnDest rest hcap hcode hfork

@@ -1,3 +1,4 @@
+import Challenge.Modexp.Reference
 import Challenge.Modexp.Scorer
 import YulParser.Compile
 set_option warningAsError true

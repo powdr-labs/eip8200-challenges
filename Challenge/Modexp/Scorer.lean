@@ -1,4 +1,3 @@
-import Challenge.Modexp.Reference
 import Challenge.Modexp.Spec
 import EvmSemantics.EVM.StepF
 import EvmSemantics.Data.Hex

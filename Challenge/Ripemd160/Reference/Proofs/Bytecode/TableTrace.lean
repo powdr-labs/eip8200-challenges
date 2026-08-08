@@ -344,7 +344,7 @@ def gasSteps_hAt (s : State) (i returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps
@@ -363,7 +363,7 @@ def gasSteps_wordSet (s : State) (base i value returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (setEntry s base i value returnDest rest)
@@ -381,7 +381,7 @@ def gasSteps_hSet (s : State) (i value returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (hSetEntry s i value returnDest rest)
@@ -393,7 +393,7 @@ def gasSteps_xAt (s : State) (i returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps
@@ -412,7 +412,7 @@ def gasSteps_xSet (s : State) (i value returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1017)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (xSetEntry s i value returnDest rest)
@@ -430,7 +430,7 @@ def gasSteps_tableAt (s : State) (base i returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (tableAtEntry s base i returnDest rest)

@@ -61,7 +61,7 @@ theorem gasSteps_iteration_cost_of_compress
     (i : Nat) (hi : i < Driver.blockCount input)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hcompress :
       (Driver.gasSteps_iterationCompress s input i hcode hfork hrun hnp).cost +
@@ -122,7 +122,7 @@ theorem gasSteps_blockLoop_cost_of_compressions
     (hcompress : ∀ (s : State) (i : Nat)
       (hcode : s.executionEnv.code = referenceBytecode)
       (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-      (hnp : Precompile.isPrecompile s.executionEnv.fork
+      (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false),
       (Driver.gasSteps_iterationCompress s input i
           hcode hfork hrun hnp).cost +
@@ -141,7 +141,7 @@ theorem gasSteps_blockLoop_cost_of_compressions
   have qcode : q.executionEnv.code = referenceBytecode := by simp [q]
   have qfork : q.fork = .Osaka := by simp [q, State.fork]
   have qrun : q.halt = .Running := by simp [q]
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, State.fork] using
       PaddingTrace.padReturned_noPrecompile input
@@ -214,7 +214,7 @@ theorem gasSteps_reference_cost (input : ByteArray)
   have hcompress : ∀ (s : State) (i : Nat)
       (hcode : s.executionEnv.code = referenceBytecode)
       (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-      (hnp : Precompile.isPrecompile s.executionEnv.fork
+      (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false),
       (Driver.gasSteps_iterationCompress s input i
           hcode hfork hrun hnp).cost +

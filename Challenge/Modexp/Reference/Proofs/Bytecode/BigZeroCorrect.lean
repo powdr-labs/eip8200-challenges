@@ -210,7 +210,7 @@ def gasSteps_zero (s : State) (b e m baseOff expOff modOff : Nat)
       rest = 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (BigSetup.setupEntry s b e m baseOff expOff modOff returnDest rest)
@@ -229,7 +229,7 @@ def gasSteps_zero (s : State) (b e m baseOff expOff modOff : Nat)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   exact Challenge.EvmProof.GasSteps.cast (hsetup.trans hscan) rfl
@@ -248,7 +248,7 @@ theorem gasSteps_zero_cost_potential (s : State)
       rest = 0)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_zero s b e m baseOff expOff modOff returnDest rest hmBound
         hmodOff hinputFit hcap hor hcode hfork hrun hnp).cost +
@@ -269,7 +269,7 @@ theorem gasSteps_zero_cost_potential (s : State)
     (by change s.fork = .Osaka; exact hfork)
     (by change s.halt = .Running; exact hrun)
     (by
-      change Precompile.isPrecompile s.executionEnv.fork
+      change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
   unfold gasSteps_zero

@@ -1,4 +1,5 @@
 import Challenge.EvmProof
+import Challenge.Blake2f
 import Challenge.Modexp
 import Challenge.Ripemd160
 import Challenge.Sha256
@@ -10,7 +11,8 @@ Verified replacements for Ethereum precompiles: EVM bytecode, plus a
 machine-checked proof that the bytecode computes what the precompile
 computed.
 
-SHA-256 (`0x02`), RIPEMD-160 (`0x03`), and MODEXP (`0x05`) are the first
+SHA-256 (`0x02`), RIPEMD-160 (`0x03`), MODEXP (`0x05`), and BLAKE2f (`0x09`)
+are the first
 challenges:
 
 * `Challenge.EvmProof` — verified disassembly and direct small-step proof
@@ -36,6 +38,10 @@ challenges:
   unconditional direct-bytecode correctness and exact-gas theorems.
 * `Challenge.Ripemd160.Scorer` — executable clean- and dirty-memory vectors
   (`lake exe ripemd160challenge`).
+* `Challenge.Blake2f.Spec` — the complete successful and malformed EIP-152
+  interface with the incumbent `0x09` precompile disabled.
+* `Challenge.Blake2f.Scorer` — executable EIP-152 and malformed-input vectors
+  (`lake exe blake2fchallenge`).
 
 See each challenge directory for its specification, audit map, submission
 instructions, reference artifact, and proof.

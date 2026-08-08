@@ -112,6 +112,12 @@ theorem word_eq_ofNat_toNat (a : EvmSemantics.UInt256) :
   rw [word_toNat_ofNat]
   exact (Nat.mod_eq_of_lt a.val.isLt).symm
 
+/-- Normalize elaborated `UInt256` numeral syntax to the explicit constructor.
+This lets symbolic traces reuse the arithmetic lemmas below even when a frozen
+instruction artifact stores PUSH immediates using numeral notation. -/
+theorem literal_eq_ofNat (n : Nat) :
+    (OfNat.ofNat n : EvmSemantics.UInt256) = EvmSemantics.UInt256.ofNat n := rfl
+
 theorem ofNat_add_ofNat {a b : Nat} (h : a + b < 2 ^ 256) :
     EvmSemantics.UInt256.ofNat a + EvmSemantics.UInt256.ofNat b =
       EvmSemantics.UInt256.ofNat (a + b) := by

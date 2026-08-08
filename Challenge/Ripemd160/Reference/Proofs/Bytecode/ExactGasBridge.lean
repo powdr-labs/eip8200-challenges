@@ -30,7 +30,7 @@ private theorem condition_cost_potential (s : State) (input : ByteArray)
     (hfit : CalldataFits input) (i : Nat) (hi : i < DriverTrace.blockCount input)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (DriverTrace.gasSteps_condition_continue s input hfit i hi hcode hfork
       hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -60,7 +60,7 @@ private theorem call_cost_potential (s : State) (input : ByteArray)
     (hfit : CalldataFits input) (i : Nat) (hi : i < DriverTrace.blockCount input)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (DriverTrace.gasSteps_call s input hfit i hi hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -88,7 +88,7 @@ private theorem increment_cost_potential (s : State) (input : ByteArray)
     (i : Nat) (hoff : DriverTrace.blockOffset (i + 1) < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (DriverTrace.gasSteps_increment s input i hoff hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -123,11 +123,11 @@ theorem iteration_cost_potential (s next : State) (input : ByteArray)
     (hfit : CalldataFits input) (i : Nat) (hi : i < DriverTrace.blockCount input)
     (hcodeS : s.executionEnv.code = referenceBytecode)
     (hforkS : s.fork = .Osaka) (hrunS : s.halt = .Running)
-    (hnpS : Precompile.isPrecompile s.executionEnv.fork
+    (hnpS : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hcodeNext : next.executionEnv.code = referenceBytecode)
     (hforkNext : next.fork = .Osaka) (hrunNext : next.halt = .Running)
-    (hnpNext : Precompile.isPrecompile next.executionEnv.fork
+    (hnpNext : Precompile.isPrecompileWithConfig next.executionEnv.precompileConfig next.executionEnv.fork
       next.executionEnv.codeAddr = false)
     (compress : GasSteps (DriverTrace.compressEntry s input i)
       (DriverTrace.compressReturned next input i))

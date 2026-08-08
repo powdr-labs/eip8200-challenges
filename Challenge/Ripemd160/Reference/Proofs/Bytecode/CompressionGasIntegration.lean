@@ -29,7 +29,7 @@ theorem schedule_cost_potential (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Schedule.gasSteps_schedule s msgOff returnDest rest hstack hcode hfork
@@ -47,7 +47,7 @@ theorem schedule_cost_potential (s : State) (msgOff returnDest : UInt256)
     have hqifork : qi.fork = .Osaka := by
       simpa [qi, State.fork] using hfork
     have hqirun : qi.halt = .Running := by simpa [qi] using hrun
-    have hqinp : Precompile.isPrecompile qi.executionEnv.fork
+    have hqinp : Precompile.isPrecompileWithConfig qi.executionEnv.precompileConfig qi.executionEnv.fork
         qi.executionEnv.codeAddr = false := by simpa [qi] using hnp
     simpa [qi] using Schedule.gasSteps_readLE qi msgOff returnDest rest i
       hstack hqicode hqifork hqirun hqinp
@@ -60,7 +60,7 @@ theorem schedule_cost_potential (s : State) (msgOff returnDest : UInt256)
   have hqcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have hqfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have hqrun : q.halt = .Running := by simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have h0 := blockCost_potential Schedule.scheduleStartPath
     (Schedule.scheduleEntry s msgOff returnDest rest)
@@ -82,7 +82,7 @@ theorem schedule_cost_potential (s : State) (msgOff returnDest : UInt256)
     have hqifork : qi.fork = .Osaka := by
       simpa [qi, State.fork] using hfork
     have hqirun : qi.halt = .Running := by simpa [qi] using hrun
-    have hqinp : Precompile.isPrecompile qi.executionEnv.fork
+    have hqinp : Precompile.isPrecompileWithConfig qi.executionEnv.precompileConfig qi.executionEnv.fork
         qi.executionEnv.codeAddr = false := by simpa [qi] using hnp
     have hi := scheduleIteration_cost_potential qi msgOff returnDest rest i hi
       hstack hqicode hqifork hqirun hqinp
@@ -121,7 +121,7 @@ theorem leftRoundSetup_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_leftRoundSetup s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -143,7 +143,7 @@ theorem leftRoundSetup_cost_potential (s : State)
   have hq0fork : q0.fork = .Osaka := by
     simpa [q0, afterConstantLoad, State.fork] using hfork
   have hq0run : q0.halt = .Running := by simpa [q0, afterConstantLoad] using hrun
-  have hq0np : Precompile.isPrecompile q0.executionEnv.fork
+  have hq0np : Precompile.isPrecompileWithConfig q0.executionEnv.precompileConfig q0.executionEnv.fork
       q0.executionEnv.codeAddr = false := by simpa [q0, afterConstantLoad] using hnp
   have h0 := blockCost_potential leftRoundPrefixLocated
     (leftBodyAt s messageOffset returnDest rest i)
@@ -165,7 +165,7 @@ theorem leftRoundSetup_cost_potential (s : State)
   have hq1run : q1.halt = .Running := by
     simpa [q1, leftFirstReturned, TableTrace.tableAtReturned,
       q0, afterConstantLoad] using hrun
-  have hq1np : Precompile.isPrecompile q1.executionEnv.fork
+  have hq1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by
     simpa [q1, leftFirstReturned, TableTrace.tableAtReturned,
       q0, afterConstantLoad] using hnp
@@ -187,7 +187,7 @@ theorem leftRoundSetup_cost_potential (s : State)
   have hq2run : q2.halt = .Running := by
     simpa [q2, leftSecondReturned, q1, leftFirstReturned,
       TableTrace.tableAtReturned, afterConstantLoad] using hrun
-  have hq2np : Precompile.isPrecompile q2.executionEnv.fork
+  have hq2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, leftSecondReturned, q1, leftFirstReturned,
       TableTrace.tableAtReturned, afterConstantLoad] using hnp
@@ -219,7 +219,7 @@ theorem leftIteration_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_leftIterationConcrete s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -229,7 +229,7 @@ theorem leftIteration_cost_potential (s : State)
   have hqcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have hqfork : q.fork = .Osaka := by simpa [q] using hfork
   have hqrun : q.halt = .Running := by simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have h0 := blockCost_potential leftTestLocated
     (leftLoopAt s messageOffset returnDest rest i)
@@ -295,7 +295,7 @@ theorem rightRoundSetup_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_rightRoundSetup s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -317,7 +317,7 @@ theorem rightRoundSetup_cost_potential (s : State)
   have hq0fork : q0.fork = .Osaka := by
     simpa [q0, afterConstantLoad, State.fork] using hfork
   have hq0run : q0.halt = .Running := by simpa [q0, afterConstantLoad] using hrun
-  have hq0np : Precompile.isPrecompile q0.executionEnv.fork
+  have hq0np : Precompile.isPrecompileWithConfig q0.executionEnv.precompileConfig q0.executionEnv.fork
       q0.executionEnv.codeAddr = false := by simpa [q0, afterConstantLoad] using hnp
   have h0 := blockCost_potential rightRoundPrefixLocated
     (rightBodyAt s messageOffset returnDest rest i)
@@ -339,7 +339,7 @@ theorem rightRoundSetup_cost_potential (s : State)
   have hq1run : q1.halt = .Running := by
     simpa [q1, rightFirstReturned, TableTrace.tableAtReturned,
       q0, afterConstantLoad] using hrun
-  have hq1np : Precompile.isPrecompile q1.executionEnv.fork
+  have hq1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by
     simpa [q1, rightFirstReturned, TableTrace.tableAtReturned,
       q0, afterConstantLoad] using hnp
@@ -361,7 +361,7 @@ theorem rightRoundSetup_cost_potential (s : State)
   have hq2run : q2.halt = .Running := by
     simpa [q2, rightSecondReturned, q1, rightFirstReturned,
       TableTrace.tableAtReturned, afterConstantLoad] using hrun
-  have hq2np : Precompile.isPrecompile q2.executionEnv.fork
+  have hq2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, rightSecondReturned, q1, rightFirstReturned,
       TableTrace.tableAtReturned, afterConstantLoad] using hnp
@@ -394,7 +394,7 @@ theorem rightIteration_cost_potential (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_rightIterationConcrete s messageOffset returnDest rest i hi hstack
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -404,7 +404,7 @@ theorem rightIteration_cost_potential (s : State)
   have hqcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have hqfork : q.fork = .Osaka := by simpa [q] using hfork
   have hqrun : q.halt = .Running := by simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have h0 := blockCost_potential rightTestLocated
     (rightLoopAt s messageOffset returnDest rest i)

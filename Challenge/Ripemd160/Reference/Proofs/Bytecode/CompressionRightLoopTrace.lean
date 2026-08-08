@@ -22,7 +22,7 @@ def gasSteps_rightRoundSetup (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (rightBodyAt s messageOffset returnDest rest i)
@@ -44,7 +44,7 @@ def gasSteps_rightRoundSetup (s : State)
     simpa [q0, afterConstantLoad, State.fork] using hfork
   have hq0run : q0.halt = .Running := by
     simpa [q0, afterConstantLoad] using hrun
-  have hq0np : Precompile.isPrecompile q0.executionEnv.fork
+  have hq0np : Precompile.isPrecompileWithConfig q0.executionEnv.precompileConfig q0.executionEnv.fork
       q0.executionEnv.codeAddr = false := by
     simpa [q0, afterConstantLoad] using hnp
   have gp := Challenge.EvmProof.Stepper.runLocatedBlock_sound
@@ -65,7 +65,7 @@ def gasSteps_rightRoundSetup (s : State)
   have hq1run : q1.halt = .Running := by
     simpa [q1, rightFirstReturned, TableTrace.tableAtReturned,
       q0, afterConstantLoad] using hrun
-  have hq1np : Precompile.isPrecompile q1.executionEnv.fork
+  have hq1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by
     simpa [q1, rightFirstReturned, TableTrace.tableAtReturned,
       q0, afterConstantLoad] using hnp
@@ -86,7 +86,7 @@ def gasSteps_rightRoundSetup (s : State)
   have hq2run : q2.halt = .Running := by
     simpa [q2, rightSecondReturned, q1, rightFirstReturned,
       TableTrace.tableAtReturned, afterConstantLoad] using hrun
-  have hq2np : Precompile.isPrecompile q2.executionEnv.fork
+  have hq2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, rightSecondReturned, q1, rightFirstReturned,
       TableTrace.tableAtReturned, afterConstantLoad] using hnp
@@ -164,7 +164,7 @@ def gasSteps_rightTest_continue (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (rightLoopAt s messageOffset returnDest rest i)
@@ -213,7 +213,7 @@ def gasSteps_rightTest_exit (s : State)
     (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (rightLoopAt s messageOffset returnDest rest 80)
@@ -243,7 +243,7 @@ def gasSteps_rightExit (s : State) (messageOffset returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1021)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (rightExitTested s messageOffset returnDest rest)
@@ -283,7 +283,7 @@ def gasSteps_rightIncrement (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (rightRoundReturned s messageOffset returnDest discard rest i)
@@ -331,7 +331,7 @@ def gasSteps_rightIterationConcrete (s : State)
     (i : Nat) (hi : i < 80) (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (rightLoopAt s messageOffset returnDest rest i)
@@ -346,7 +346,7 @@ def gasSteps_rightIterationConcrete (s : State)
     simpa [q] using hcode
   have hqfork : q.fork = .Osaka := by simpa [q] using hfork
   have hqrun : q.halt = .Running := by simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   have gi := gasSteps_rightIncrement q messageOffset returnDest
     (UInt256.ofNat (roundIndex i)) rest i hi (by omega)
@@ -396,7 +396,7 @@ def gasSteps_right80Concrete (s : State)
     (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (rightLoopAt s messageOffset returnDest rest 0)
@@ -416,7 +416,7 @@ def gasSteps_right80Concrete (s : State)
   have hqrun : q.halt = .Running := by
     rw [rightStates_halt]
     exact hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, rightStates_executionEnv] using hnp
   simpa [q, rightStates] using

@@ -30,7 +30,7 @@ def gasSteps_initStore (s : State) (w : Artifact.InitStore)
     (hstack : s.stack = [])
     (hcode : s.executionEnv.code = referenceBytecode)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps s (applyInitStore s w) := by
   have hv := Artifact.initStore_valid w hw
@@ -151,7 +151,7 @@ def gasSteps_initStores (s : State) :
     s.stack = [] →
     s.executionEnv.code = referenceBytecode →
     s.halt = .Running →
-    Precompile.isPrecompile s.executionEnv.fork
+    Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false →
     Challenge.EvmProof.GasSteps s (ws.foldl applyInitStore s)
   | [], _, _, _, _, _, _, _ => Challenge.EvmProof.GasSteps.refl s

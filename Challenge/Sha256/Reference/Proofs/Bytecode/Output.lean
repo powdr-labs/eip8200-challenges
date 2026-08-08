@@ -507,7 +507,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
     (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (outputEntry s offset rest) (outputResult s rest) := by
   let q7 := afterH7 s rest
@@ -560,7 +560,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
     simp [q7, afterH7, Accessors.loadReturned, hfork]
   have q7run : q7.halt = .Running := by
     simp [q7, afterH7, Accessors.loadReturned, hrun]
-  have q7np : Precompile.isPrecompile q7.executionEnv.fork
+  have q7np : Precompile.isPrecompileWithConfig q7.executionEnv.precompileConfig q7.executionEnv.fork
       q7.executionEnv.codeAddr = false := by
     simpa [q7, afterH7, Accessors.loadReturned] using hnp
   have gSetup6 : Challenge.EvmProof.GasSteps q7
@@ -587,7 +587,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
     simp [q6, afterH6, q7, afterH7, Accessors.loadReturned, hfork]
   have q6run : q6.halt = .Running := by
     simp [q6, afterH6, q7, afterH7, Accessors.loadReturned, hrun]
-  have q6np : Precompile.isPrecompile q6.executionEnv.fork
+  have q6np : Precompile.isPrecompileWithConfig q6.executionEnv.precompileConfig q6.executionEnv.fork
       q6.executionEnv.codeAddr = false := by
     simpa [q6, afterH6, q7, afterH7, Accessors.loadReturned] using hnp
   have gSetup5 : Challenge.EvmProof.GasSteps q6
@@ -619,7 +619,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
   have q5run : q5.halt = .Running := by
     simp [q5, afterH5, q6, afterH6, q7, afterH7,
       Accessors.loadReturned, hrun]
-  have q5np : Precompile.isPrecompile q5.executionEnv.fork
+  have q5np : Precompile.isPrecompileWithConfig q5.executionEnv.precompileConfig q5.executionEnv.fork
       q5.executionEnv.codeAddr = false := by
     simpa [q5, afterH5, q6, afterH6, q7, afterH7,
       Accessors.loadReturned] using hnp
@@ -652,7 +652,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
   have q4run : q4.halt = .Running := by
     simp [q4, afterH4, q5, afterH5, q6, afterH6, q7, afterH7,
       Accessors.loadReturned, hrun]
-  have q4np : Precompile.isPrecompile q4.executionEnv.fork
+  have q4np : Precompile.isPrecompileWithConfig q4.executionEnv.precompileConfig q4.executionEnv.fork
       q4.executionEnv.codeAddr = false := by
     simpa [q4, afterH4, q5, afterH5, q6, afterH6, q7, afterH7,
       Accessors.loadReturned] using hnp
@@ -685,7 +685,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
   have q3run : q3.halt = .Running := by
     simp [q3, afterH3, q4, afterH4, q5, afterH5, q6, afterH6,
       q7, afterH7, Accessors.loadReturned, hrun]
-  have q3np : Precompile.isPrecompile q3.executionEnv.fork
+  have q3np : Precompile.isPrecompileWithConfig q3.executionEnv.precompileConfig q3.executionEnv.fork
       q3.executionEnv.codeAddr = false := by
     simpa [q3, afterH3, q4, afterH4, q5, afterH5, q6, afterH6,
       q7, afterH7, Accessors.loadReturned] using hnp
@@ -718,7 +718,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
   have q2run : q2.halt = .Running := by
     simp [q2, afterH2, q3, afterH3, q4, afterH4, q5, afterH5,
       q6, afterH6, q7, afterH7, Accessors.loadReturned, hrun]
-  have q2np : Precompile.isPrecompile q2.executionEnv.fork
+  have q2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, afterH2, q3, afterH3, q4, afterH4, q5, afterH5,
       q6, afterH6, q7, afterH7, Accessors.loadReturned] using hnp
@@ -752,7 +752,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
   have q1run : q1.halt = .Running := by
     simp [q1, afterH1, q2, afterH2, q3, afterH3, q4, afterH4,
       q5, afterH5, q6, afterH6, q7, afterH7, Accessors.loadReturned, hrun]
-  have q1np : Precompile.isPrecompile q1.executionEnv.fork
+  have q1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by
     simpa [q1, afterH1, q2, afterH2, q3, afterH3, q4, afterH4,
       q5, afterH5, q6, afterH6, q7, afterH7, Accessors.loadReturned] using hnp
@@ -789,7 +789,7 @@ def gasSteps_output (s : State) (offset : UInt256) (rest : List UInt256)
     simp [q0, afterH0, q1, afterH1, q2, afterH2, q3, afterH3,
       q4, afterH4, q5, afterH5, q6, afterH6, q7, afterH7,
       Accessors.loadReturned, hrun]
-  have q0np : Precompile.isPrecompile q0.executionEnv.fork
+  have q0np : Precompile.isPrecompileWithConfig q0.executionEnv.precompileConfig q0.executionEnv.fork
       q0.executionEnv.codeAddr = false := by
     simpa [q0, afterH0, q1, afterH1, q2, afterH2, q3, afterH3,
       q4, afterH4, q5, afterH5, q6, afterH6, q7, afterH7,

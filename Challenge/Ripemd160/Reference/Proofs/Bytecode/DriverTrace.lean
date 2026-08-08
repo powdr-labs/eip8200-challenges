@@ -297,7 +297,7 @@ private def gasStepsBlock (path : List Located) (s t : State)
     (hfork : s.fork = .Osaka)
     (hresult : Challenge.EvmProof.Stepper.runLocatedBlock path s = some t)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) : Challenge.EvmProof.GasSteps s t :=
   Challenge.EvmProof.Stepper.runLocatedBlock_sound
     Artifact.referenceArtifact .Osaka path hcode hfork hresult hrun hnp
@@ -305,7 +305,7 @@ private def gasStepsBlock (path : List Located) (s t : State)
 def gasSteps_setup (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (setupEntry s input) (loopAt s input 0) :=
   gasStepsBlock setupPath _ _ hcode hfork (run_setup s input hrun) hrun hnp
@@ -315,7 +315,7 @@ def gasSteps_condition_continue (s : State) (input : ByteArray)
     (hi : i < blockCount input)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (loopAt s input i) (afterCondition s input i) :=
   gasStepsBlock conditionPath _ _ hcode hfork
@@ -325,7 +325,7 @@ def gasSteps_condition_exit (s : State) (input : ByteArray)
     (hfit : Challenge.Ripemd160.CalldataFits input)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (loopAt s input (blockCount input))
       (afterExit s input) :=
@@ -337,7 +337,7 @@ def gasSteps_call (s : State) (input : ByteArray)
     (hi : i < blockCount input)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (afterCondition s input i)
       (compressEntry s input i) :=
@@ -348,7 +348,7 @@ def gasSteps_increment (s : State) (input : ByteArray) (i : Nat)
     (hoff : blockOffset (i + 1) < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (compressReturned s input i)
       (afterIteration s input i) :=
@@ -361,11 +361,11 @@ def gasSteps_iteration_of_compress (s next : State) (input : ByteArray)
     (hi : i < blockCount input)
     (hcodeS : s.executionEnv.code = referenceBytecode)
     (hforkS : s.fork = .Osaka) (hrunS : s.halt = .Running)
-    (hnpS : Precompile.isPrecompile s.executionEnv.fork
+    (hnpS : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hcodeNext : next.executionEnv.code = referenceBytecode)
     (hforkNext : next.fork = .Osaka) (hrunNext : next.halt = .Running)
-    (hnpNext : Precompile.isPrecompile next.executionEnv.fork
+    (hnpNext : Precompile.isPrecompileWithConfig next.executionEnv.precompileConfig next.executionEnv.fork
       next.executionEnv.codeAddr = false)
     (hcompress : Challenge.EvmProof.GasSteps (compressEntry s input i)
       (compressReturned next input i)) :
@@ -388,7 +388,7 @@ def gasSteps_loop_of_compress (states : Nat → State) (input : ByteArray)
     (hfork : ∀ i, i ≤ blockCount input → (states i).fork = .Osaka)
     (hrun : ∀ i, i ≤ blockCount input → (states i).halt = .Running)
     (hnp : ∀ i, i ≤ blockCount input →
-      Precompile.isPrecompile (states i).executionEnv.fork
+      Precompile.isPrecompileWithConfig (states i).executionEnv.precompileConfig (states i).executionEnv.fork
         (states i).executionEnv.codeAddr = false)
     (hcompress : ∀ i, i < blockCount input →
       Challenge.EvmProof.GasSteps (compressEntry (states i) input i)

@@ -86,3 +86,13 @@ The shared direct-bytecode proof toolkit is under [`../EvmProof/`](../EvmProof/)
 and the bundled proof is a complete worked example. Measured gas and vector
 passes are useful falsification evidence; only the Lean theorems establish the
 universal claims.
+
+## PR guidance
+
+Candidate PRs are mechanically confined to one candidate directory. The only
+permitted change outside it is the generated gas-report section in this
+challenge's [`README.md`](README.md). Changes to `Spec.lean`, the central
+checker, proof support, pinned dependencies, CI, or any other path alter the
+trust boundary and must be proposed as a separate infrastructure PR. The
+boundary policy runs from the trusted base branch, so changing the policy in a
+candidate PR cannot bypass it.

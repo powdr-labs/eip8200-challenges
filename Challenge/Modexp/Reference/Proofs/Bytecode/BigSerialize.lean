@@ -362,7 +362,7 @@ def gasSteps_serializerIteration (s : State) (accumulatorWord : UInt256)
     (hcap : rest.length < 968) (hm : m < 2 ^ 256) (hk : k < m)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (serializerLoop s accumulatorWord count b e m baseOff expOff rest k)
@@ -393,7 +393,7 @@ theorem gasSteps_serializerIteration_cost_potential (s : State)
     (hm : m < 2 ^ 256) (hk : k < m)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_serializerIteration s accumulatorWord count b e m baseOff expOff
       k rest hcap hm hk hcode hfork hrun hnp).cost +
@@ -428,7 +428,7 @@ def gasSteps_serializerLoop (s : State) (accumulatorWord : UInt256)
     (hcap : rest.length < 968) (hm : m < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (serializerLoop s accumulatorWord count b e m baseOff expOff rest 0)
@@ -442,7 +442,7 @@ theorem gasSteps_serializerLoop_cost_potential (s : State)
     (rest : List UInt256) (hcap : rest.length < 968)
     (hm : m < 2 ^ 256) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_serializerLoop s accumulatorWord count b e m baseOff expOff rest
       hcap hm hcode hfork hrun hnp).cost +
@@ -464,7 +464,7 @@ def gasSteps_serializerFinish (s : State) (accumulatorWord : UInt256)
     (hcap : rest.length < 968) (hm : m < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (serializerLoop s accumulatorWord count b e m baseOff expOff rest m)
@@ -493,7 +493,7 @@ theorem gasSteps_serializerFinish_cost_potential (s : State)
     (rest : List UInt256) (hcap : rest.length < 968)
     (hm : m < 2 ^ 256) (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_serializerFinish s accumulatorWord count b e m baseOff expOff
       rest hcap hm hcode hfork hrun hnp).cost +
@@ -527,7 +527,7 @@ def gasSteps_serializeResult (s : State) (accumulatorWord : UInt256)
     (hcap : rest.length < 968) (he : e < 2 ^ 256) (hm : m < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps
       (outerLoop s accumulatorWord count b e m baseOff expOff rest e)
@@ -561,7 +561,7 @@ theorem gasSteps_serializeResult_cost_potential (s : State)
     (he : e < 2 ^ 256) (hm : m < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_serializeResult s accumulatorWord count b e m baseOff expOff rest
       hcap he hm hcode hfork hrun hnp).cost +

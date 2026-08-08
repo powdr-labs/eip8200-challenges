@@ -31,6 +31,10 @@ def CalldataFits (input : ByteArray) : Prop := input.size < 2 ^ 64
 /-- A non-precompile address used while the pinned fork still reserves `0x03`. -/
 def deployAddress : AccountAddress := AccountAddress.ofNat 0x8200
 
+/-- Disable the native RIPEMD-160 precompile for replacement executions. -/
+def executionConfig : PrecompileConfig :=
+  { disabled := [Precompile.ripemd160Address] }
+
 /-- The explicit fixed initial state used to judge candidates. -/
 def initialState (code calldata : ByteArray) (gas : Nat) : EVM.State :=
   let account : Account := { Account.empty with code }
@@ -49,6 +53,7 @@ def initialState (code calldata : ByteArray) (gas : Nat) : EVM.State :=
     permitStateMutation := true
     blobVersionedHashes := #[]
     fork := .Osaka
+    precompileConfig := executionConfig
   }
   { (default : EVM.State) with
     pc := 0

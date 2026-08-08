@@ -156,7 +156,7 @@ theorem hAt_cost_potential (s : State) (index output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (Accessors.gasSteps_hAt s index output returnDest rest hcap hcode hfork
@@ -361,7 +361,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Output.gasSteps_output s offset rest hcap hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -392,7 +392,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
     simp [q7, Output.afterH7, Accessors.loadReturned, hfork]
   have q7run : q7.halt = .Running := by
     simp [q7, Output.afterH7, Accessors.loadReturned, hrun]
-  have q7np : Precompile.isPrecompile q7.executionEnv.fork
+  have q7np : Precompile.isPrecompileWithConfig q7.executionEnv.precompileConfig q7.executionEnv.fork
       q7.executionEnv.codeAddr = false := by
     simpa [q7, Output.afterH7, Accessors.loadReturned] using hnp
   have hSetup6 := setup6_cost_potential q7 (Output.hWord s 7) rest
@@ -407,7 +407,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
     simp [q6, Output.afterH6, q7, Output.afterH7, Accessors.loadReturned, hfork]
   have q6run : q6.halt = .Running := by
     simp [q6, Output.afterH6, q7, Output.afterH7, Accessors.loadReturned, hrun]
-  have q6np : Precompile.isPrecompile q6.executionEnv.fork
+  have q6np : Precompile.isPrecompileWithConfig q6.executionEnv.precompileConfig q6.executionEnv.fork
       q6.executionEnv.codeAddr = false := by
     simpa [q6, Output.afterH6, q7, Output.afterH7, Accessors.loadReturned] using hnp
   have hSetup5 := setup5_cost_potential q6 (Output.hWord s 6) (Output.hWord s 7)
@@ -425,7 +425,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
   have q5run : q5.halt = .Running := by
     simp [q5, Output.afterH5, q6, Output.afterH6, q7, Output.afterH7,
       Accessors.loadReturned, hrun]
-  have q5np : Precompile.isPrecompile q5.executionEnv.fork
+  have q5np : Precompile.isPrecompileWithConfig q5.executionEnv.precompileConfig q5.executionEnv.fork
       q5.executionEnv.codeAddr = false := by
     simpa [q5, Output.afterH5, q6, Output.afterH6, q7, Output.afterH7,
       Accessors.loadReturned] using hnp
@@ -444,7 +444,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
   have q4run : q4.halt = .Running := by
     simp [q4, Output.afterH4, q5, Output.afterH5, q6, Output.afterH6,
       q7, Output.afterH7, Accessors.loadReturned, hrun]
-  have q4np : Precompile.isPrecompile q4.executionEnv.fork
+  have q4np : Precompile.isPrecompileWithConfig q4.executionEnv.precompileConfig q4.executionEnv.fork
       q4.executionEnv.codeAddr = false := by
     simpa [q4, Output.afterH4, q5, Output.afterH5, q6, Output.afterH6,
       q7, Output.afterH7, Accessors.loadReturned] using hnp
@@ -463,7 +463,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
   have q3run : q3.halt = .Running := by
     simp [q3, Output.afterH3, q4, Output.afterH4, q5, Output.afterH5,
       q6, Output.afterH6, q7, Output.afterH7, Accessors.loadReturned, hrun]
-  have q3np : Precompile.isPrecompile q3.executionEnv.fork
+  have q3np : Precompile.isPrecompileWithConfig q3.executionEnv.precompileConfig q3.executionEnv.fork
       q3.executionEnv.codeAddr = false := by
     simpa [q3, Output.afterH3, q4, Output.afterH4, q5, Output.afterH5,
       q6, Output.afterH6, q7, Output.afterH7, Accessors.loadReturned] using hnp
@@ -485,7 +485,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
     simp [q2, Output.afterH2, q3, Output.afterH3, q4, Output.afterH4,
       q5, Output.afterH5, q6, Output.afterH6, q7, Output.afterH7,
       Accessors.loadReturned, hrun]
-  have q2np : Precompile.isPrecompile q2.executionEnv.fork
+  have q2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, Output.afterH2, q3, Output.afterH3, q4, Output.afterH4,
       q5, Output.afterH5, q6, Output.afterH6, q7, Output.afterH7,
@@ -508,7 +508,7 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
     simp [q1, Output.afterH1, q2, Output.afterH2, q3, Output.afterH3,
       q4, Output.afterH4, q5, Output.afterH5, q6, Output.afterH6,
       q7, Output.afterH7, Accessors.loadReturned, hrun]
-  have q1np : Precompile.isPrecompile q1.executionEnv.fork
+  have q1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by
     simpa [q1, Output.afterH1, q2, Output.afterH2, q3, Output.afterH3,
       q4, Output.afterH4, q5, Output.afterH5, q6, Output.afterH6,
@@ -760,7 +760,7 @@ theorem gasSteps_output_cost_of_activeWords_ge (s : State) (offset : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1010)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (haw : 17 ≤ s.activeWords.toNat) :
     (Output.gasSteps_output s offset rest hcap hcode hfork hrun hnp).cost = 531 := by

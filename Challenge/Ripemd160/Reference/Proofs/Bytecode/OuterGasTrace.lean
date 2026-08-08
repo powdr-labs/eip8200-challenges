@@ -36,7 +36,7 @@ private theorem block_cost_potential (path : List Output.Located)
     (hfork : s.fork = .Osaka)
     (hresult : Challenge.EvmProof.Stepper.runLocatedBlock path s = some t)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hstatic : ∀ located, located ∈ path → ∀ q, q.fork = .Osaka →
       Challenge.EvmProof.Meter.instrCostWithoutMemory located.instruction q =
@@ -55,7 +55,7 @@ private theorem writeIteration_cost_potential (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_writeIteration s offset word ret tail j hj htail hoff hcode
       hfork hrun hnp).cost +
@@ -67,7 +67,7 @@ private theorem writeIteration_cost_potential (s : State) (offset : Nat)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   let testStart : State := { q with
     pc := UInt256.ofNat 0x3c8
@@ -129,7 +129,7 @@ private theorem writeLoop_cost_potential (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_writeLoop s offset word ret tail htail hoff hcode hfork
       hrun hnp).cost + MachineState.memCost
@@ -150,7 +150,7 @@ private theorem writeWord_cost_potential (s : State) (offset : Nat)
     (htail : tail.length < 1016) (hoff : offset + 3 < 2 ^ 256)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode ret.toNat = true) :
     (gasSteps_writeWord s offset word ret tail htail hoff hcode hfork
@@ -182,7 +182,7 @@ private theorem writeWord_cost_potential (s : State) (offset : Nat)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   let testEnd : State := { q with
     pc := UInt256.ofNat 0x3e9
@@ -240,7 +240,7 @@ private theorem outputIteration_cost_potential (s : State) (input : ByteArray)
     (i : Nat) (hi : i < 5)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_outputIteration s input i hi hcode hfork hrun hnp).cost +
         MachineState.memCost (outputLoopState s input i).activeWords.toNat =
@@ -250,7 +250,7 @@ private theorem outputIteration_cost_potential (s : State) (input : ByteArray)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   let conditionStart : State := { q with
     pc := UInt256.ofNat 0x654
@@ -327,7 +327,7 @@ private theorem outputIteration_cost_potential (s : State) (input : ByteArray)
     simpa [loaded] using qcode
   have loadedFork : loaded.fork = .Osaka := by simpa [loaded, State.fork] using qfork
   have loadedRun : loaded.halt = .Running := by simpa [loaded] using qrun
-  have loadedNp : Precompile.isPrecompile loaded.executionEnv.fork
+  have loadedNp : Precompile.isPrecompileWithConfig loaded.executionEnv.precompileConfig loaded.executionEnv.fork
       loaded.executionEnv.codeAddr = false := by simpa [loaded] using qnp
   let writeStart : State := { loaded with
     pc := UInt256.ofNat 0x3c6
@@ -368,7 +368,7 @@ private theorem outputIteration_cost_potential (s : State) (input : ByteArray)
   have writtenFork : written.fork = .Osaka := by
     simpa [written, State.fork] using loadedFork
   have writtenRun : written.halt = .Running := by simpa [written] using loadedRun
-  have writtenNp : Precompile.isPrecompile written.executionEnv.fork
+  have writtenNp : Precompile.isPrecompileWithConfig written.executionEnv.precompileConfig written.executionEnv.fork
       written.executionEnv.codeAddr = false := by simpa [written] using loadedNp
   let writtenReturned : State := { written with
     pc := UInt256.ofNat 0x676
@@ -411,7 +411,7 @@ private theorem outputIteration_cost_potential (s : State) (input : ByteArray)
 private theorem outputLoop_cost_potential (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_outputLoop s input hcode hfork hrun hnp).cost +
         MachineState.memCost (outputLoopState s input 0).activeWords.toNat =
@@ -509,7 +509,7 @@ set_option linter.unusedSimpArgs false in
 private theorem output_cost_potential (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_output s input hcode hfork hrun hnp).cost +
         MachineState.memCost s.activeWords.toNat =
@@ -542,7 +542,7 @@ private theorem output_cost_potential (s : State) (input : ByteArray)
   have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
   have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
   have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompile q.executionEnv.fork
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by simpa [q] using hnp
   let exitStart : State := { q with
     pc := UInt256.ofNat 0x654
@@ -601,7 +601,7 @@ private theorem output_cost_potential (s : State) (input : ByteArray)
 private theorem output_cost (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hactive : 64 ≤ s.activeWords.toNat) :
     (gasSteps_output s input hcode hfork hrun hnp).cost = 2636 := by

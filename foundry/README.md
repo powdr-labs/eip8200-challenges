@@ -19,16 +19,18 @@ forge test -vv    # with the comparison tables
 
 ## Result
 
-Every one of the 45 scored vectors agrees to the gas. Suite totals:
+Every successful scored vector agrees to the gas. Suite totals:
 
 | challenge | vectors | reference (Lean scorer) | reference (revm) | delta |
 |---|---:|---:|---:|---:|
 | RIPEMD-160 | 17 | 9,862,146 | 9,862,146 | 0 |
 | SHA-256 | 19 | 10,179,119 | 10,179,119 | 0 |
 | MODEXP | 9 | 19,046,904 | 19,046,904 | 0 |
+| BLAKE2f (valid) | 10 | 915,564 | 915,564 | 0 |
 
 The `vs precompile` ratios the READMEs publish reproduce exactly as well:
-419.31× for RIPEMD-160, 4199.31× for SHA-256, 1633.53× for MODEXP. For MODEXP
+419.31× for RIPEMD-160, 4199.31× for SHA-256, 1633.53× for MODEXP, and
+5831.62× for BLAKE2f's valid vectors. For MODEXP
 the check goes one step further and compares the pinned semantics' own
 Osaka/EIP-7883 precompile pricing against revm's, tuple by tuple; those agree
 too, including the 500-gas floor and the 4,080 charged for the EIP-198 examples.
@@ -90,14 +92,13 @@ to equal the precompile's on every vector, but pinning a third party's gas would
 turn a submodule bump into an unrelated test failure. Only the reference's gas,
 which this repository publishes, is asserted.
 
-### Not covered
+### Additional implementations
 
 [eth-act/evmification](https://github.com/eth-act/evmification/tree/main/src)
 also implements `identity` (`0x04`), `blake2f` (`0x09`), `point_eval` (`0x0a`),
-and the BLS12-381 family (`0x0b`–`0x11`). Those are measured here only if a
-challenge exists to compare them against, and none does yet, so they are out of
-scope for this suite. Adding one is mechanical: the probe and the precompile
-column need nothing challenge-specific.
+and the BLS12-381 family (`0x0b`–`0x11`). BLAKE2f is now included: its ten
+valid vectors return identical bytes in the reference, native precompile, and
+evmification contract; all three malformed vectors must also fail.
 
 ## Measurement
 

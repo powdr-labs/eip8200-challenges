@@ -134,7 +134,7 @@ def gasSteps_rotl (s : State) (x n returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1015)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (rotlEntry s x n returnDest rest)
@@ -146,8 +146,7 @@ def gasSteps_rotl (s : State) (x n returnDest : UInt256)
     simpa [rotlEntry] using hfork
   have hrunEntry : (rotlEntry s x n returnDest rest).halt = .Running := by
     simpa [rotlEntry] using hrun
-  have hnpEntry : Precompile.isPrecompile
-      (rotlEntry s x n returnDest rest).executionEnv.fork
+  have hnpEntry : Precompile.isPrecompileWithConfig (rotlEntry s x n returnDest rest).executionEnv.precompileConfig (rotlEntry s x n returnDest rest).executionEnv.fork
       (rotlEntry s x n returnDest rest).executionEnv.codeAddr = false := by
     simpa [rotlEntry] using hnp
   have gbody := Challenge.EvmProof.Stepper.runLocatedBlock_sound
@@ -160,8 +159,7 @@ def gasSteps_rotl (s : State) (x n returnDest : UInt256)
     simpa [rotlReady] using hfork
   have hrunReady : (rotlReady s x n returnDest rest).halt = .Running := by
     simpa [rotlReady] using hrun
-  have hnpReady : Precompile.isPrecompile
-      (rotlReady s x n returnDest rest).executionEnv.fork
+  have hnpReady : Precompile.isPrecompileWithConfig (rotlReady s x n returnDest rest).executionEnv.precompileConfig (rotlReady s x n returnDest rest).executionEnv.fork
       (rotlReady s x n returnDest rest).executionEnv.codeAddr = false := by
     simpa [rotlReady] using hnp
   have greturn := Challenge.EvmProof.Stepper.runLocatedBlock_sound

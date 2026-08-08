@@ -41,6 +41,7 @@ It is independent of any particular precompile or challenge specification.
 | SHA-256 | [`Challenge/Sha256/README.md`](Challenge/Sha256/README.md) | [`Challenge/Sha256/SUBMITTING.md`](Challenge/Sha256/SUBMITTING.md) |
 | MODEXP | [`Challenge/Modexp/README.md`](Challenge/Modexp/README.md) | reference implementation in progress |
 | RIPEMD-160 | [`Challenge/Ripemd160/README.md`](Challenge/Ripemd160/README.md) | [`Challenge/Ripemd160/SUBMITTING.md`](Challenge/Ripemd160/SUBMITTING.md) |
+| BLAKE2f | [`Challenge/Blake2f/README.md`](Challenge/Blake2f/README.md) | [`Challenge/Blake2f/SUBMITTING.md`](Challenge/Blake2f/SUBMITTING.md) |
 
 ## Build and verify
 

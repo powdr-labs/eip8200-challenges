@@ -74,7 +74,7 @@ private theorem soundBlock_cost_potential
     (hcode : s.executionEnv.code = artifact.code) (hfork : s.fork = fork)
     (hresult : Stepper.runLocatedBlock path s = some t)
     (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hfree : ∀ located ∈ path, CopyFree located.instruction) :
     (Stepper.runLocatedBlock_sound artifact fork path hcode hfork hresult hrun hnp).cost +
@@ -132,7 +132,7 @@ theorem tableAt_cost_potential (s : State) (base i returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (TableTrace.gasSteps_tableAt s base i returnDest rest hstack hcode hfork
@@ -152,7 +152,7 @@ theorem xAt_cost_potential (s : State) (i returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1018)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (TableTrace.gasSteps_xAt s i returnDest rest hstack hcode hfork hrun hnp
@@ -172,7 +172,7 @@ theorem wordSet_cost_potential (s : State)
     (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (TableTrace.gasSteps_wordSet s base i value returnDest rest hstack hcode
@@ -197,7 +197,7 @@ theorem scheduleSetup_cost_potential (s : State)
     (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_scheduleSetup s messageOffset returnDest rest hstack hcode hfork
       hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -218,7 +218,7 @@ theorem copyState_cost_potential (s : State)
     (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (gasSteps_copyState s messageOffset returnDest rest hstack hcode hfork
       hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -259,7 +259,7 @@ theorem readLE_cost_potential (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (i : Nat) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_readLE s msgOff returnDest rest i hstack hcode hfork
       hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -279,7 +279,7 @@ theorem scheduleIteration_cost_potential (s : State)
     (i : Nat) (hi : i < 16) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (Schedule.gasSteps_iteration_of_readLE s msgOff returnDest rest i hi hstack
       hcode hfork hrun hnp
@@ -329,7 +329,7 @@ private def concreteScheduleRead (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (i : Nat) (_hi : i < 16) :
     GasSteps
@@ -349,7 +349,7 @@ private def concreteScheduleIteration (s : State)
     (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (i : Nat) (hi : i < 16) :
     GasSteps (Schedule.loopState s msgOff returnDest rest i)
@@ -369,7 +369,7 @@ private theorem concreteScheduleIteration_cost_potential (s : State)
     (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (i : Nat) (hi : i < 16) :
     (concreteScheduleIteration s msgOff returnDest rest hstack hcode hfork
@@ -396,7 +396,7 @@ private def concreteScheduleLoop (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     GasSteps (Schedule.loopState s msgOff returnDest rest 0)
       (Schedule.loopState s msgOff returnDest rest 16) :=
@@ -409,7 +409,7 @@ theorem scheduleLoop_cost_potential (s : State)
     (hstack : rest.length < 1012)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     (concreteScheduleLoop s msgOff returnDest rest hstack hcode hfork hrun
       hnp).cost + MachineState.memCost s.activeWords.toNat =
@@ -433,7 +433,7 @@ theorem combination_cost_potential (s : State)
     (hstack : rest.length < 970)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     (gasSteps_combination s messageOffset returnDest rest hstack hcode hfork

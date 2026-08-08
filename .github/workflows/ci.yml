@@ -11,187 +11,263 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Build, verify, score
-    runs-on: warp-ubuntu-2404-x64-32x
-    timeout-minutes: 45
+  submission-policy-test:
+    name: Submission boundary policy self-test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # Change the dependency cache only when this repository's import surface
-      # changes. Ordinary proof edits can reuse the same package build, while a
-      # new import gets a fresh key that can save the expanded closure.
-      - name: Fingerprint Lean imports
-        id: lean-imports
+      - name: Exercise acceptance and rejection controls
+        run: scripts/check-submission-boundary.sh --self-test
+
+  # Build external Lean dependencies and the direct-EVM proof layer once.
+  # Challenge jobs restore these complete global caches and own only their
+  # root-package outputs.
+  shared-lean:
+    name: Shared Lean proof infrastructure
+    runs-on: warp-ubuntu-2404-x64-32x
+    timeout-minutes: 30
+    outputs:
+      package-key: ${{ steps.cache-keys.outputs.package-key }}
+      shared-key: ${{ steps.cache-keys.outputs.shared-key }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Compute shared cache keys
+        id: cache-keys
+        env:
+          DEPENDENCY_HASH: ${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          PACKAGE_TARGET_HASH: ${{ hashFiles('.github/lean-package-cache-targets') }}
+          SHARED_HASH: ${{ hashFiles('lakefile.toml', 'Challenge/EvmProof.lean', 'Challenge/EvmProof/**/*.lean', 'Checks/EvmProof.lean') }}
         run: |
-          import_hash="$({ git grep --no-color '^import ' -- '*.lean' || true; } | sort | sha256sum | cut -d' ' -f1)"
-          echo "hash=$import_hash" >> "$GITHUB_OUTPUT"
+          package_key="lake-packages-v4-${{ runner.os }}-${{ runner.arch }}-${DEPENDENCY_HASH}-${PACKAGE_TARGET_HASH}"
+          shared_key="project-shared-v3-${{ runner.os }}-${{ runner.arch }}-${DEPENDENCY_HASH}-${PACKAGE_TARGET_HASH}-${SHARED_HASH}"
+          echo "package-key=$package_key" >> "$GITHUB_OUTPUT"
+          echo "shared-key=$shared_key" >> "$GITHUB_OUTPUT"
 
-      # Cache this repository separately from its pinned dependencies. The
-      # restore prefix gives Lake a safe incremental base after source edits.
-      - name: Cache compiled project build
-        uses: actions/cache@v5
-        with:
-          path: .lake/build
-          key: project-lake-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ hashFiles('Challenge/**/*.lean', 'Challenge.lean', 'Checks.lean', 'Main.lean', 'lakefile.toml') }}
-          restore-keys: |
-            project-lake-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
-
-      # Preserve complete package workspaces, including Git metadata. Caching
-      # only their build directories makes Lake regard the restored packages
-      # as invalid checkouts and delete the artifacts before building.
+      # This cache is the sole owner of dependency-package sources and build
+      # outputs. Its target-set hash forces a new immutable cache whenever the
+      # globally warmed dependency closure changes.
       - name: Cache pinned packages
         id: package-cache
         uses: actions/cache@v5
         with:
           path: .lake/packages
-          key: lake-packages-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ steps.lean-imports.outputs.hash }}
+          key: ${{ steps.cache-keys.outputs.package-key }}
           restore-keys: |
+            lake-packages-v4-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            lake-packages-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
             lake-packages-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
 
-      - name: Build (fetch Mathlib cache on cold start + lake build)
+      - name: Cache shared project build
+        uses: actions/cache@v5
+        with:
+          path: .lake/build
+          key: ${{ steps.cache-keys.outputs.shared-key }}
+          restore-keys: |
+            project-shared-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            project-shared-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            project-shared-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+
+      - name: Set up Lean
         uses: leanprover/lean-action@v1
         with:
           # `cache-hit` is empty only for a total miss; it is `false` for a
-          # restore-prefix hit, whose complete workspace already has Mathlib.
+          # restore-prefix hit whose complete workspace already has Mathlib.
           use-mathlib-cache: ${{ steps.package-cache.outputs.cache-hit == '' }}
-          build: "true"
+          build: "false"
           test: "false"
           lint: "false"
           use-github-cache: "false"
 
+      - name: Build global package dependencies
+        run: |
+          mapfile -t targets < .github/lean-package-cache-targets
+          lake build "${targets[@]}"
+
+      - name: Build shared EVM proof support
+        run: lake build +Challenge.EvmProof:c.o
+
+      - name: Verify shared soundness
+        run: |
+          if grep -rn --include='*.lean' -w 'sorry' Challenge/EvmProof Challenge/EvmProof.lean; then
+            echo "::error::found an unfinished proof in shared EVM support"
+            exit 1
+          fi
+          lake build +Checks.EvmProof
+
+  # Each matrix entry has its own job and source-keyed project cache. A RIPEMD
+  # submission therefore neither rebuilds nor invalidates SHA-256 or MODEXP.
+  challenge:
+    name: ${{ matrix.name }} proofs, submissions, and gas
+    needs: shared-lean
+    runs-on: warp-ubuntu-2404-x64-32x
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: SHA-256
+            directory: Sha256
+            slug: sha256
+            executable: sha256challenge
+            main: Sha256Main.lean
+            target: +Challenge.Sha256 sha256challenge
+            has_submission_checks: true
+          - name: RIPEMD-160
+            directory: Ripemd160
+            slug: ripemd160
+            executable: ripemd160challenge
+            main: Ripemd160Main.lean
+            target: +Challenge.Ripemd160 ripemd160challenge
+            has_submission_checks: true
+          - name: MODEXP
+            directory: Modexp
+            slug: modexp
+            executable: modexpchallenge
+            main: ModexpMain.lean
+            target: +Challenge.Modexp modexpchallenge
+            has_submission_checks: true
+          - name: BLAKE2f
+            directory: Blake2f
+            slug: blake2f
+            executable: blake2fchallenge
+            main: Blake2fMain.lean
+            target: +Challenge.Blake2f blake2fchallenge
+            has_submission_checks: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Restore pinned packages
+        uses: actions/cache/restore@v5
+        with:
+          path: .lake/packages
+          key: ${{ needs.shared-lean.outputs.package-key }}
+          fail-on-cache-miss: true
+
+      - name: Restore shared project build
+        uses: actions/cache/restore@v5
+        with:
+          path: .lake/build
+          key: ${{ needs.shared-lean.outputs.shared-key }}
+          fail-on-cache-miss: true
+
+      - name: Cache ${{ matrix.name }} project build
+        uses: actions/cache@v5
+        with:
+          # Dependency-package artifacts come exclusively from the global
+          # package cache. A challenge cache owns only root-package outputs.
+          path: .lake/build
+          # Only compiled Lean inputs belong in this hash. Documentation and
+          # generated gas reports are checked separately and must not trigger
+          # a cold proof rebuild.
+          key: project-${{ matrix.slug }}-v4-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-${{ hashFiles(format('Challenge/{0}.lean', matrix.directory), format('Challenge/{0}/**/*.lean', matrix.directory), matrix.main, format('Checks/{0}.lean', matrix.directory)) }}
+          # Prefer root-only v4 caches. Older namespaces can bootstrap root
+          # outputs when their cache archive version is compatible.
+          restore-keys: |
+            project-${{ matrix.slug }}-v4-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-
+            project-${{ matrix.slug }}-v3-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-
+            project-${{ matrix.slug }}-v2-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-
+            project-${{ matrix.slug }}-v1-${{ runner.os }}-${{ runner.arch }}-
+            project-lake-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+
+      - name: Set up Lean
+        uses: leanprover/lean-action@v1
+        with:
+          use-mathlib-cache: "false"
+          build: "false"
+          test: "false"
+          lint: "false"
+          use-github-cache: "false"
+
+      - name: Build ${{ matrix.name }} proofs and scorer
+        run: lake build ${{ matrix.target }}
+
       # A proof is only a proof if its axiom footprint is the standard one.
-      # Checks.lean pins it with `#guard_msgs`, so a `sorry` (`sorryAx`) or a
-      # `native_decide` (`Lean.ofReduceBool`) fails the job. The textual scan
-      # catches an unfinished proof in a file Checks.lean does not reach.
-      - name: Verify soundness (axiom footprint, no unfinished proofs)
+      # The textual scan catches an unfinished proof that an umbrella misses.
+      - name: Verify ${{ matrix.name }} soundness
         run: |
-          if grep -rn --include='*.lean' -w 'sorry' Challenge Challenge.lean Main.lean; then
-            echo "::error::found an unfinished proof"
+          if grep -rn --include='*.lean' -w 'sorry' \
+              "Challenge/${{ matrix.directory }}" \
+              "Challenge/${{ matrix.directory }}.lean" \
+              "${{ matrix.main }}"; then
+            echo "::error::found an unfinished ${{ matrix.name }} proof"
             exit 1
           fi
-          lake env lean Checks.lean
+          lake build "+Checks.${{ matrix.directory }}"
 
-      # Candidate PRs follow a fixed module/declaration convention. This gate
-      # checks the theorem type, bytecode/hex identity, transitive axiom set,
-      # and executable vectors without trusting contributor-written checks.
-      # Its negative control proves that a type-correct fake axiom is rejected.
-      - name: Verify SHA-256 candidate submissions
+      # Keep each statement auditable in isolation. Proof support and bundled
+      # implementations may depend on the spec, never the reverse.
+      - name: Verify ${{ matrix.name }} specification boundary
         run: |
-          scripts/check-sha256-submissions.sh --self-test
-          scripts/check-sha256-submissions.sh
-
-      # Keep the statement auditable in isolation. Proof support and the
-      # bundled implementation may depend on the spec, never the reverse.
-      - name: Verify SHA specification boundary
-        run: |
-          imports="$(grep '^import ' Challenge/Sha256/Spec.lean)"
+          imports="$(grep '^import ' "Challenge/${{ matrix.directory }}/Spec.lean")"
           if [ "$imports" != 'import EvmSemantics.EVM.BigStep' ]; then
-            echo "::error::Spec.lean must depend only on the pinned EVM semantics"
+            echo "::error::${{ matrix.name }} Spec.lean must depend only on the pinned EVM semantics"
             printf '%s\n' "$imports"
             exit 1
           fi
 
-      - name: Verify MODEXP specification boundary
+      # The Yul compiler is only the reproducible generator for the frozen
+      # artifact; direct-bytecode proofs target the literal bytes themselves.
+      - name: Verify frozen ${{ matrix.name }} reference bytecode
         run: |
-          imports="$(grep '^import ' Challenge/Modexp/Spec.lean)"
-          if [ "$imports" != 'import EvmSemantics.EVM.BigStep' ]; then
-            echo "::error::MODEXP Spec.lean must depend only on the pinned EVM semantics"
-            printf '%s\n' "$imports"
-            exit 1
-          fi
-
-      # `reference.hex` is the frozen direct-bytecode artifact. The compiler is
-      # only its reproducible generator; its bytecode proof uses no compiler
-      # soundness theorem.
-      - name: Verify frozen reference bytecode
-        run: |
-          compiled="$(lake exe yulc Challenge/Sha256/Reference/reference.yul)"
-          frozen="$(tr -d '[:space:]' < Challenge/Sha256/Reference/reference.hex)"
-          literal="$(lake exe sha256challenge --print-reference-hex)"
+          reference="Challenge/${{ matrix.directory }}/Reference"
+          compiled="$(lake exe yulc "$reference/reference.yul")"
+          frozen="$(tr -d '[:space:]' < "$reference/reference.hex")"
+          literal="$(lake exe ${{ matrix.executable }} --print-reference-hex)"
           if [ "$compiled" != "$frozen" ] || [ "$literal" != "$frozen" ]; then
-            echo "::error::reference.hex is stale"
+            echo "::error::${{ matrix.name }} reference.hex is stale"
             exit 1
           fi
 
-      - name: Verify frozen MODEXP reference bytecode
+      # Candidate PRs follow a fixed module/declaration convention. These
+      # checks validate theorem type, bytecode identity, transitive axioms,
+      # executable vectors, and optional proved gas schedules.
+      - name: Verify ${{ matrix.name }} submissions and gas report
+        if: matrix.has_submission_checks
         run: |
-          compiled="$(lake exe yulc Challenge/Modexp/Reference/reference.yul)"
-          frozen="$(tr -d '[:space:]' < Challenge/Modexp/Reference/reference.hex)"
-          literal="$(lake exe modexpchallenge --print-reference-hex)"
-          if [ "$compiled" != "$frozen" ] || [ "$literal" != "$frozen" ]; then
-            echo "::error::MODEXP reference.hex is stale"
-            exit 1
-          fi
+          scripts/check-${{ matrix.slug }}-submissions.sh --self-test
+          scripts/check-${{ matrix.slug }}-submissions.sh
+          scripts/report-${{ matrix.slug }}-gas.sh --self-test
+          scripts/check-${{ matrix.slug }}-gas-report.sh
 
-      - name: Tier 1 — MODEXP reference vectors
-        run: lake exe modexpchallenge
-
-      - name: Verify MODEXP submissions and gas report
+      - name: Run ${{ matrix.name }} scorer controls
         run: |
-          scripts/check-modexp-submissions.sh --self-test
-          scripts/check-modexp-submissions.sh
-          scripts/report-modexp-gas.sh --self-test
-          scripts/check-modexp-gas-report.sh
+          case "${{ matrix.slug }}" in
+            sha256)
+              printf '60206000f3' > /tmp/sha256-zeros.hex
+              if lake exe sha256challenge --hex=/tmp/sha256-zeros.hex; then
+                echo "::error::the SHA-256 scorer accepted a candidate returning 32 zero bytes"
+                exit 1
+              fi
+              ;;
+            ripemd160)
+              lake exe ripemd160challenge --hex=Challenge/Ripemd160/Reference/reference.hex
+              printf '60206000f3' > /tmp/ripemd160-zeros.hex
+              if lake exe ripemd160challenge --hex=/tmp/ripemd160-zeros.hex; then
+                echo "::error::the RIPEMD-160 scorer accepted a candidate returning 32 zero bytes"
+                exit 1
+              fi
+              ;;
+            modexp)
+              lake exe modexpchallenge
+              ;;
+            blake2f)
+              lake exe blake2fchallenge --hex=Challenge/Blake2f/Reference/reference.hex
+              printf '60406000f3' > /tmp/blake2f-zeros.hex
+              if lake exe blake2fchallenge --hex=/tmp/blake2f-zeros.hex; then
+                echo "::error::the BLAKE2f scorer accepted a candidate returning 64 zero bytes"
+                exit 1
+              fi
+              ;;
+          esac
 
-      # Score the reference and every submission, validate optional proved
-      # input-size schedules, and keep the checked gas tables in the SHA README
-      # synchronized with the exact submitted artifacts.
-      - name: Verify and report SHA-256 gas
-        run: |
-          scripts/report-sha256-gas.sh --self-test
-          scripts/check-sha256-gas-report.sh
-
-      # The scorer must be able to reject: a candidate that returns 32 zero
-      # bytes has to fail every vector. A green Tier-1 gate that cannot fail
-      # is worse than no gate.
-      - name: Tier 1 — negative control
-        run: |
-          printf '60206000f3' > /tmp/zeros.hex
-          if lake exe sha256challenge --hex=/tmp/zeros.hex; then
-            echo "::error::the scorer accepted a candidate returning 32 zero bytes"
-            exit 1
-          fi
-
-      # RIPEMD-160 uses the same minimal-spec/frozen-artifact discipline as
-      # SHA-256.  Keep the independently checked source, literal bytecode, and
-      # executable artifact synchronized.
-      - name: Verify RIPEMD-160 specification boundary and frozen bytecode
-        run: |
-          imports="$(grep '^import ' Challenge/Ripemd160/Spec.lean)"
-          if [ "$imports" != 'import EvmSemantics.EVM.BigStep' ]; then
-            echo "::error::RIPEMD-160 Spec.lean must depend only on the pinned EVM semantics"
-            printf '%s\n' "$imports"
-            exit 1
-          fi
-          compiled="$(lake exe yulc Challenge/Ripemd160/Reference/reference.yul)"
-          frozen="$(tr -d '[:space:]' < Challenge/Ripemd160/Reference/reference.hex)"
-          literal="$(lake exe ripemd160challenge --print-reference-hex)"
-          if [ "$compiled" != "$frozen" ] || [ "$literal" != "$frozen" ]; then
-            echo "::error::RIPEMD-160 reference.hex is stale"
-            exit 1
-          fi
-
-      - name: Verify RIPEMD-160 reference and scorer negative control
-        run: |
-          scripts/check-ripemd160-submissions.sh --self-test
-          scripts/check-ripemd160-submissions.sh
-          scripts/report-ripemd160-gas.sh --self-test
-          scripts/check-ripemd160-gas-report.sh
-          lake exe ripemd160challenge --hex=Challenge/Ripemd160/Reference/reference.hex
-          printf '60206000f3' > /tmp/ripemd-zeros.hex
-          if lake exe ripemd160challenge --hex=/tmp/ripemd-zeros.hex; then
-            echo "::error::the RIPEMD-160 scorer accepted a candidate returning 32 zero bytes"
-            exit 1
-          fi
-
-  # An independent check on the gas numbers the challenge READMEs publish.
-  # Those numbers come from the pinned Lean semantics; this job re-measures the
-  # same frozen bytecode on the same vectors under revm and requires exact
-  # agreement. It shares no code with the job above, and deliberately does not
-  # build Lean: if the two EVMs ever disagree, that has to show up as a
-  # disagreement, not as a shared bug.
+  # Independent gas re-measurement under revm. This deliberately shares no
+  # Lean code with the proof jobs, so disagreement between the EVMs is visible.
   crosscheck:
     name: Cross-check published gas under revm
     runs-on: ubuntu-24.04
@@ -207,9 +283,8 @@ jobs:
           # Not recursive: evmification's own libraries are not imported here.
           submodules: true
 
-      # Pinned rather than floating: an exact-equality gas assertion is only
-      # reproducible against a fixed revm, and a toolchain bump should be a
-      # deliberate change with its own diff.
+      # Pinned rather than floating: exact gas equality is reproducible only
+      # against a fixed revm, so a toolchain bump remains a deliberate change.
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:

@@ -233,4 +233,31 @@ theorem byteAt_zero_readWord (bytes : ByteArray) (offset : Nat) :
     Nat.and_two_pow_sub_one_eq_mod]
   exact Nat.mod_eq_of_lt (YulSemantics.EVM.byteFrom bytes.toList offset).toNat_lt
 
+/-- `BYTE i (CALLDATALOAD offset)` selects calldata byte `offset + i` for
+every in-range EVM byte index. This is the reusable bridge needed by compiled
+little-endian decoders. -/
+theorem byteAt_readWord (bytes : ByteArray) (offset i : Nat) (hi : i < 32) :
+    EvmSemantics.UInt256.byteAt (EvmSemantics.UInt256.ofNat i)
+        (EvmSemantics.MachineState.readWord bytes offset) =
+      EvmSemantics.UInt256.ofNat
+        (YulSemantics.EVM.byteFrom bytes.toList (offset + i)).toNat := by
+  unfold EvmSemantics.UInt256.byteAt
+  rw [Challenge.EvmProof.Word.word_toNat_ofNat,
+    Nat.mod_eq_of_lt (Nat.lt_trans hi (by norm_num))]
+  rw [if_neg (by omega)]
+  apply Challenge.EvmProof.Word.word_ext
+  rw [Challenge.EvmProof.Word.word_toNat_ofNat
+    (YulSemantics.EVM.byteFrom bytes.toList (offset + i)).toNat]
+  rw [Nat.mod_eq_of_lt (Nat.lt_trans
+    (YulSemantics.EVM.byteFrom bytes.toList (offset + i)).toNat_lt (by norm_num))]
+  rw [show 8 * (31 - i) = (32 - (i + 1)) * 8 by omega]
+  rw [readWord_shift_toNat bytes offset (i + 1) (by omega)]
+  rw [bytesToNatPadded_succ bytes offset i]
+  rw [show 0xff = 2 ^ 8 - 1 by norm_num,
+    Nat.and_two_pow_sub_one_eq_mod]
+  simp [Nat.add_mod,
+    Nat.mod_eq_of_lt (YulSemantics.EVM.byteFrom bytes.toList (offset + i)).toNat_lt]
+  exact Nat.lt_trans
+    (YulSemantics.EVM.byteFrom bytes.toList (offset + i)).toNat_lt (by norm_num)
+
 end Challenge.EvmProof.Bytes

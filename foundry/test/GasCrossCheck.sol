@@ -6,7 +6,7 @@ import {GasProbe} from "../src/GasProbe.sol";
 import {LeanArtifact} from "../src/LeanArtifact.sol";
 
 /// @title GasCrossCheck
-/// @notice Shared scaffolding for the three challenge cross-checks.
+/// @notice Shared scaffolding for the challenge cross-checks.
 ///
 /// @dev Each challenge test declares its vectors together with the gas its
 ///      `Scorer.lean` reports for them, etches the frozen reference artifact,
@@ -37,9 +37,15 @@ abstract contract GasCrossCheck is Test {
     /// @notice Loads the frozen artifact from `referenceDir`, proving it is the
     ///         bytecode the Lean theorems are about, and etches it.
     function _etchReference(string memory referenceDir) internal returns (address) {
+        return _etchReferenceAt(referenceDir, REFERENCE_ADDRESS);
+    }
+
+    /// @notice Variant for challenges whose specification pins another
+    ///         non-precompile address.
+    function _etchReferenceAt(string memory referenceDir, address target) internal returns (address) {
         pin = LeanArtifact.load(vm, referenceDir);
-        vm.etch(REFERENCE_ADDRESS, pin.code);
-        return REFERENCE_ADDRESS;
+        vm.etch(target, pin.code);
+        return target;
     }
 
     /// @notice Measures one frame, requiring it to return successfully.

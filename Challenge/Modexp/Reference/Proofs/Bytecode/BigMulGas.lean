@@ -35,7 +35,7 @@ theorem gasSteps_mulOuterGuardSegment_cost_potential (current : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false) :
     (gasSteps_mulOuterGuardSegment current a b out modulus count i returnDest
       rest hcap hcount hi hcode hfork hrun hnp).cost + MachineState.memCost
@@ -56,7 +56,7 @@ theorem gasSteps_mulOuterLoadSegment_cost_potential (current : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false) :
     (gasSteps_mulOuterLoadSegment current a b out modulus count i returnDest
       rest hcap hcount hi hcode hfork hrun hnp).cost + MachineState.memCost
@@ -76,7 +76,7 @@ theorem gasSteps_mulInnerFinishSegment_cost_potential (current : State)
     (returnDest : UInt256) (rest : List UInt256) (hcap : rest.length < 980)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false) :
     let inner := mulInnerState current word a b out modulus count i 256
       returnDest rest
@@ -100,7 +100,7 @@ theorem gasSteps_mulInnerExitSegment_cost_potential (current : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false) :
     let inner := mulInnerState current word a b out modulus count i 256
       returnDest rest
@@ -126,7 +126,7 @@ theorem gasSteps_mulOuterIteration_cost_potential (current : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false) :
     let before := mulOuterProgress current a b out modulus count returnDest rest i
     let after := mulOuterProgress current a b out modulus count returnDest rest (i + 1)
@@ -199,7 +199,7 @@ theorem gasSteps_mulOuterIteration_cost_potential (current : State)
     (hcount : count < 2 ^ 256) (hi : i < count)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false) :
     let before := mulOuterProgress current a b out modulus count returnDest rest i
     let after := mulOuterProgress current a b out modulus count returnDest rest (i + 1)
@@ -303,7 +303,7 @@ theorem gasSteps_mulOuterLoop_cost_potential (current : State)
     (hcount : count < 2 ^ 256)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false) :
     (gasSteps_mulOuterLoop current a b out modulus count returnDest rest hcap
         hcount hcode hfork hrun hnp).cost + MachineState.memCost
@@ -324,7 +324,7 @@ theorem gasSteps_mulFinish_cost_potential (current : State)
     (hcount : count < 2 ^ 256)
     (hcode : current.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : current.fork = .Osaka) (hrun : current.halt = .Running)
-    (hnp : Precompile.isPrecompile current.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig current.executionEnv.precompileConfig current.executionEnv.fork
       current.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest Challenge.Modexp.referenceBytecode
       returnDest.toNat = true) :
@@ -357,7 +357,7 @@ theorem gasSteps_mulModBig_cost_potential (s : State)
     (hcount : count < 2 ^ 256)
     (hcode : s.executionEnv.code = Challenge.Modexp.referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hvalid : Decode.isValidJumpDest Challenge.Modexp.referenceBytecode
       returnDest.toNat = true) :

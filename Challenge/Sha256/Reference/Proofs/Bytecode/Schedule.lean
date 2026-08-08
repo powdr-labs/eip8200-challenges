@@ -217,7 +217,7 @@ def gasSteps_firstIteration (s : State) (msgOff returnDest : UInt256)
     (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (firstAt s msgOff returnDest rest j)
       (afterFirstIteration s msgOff returnDest rest j) := by
@@ -307,7 +307,7 @@ def gasSteps_firstLoop (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1016)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (firstLoopState s msgOff returnDest rest 0)
       (firstLoopState s msgOff returnDest rest 16) := by
@@ -320,7 +320,7 @@ def gasSteps_firstLoop (s : State) (msgOff returnDest : UInt256)
     simpa [q, State.fork] using hfork
   have hqrun : q.halt = .Running := by
     simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q] using hnp
   have g := gasSteps_firstIteration q msgOff returnDest rest j hj hstack
@@ -363,7 +363,7 @@ def gasSteps_scheduleStart (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1021)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (scheduleEntry s msgOff returnDest rest)
       (firstLoopState s msgOff returnDest rest 0) := by
@@ -833,7 +833,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     (hstack : rest.length < 990)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (secondAt s msgOff returnDest rest j)
       (afterSecondIteration s msgOff returnDest rest j) := by
@@ -874,7 +874,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     simpa [q16, gotW16, Accessors.loadReturned, State.fork] using hfork
   have q16run : q16.halt = .Running := by
     simpa [q16, gotW16, Accessors.loadReturned] using hrun
-  have q16np : Precompile.isPrecompile q16.executionEnv.fork
+  have q16np : Precompile.isPrecompileWithConfig q16.executionEnv.precompileConfig q16.executionEnv.fork
       q16.executionEnv.codeAddr = false := by
     simpa [q16, gotW16, Accessors.loadReturned] using hnp
   have rawW15 : Challenge.EvmProof.GasSteps
@@ -903,7 +903,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     simpa [q15, gotW15, q16, Accessors.loadReturned, State.fork] using q16fork
   have q15run : q15.halt = .Running := by
     simpa [q15, gotW15, q16, Accessors.loadReturned] using q16run
-  have q15np : Precompile.isPrecompile q15.executionEnv.fork
+  have q15np : Precompile.isPrecompileWithConfig q15.executionEnv.precompileConfig q15.executionEnv.fork
       q15.executionEnv.codeAddr = false := by
     simpa [q15, gotW15, q16, Accessors.loadReturned] using q16np
   have rawS0 : Challenge.EvmProof.GasSteps
@@ -931,7 +931,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     simpa [qs0, gotSsig0, q15, Functions.unaryReturned, State.fork] using q15fork
   have qs0run : qs0.halt = .Running := by
     simpa [qs0, gotSsig0, q15, Functions.unaryReturned] using q15run
-  have qs0np : Precompile.isPrecompile qs0.executionEnv.fork
+  have qs0np : Precompile.isPrecompileWithConfig qs0.executionEnv.precompileConfig qs0.executionEnv.fork
       qs0.executionEnv.codeAddr = false := by
     simpa [qs0, gotSsig0, q15, Functions.unaryReturned] using q15np
   have rawW7 : Challenge.EvmProof.GasSteps
@@ -960,7 +960,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     simpa [q7, gotW7, qs0, Accessors.loadReturned, State.fork] using qs0fork
   have q7run : q7.halt = .Running := by
     simpa [q7, gotW7, qs0, Accessors.loadReturned] using qs0run
-  have q7np : Precompile.isPrecompile q7.executionEnv.fork
+  have q7np : Precompile.isPrecompileWithConfig q7.executionEnv.precompileConfig q7.executionEnv.fork
       q7.executionEnv.codeAddr = false := by
     simpa [q7, gotW7, qs0, Accessors.loadReturned] using qs0np
   have rawW2 : Challenge.EvmProof.GasSteps
@@ -990,7 +990,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     simpa [q2, gotW2, q7, Accessors.loadReturned, State.fork] using q7fork
   have q2run : q2.halt = .Running := by
     simpa [q2, gotW2, q7, Accessors.loadReturned] using q7run
-  have q2np : Precompile.isPrecompile q2.executionEnv.fork
+  have q2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by
     simpa [q2, gotW2, q7, Accessors.loadReturned] using q7np
   have rawS1 : Challenge.EvmProof.GasSteps
@@ -1019,7 +1019,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     simpa [qs1, gotSsig1, q2, Functions.unaryReturned, State.fork] using q2fork
   have qs1run : qs1.halt = .Running := by
     simpa [qs1, gotSsig1, q2, Functions.unaryReturned] using q2run
-  have qs1np : Precompile.isPrecompile qs1.executionEnv.fork
+  have qs1np : Precompile.isPrecompileWithConfig qs1.executionEnv.precompileConfig qs1.executionEnv.fork
       qs1.executionEnv.codeAddr = false := by
     simpa [qs1, gotSsig1, q2, Functions.unaryReturned] using q2np
   have rawFinish : Challenge.EvmProof.GasSteps
@@ -1047,7 +1047,7 @@ def gasSteps_secondIteration (s : State) (msgOff returnDest : UInt256)
     simpa [qset, gotWSet, qs1, Accessors.storeReturned, State.fork] using qs1fork
   have qsetrun : qset.halt = .Running := by
     simpa [qset, gotWSet, qs1, Accessors.storeReturned] using qs1run
-  have qsetnp : Precompile.isPrecompile qset.executionEnv.fork
+  have qsetnp : Precompile.isPrecompileWithConfig qset.executionEnv.precompileConfig qset.executionEnv.fork
       qset.executionEnv.codeAddr = false := by
     simpa [qset, gotWSet, qs1, Accessors.storeReturned] using qs1np
   have rawIncrement : Challenge.EvmProof.GasSteps
@@ -1134,7 +1134,7 @@ def gasSteps_secondLoop (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 990)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (secondLoopState s msgOff returnDest rest 0)
       (secondLoopState s msgOff returnDest rest 48) := by
@@ -1147,7 +1147,7 @@ def gasSteps_secondLoop (s : State) (msgOff returnDest : UInt256)
     simpa [q, State.fork] using hfork
   have hqrun : q.halt = .Running := by
     simpa [q] using hrun
-  have hqnp : Precompile.isPrecompile q.executionEnv.fork
+  have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q] using hnp
   have g := gasSteps_secondIteration q msgOff returnDest rest (16 + n)
@@ -1213,7 +1213,7 @@ def gasSteps_firstExit (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
     Challenge.EvmProof.GasSteps (firstAt s msgOff returnDest rest 16)
       (secondAt s msgOff returnDest rest 16) := by
@@ -1252,7 +1252,7 @@ def gasSteps_secondExit (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1019)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (secondAt s msgOff returnDest rest 64)
@@ -1275,7 +1275,7 @@ def gasSteps_schedule (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 990)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) :
     Challenge.EvmProof.GasSteps (scheduleEntry s msgOff returnDest rest)
@@ -1289,7 +1289,7 @@ def gasSteps_schedule (s : State) (msgOff returnDest : UInt256)
   have q1code : q1.executionEnv.code = referenceBytecode := by simpa [q1] using hcode
   have q1fork : q1.fork = .Osaka := by simpa [q1, State.fork] using hfork
   have q1run : q1.halt = .Running := by simpa [q1] using hrun
-  have q1np : Precompile.isPrecompile q1.executionEnv.fork
+  have q1np : Precompile.isPrecompileWithConfig q1.executionEnv.precompileConfig q1.executionEnv.fork
       q1.executionEnv.codeAddr = false := by simpa [q1] using hnp
   have bridgeRaw := gasSteps_firstExit q1 msgOff returnDest rest (by omega)
     q1code q1fork q1run q1np
@@ -1301,7 +1301,7 @@ def gasSteps_schedule (s : State) (msgOff returnDest : UInt256)
   have q2code : q2.executionEnv.code = referenceBytecode := by simpa [q2] using q1code
   have q2fork : q2.fork = .Osaka := by simpa [q2, State.fork] using q1fork
   have q2run : q2.halt = .Running := by simpa [q2] using q1run
-  have q2np : Precompile.isPrecompile q2.executionEnv.fork
+  have q2np : Precompile.isPrecompileWithConfig q2.executionEnv.precompileConfig q2.executionEnv.fork
       q2.executionEnv.codeAddr = false := by simpa [q2] using q1np
   have finishRaw := gasSteps_secondExit q2 msgOff returnDest rest (by omega)
     q2code q2fork q2run q2np hreturn
@@ -1319,7 +1319,7 @@ def gasSteps_scheduleCost (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 990)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
-    (hnp : Precompile.isPrecompile s.executionEnv.fork
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false)
     (hreturn : Decode.isValidJumpDest referenceBytecode returnDest.toNat = true) : Nat :=
   @Challenge.EvmProof.GasSteps.cost
