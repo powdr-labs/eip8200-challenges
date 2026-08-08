@@ -84,6 +84,7 @@ against the bundled reference. These measurements are tests, not proofs.
 | implementation | bytes | empty | abc | 55 bytes | 56 bytes | 64 bytes | 1,000 bytes | all vectors | vs precompile | vs reference |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | [Reference](Reference/) | 1524 | 158035 | 158038 | 158041 | 314044 | 314044 | 2498174 | 10179119 | 4199.31× | 1.00× |
+| [Sha256Fast](Submissions/Sha256Fast/) | 2622 | 22552 | 22552 | 22552 | 43750 | 43781 | 340987 | 1404867 | 579.57× | 0.14× |
 
 ### Category 2: proved `CALLDATASIZE` gas bounds
 
@@ -100,6 +101,7 @@ the largest admissible calldata size, $2^{64}-1$, smallest first.
 
 | implementation | proved symbolic bound | proof |
 |---|---|---|
+| [Sha256Fast](Submissions/Sha256Fast/) | $G(\mathrm{CALLDATASIZE}) = 1323 + 21229 \cdot \left\lfloor\frac{\mathrm{CALLDATASIZE} + 72}{64}\right\rfloor$ | [proved](Submissions/Sha256Fast/Gas.lean) |
 | [Reference](Reference/) | $G(\mathrm{CALLDATASIZE}) = 1747 + 155996 \cdot \left\lfloor\frac{\mathrm{CALLDATASIZE} + 72}{64}\right\rfloor + 3 \cdot \left\lfloor\frac{\mathrm{CALLDATASIZE} + 31}{32}\right\rfloor + C_{\mathrm{mem}}\left(90 + 2 \cdot \left\lfloor\frac{\mathrm{CALLDATASIZE} + 72}{64}\right\rfloor\right)$ | [proved](Reference/Proofs/Gas.lean) |
 
 <!-- END GENERATED SHA256 GAS REPORT -->
