@@ -293,20 +293,6 @@ class Gen:
         return a.assemble()
 
 
-def build():
-    g = Gen()
-    code = g.program()
-    assert g.maxdepth <= 16, g.maxdepth
-    return code, g.a.marks
-
-
-def build():
-    g = Gen()
-    code = g.program()
-    assert g.maxdepth <= 16, g.maxdepth
-    return code, g
-
-
 def generate():
     g = Gen()
     code = g.program()
