@@ -1,7 +1,7 @@
 import Challenge.Sha256.Submissions.Sha256Fast.Proofs.RoundCorrect
 import Challenge.Sha256.Submissions.Sha256Fast.Proofs.FeedForwardCorrect
 import Challenge.Sha256.Submissions.Sha256Fast.Proofs.ScheduleTrace
-import Challenge.EvmProof.FixedPathGas
+import Challenge.Sha256.Submissions.Sha256Fast.Proofs.GasTools
 
 set_option warningAsError true
 set_option maxRecDepth 20000

@@ -1,6 +1,6 @@
 import Challenge.Sha256.Submissions.Sha256Fast.Proofs.SchedIter
 import Challenge.Sha256.Submissions.Sha256Fast.Proofs.Body
-import Challenge.EvmProof.Meter
+import Challenge.Sha256.Submissions.Sha256Fast.Proofs.GasTools
 
 set_option warningAsError true
 set_option maxRecDepth 100000

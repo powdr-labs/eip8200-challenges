@@ -1,5 +1,5 @@
 import Challenge.Sha256.Submissions.Sha256Fast.Proofs.TailCompression
-import Challenge.EvmProof.FixedPathGas
+import Challenge.Sha256.Submissions.Sha256Fast.Proofs.GasTools
 import Challenge.Sha256.Submissions.Sha256Fast.Proofs.OutputBlock
 import Challenge.Sha256.Reference.Proofs.Bytecode.DriverCorrect
 

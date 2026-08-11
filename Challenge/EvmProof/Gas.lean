@@ -101,35 +101,6 @@ def cast {s t s' t' : State} (g : GasSteps s t)
     (hst : GasSteps s t) (htu : GasSteps t u) :
     (trans hst htu).cost = hst.cost + htu.cost := rfl
 
-/-- Replace a certificate's proof-relevant cost by a propositionally equal
-number.  This keeps large symbolic traces out of later cost projections: the
-new certificate's `cost` field is definitionally the displayed number. -/
-def reprice {s t : State} (trace : GasSteps s t) (cost : Nat)
-    (hcost : trace.cost = cost) : GasSteps s t := by
-  refine ⟨cost, fun gas hgas => ?_⟩
-  have hold : trace.cost ≤ gas := by simpa [hcost] using hgas
-  simpa [hcost] using trace.trace gas hold
-
-@[simp] theorem reprice_cost {s t : State} (trace : GasSteps s t)
-    (cost : Nat) (hcost : trace.cost = cost) :
-    (reprice trace cost hcost).cost = cost := rfl
-
-/-- Compose two certificates while making their proved component costs
-definitionally visible in the result. -/
-def transKnown {s t u : State} (first : GasSteps s t) (second : GasSteps t u)
-    (firstCost secondCost : Nat) (hfirst : first.cost = firstCost)
-    (hsecond : second.cost = secondCost) : GasSteps s u :=
-  reprice (first.trans second) (firstCost + secondCost) (by
-    simp only [trans_cost]
-    rw [hfirst, hsecond])
-
-@[simp] theorem transKnown_cost {s t u : State}
-    (first : GasSteps s t) (second : GasSteps t u)
-    (firstCost secondCost : Nat) (hfirst : first.cost = firstCost)
-    (hsecond : second.cost = secondCost) :
-    (transKnown first second firstCost secondCost hfirst hsecond).cost =
-      firstCost + secondCost := rfl
-
 @[simp] theorem iterate_zero_cost {I : Nat → State}
     (body : ∀ i, GasSteps (I i) (I (i + 1))) :
     (iterate body 0).cost = 0 := rfl
@@ -164,23 +135,6 @@ theorem iterateBounded_cost_of_const {I : Nat → State} (count cost : Nat)
         simp [Nat.succ_mul]
       · intro i hi
         exact hcost i (Nat.lt_succ_of_lt hi)
-
-/-- Iterate a fixed-cost certificate while keeping the aggregate cost
-definitionally visible.  This is useful when the individual traces contain
-large generated symbolic-execution proofs that should not be unfolded by
-later cost calculations. -/
-def iterateBoundedKnown {I : Nat → State} (count cost : Nat)
-    (body : ∀ i, i < count → GasSteps (I i) (I (i + 1)))
-    (hcost : ∀ i (hi : i < count), (body i hi).cost = cost) :
-    GasSteps (I 0) (I count) :=
-  reprice (iterateBounded count body) (count * cost)
-    (iterateBounded_cost_of_const count cost body hcost)
-
-@[simp] theorem iterateBoundedKnown_cost {I : Nat → State}
-    (count cost : Nat)
-    (body : ∀ i, i < count → GasSteps (I i) (I (i + 1)))
-    (hcost : ∀ i (hi : i < count), (body i hi).cost = cost) :
-    (iterateBoundedKnown count cost body hcost).cost = count * cost := rfl
 
 /-- Telescope an exact per-iteration cost equation against a state potential.
 This form avoids separately proving monotonicity when the instruction meter
