@@ -607,11 +607,7 @@ def referenceInstructions : List Instr :=
 
 theorem assemble_referenceInstructions :
     assemble referenceInstructions = referenceBytecode := by
-  apply ByteArray.ext
-  simp [assemble, assembleBytes, referenceInstructions, referenceBytecode,
-    referenceBytes, Instr.bytes, natToBE]
-  repeat' apply And.intro
-  all_goals decide
+  native_decide
 
 
 def referenceArtifact : Challenge.EvmProof.ProgramArtifact where

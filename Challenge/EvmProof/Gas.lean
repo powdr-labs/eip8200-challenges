@@ -1,4 +1,5 @@
 import Challenge.EvmProof.Execution
+import Mathlib.Order.Monotone.Basic
 set_option warningAsError true
 /-!
 # Gas-parametric direct EVM traces

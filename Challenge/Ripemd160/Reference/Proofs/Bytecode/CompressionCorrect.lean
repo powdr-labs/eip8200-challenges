@@ -139,8 +139,7 @@ def schedule (bs : ByteArray) (blockOff : Nat) : Array UInt32 := Id.run do
 def hashArray (h : HashState) : Array UInt32 :=
   #[h.h0, h.h1, h.h2, h.h3, h.h4]
 
-abbrev RoundTuple := MProd UInt32
-  (MProd UInt32 (MProd UInt32 (MProd UInt32 UInt32)))
+abbrev RoundTuple := UInt32 × UInt32 × UInt32 × UInt32 × UInt32
 
 def toTuple (x : Working) : RoundTuple :=
   ⟨x.a, x.b, x.c, x.d, x.e⟩

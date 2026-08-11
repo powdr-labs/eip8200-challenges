@@ -29,7 +29,7 @@ reducible for direct `stepF` proofs; CI pins it to `reference.hex`. -/
 def referenceBytecode : ByteArray := referenceBytes
 
 @[simp] theorem referenceBytecode_size : referenceBytecode.size = 1524 := by
-  simp [referenceBytecode]
+  exact referenceBytes_size
 
 @[simp] theorem referenceBytecode_get_zero : referenceBytecode[0] = 0x61 := by
   change referenceBytes[0] = 0x61

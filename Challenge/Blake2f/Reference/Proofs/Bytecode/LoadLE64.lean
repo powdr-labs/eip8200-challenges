@@ -122,6 +122,7 @@ theorem run_init (s : State) (offset returnDest : UInt256)
   have hcap3 : tail.length + 1 + 1 + 1 < 1024 := by omega
   have hcap4 : tail.length + 1 + 1 + 1 + 1 < 1024 := by omega
   have hzeroStruct : (⟨0⟩ : UInt256) = UInt256.ofNat 0 := by decide
+  simp only [initPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -153,6 +154,7 @@ theorem run_test_continue (s : State) (offset returnDest : UInt256)
   have hpc17 : UInt256.ofNat 14 + UInt256.ofNat 3 = UInt256.ofNat 17 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 14) (b := 3) (by norm_num)
+  simp only [testPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -188,6 +190,7 @@ theorem run_test_exit (s : State) (offset returnDest : UInt256)
   have hpc17 : UInt256.ofNat 14 + UInt256.ofNat 3 = UInt256.ofNat 17 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 14) (b := 3) (by norm_num)
+  simp only [testPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -247,6 +250,7 @@ theorem run_body (s : State) (offset returnDest : UInt256)
         some (UInt256.ofNat i :: UInt256.ofNat (i + 1) :: inputWord :: offset ::
           next :: returnDest :: tail) := by
     rfl
+  simp only [bodyPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -279,6 +283,7 @@ theorem run_exit (s : State) (offset returnDest : UInt256)
     (MachineState.readWord s.executionEnv.calldata offset.toNat) 8
   have hexchange : (value :: returnDest :: tail).exchange 0 1 =
       some (returnDest :: value :: tail) := by rfl
+  simp only [exitPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,

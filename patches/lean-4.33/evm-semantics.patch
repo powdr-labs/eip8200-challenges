@@ -1,0 +1,147 @@
+diff --git a/EvmSemantics/Crypto/Fp12.lean b/EvmSemantics/Crypto/Fp12.lean
+index d6df5f3..38b4320 100644
+--- a/EvmSemantics/Crypto/Fp12.lean
++++ b/EvmSemantics/Crypto/Fp12.lean
+@@ -28,8 +28,6 @@ structure Fp12 (p : Nat) where
+   c1 : Fp6 p
+   deriving DecidableEq
+ 
+-attribute [nolint dupNamespace] Fp12 Fp12.mk Fp12.c0 Fp12.c1 Fp12.rec
+-
+ instance {p : Nat} [NeZero p] : Inhabited (Fp12 p) :=
+   ⟨{ c0 := ⟨0, 0, 0⟩, c1 := ⟨0, 0, 0⟩ }⟩
+ 
+diff --git a/EvmSemantics/Crypto/Fp2.lean b/EvmSemantics/Crypto/Fp2.lean
+index 7c4663d..9e36207 100644
+--- a/EvmSemantics/Crypto/Fp2.lean
++++ b/EvmSemantics/Crypto/Fp2.lean
+@@ -35,8 +35,6 @@ structure Fp2 (p : Nat) where
+   c1 : Fin p
+   deriving DecidableEq
+ 
+-attribute [nolint dupNamespace] Fp2 Fp2.mk Fp2.c0 Fp2.c1 Fp2.rec
+-
+ instance {p : Nat} [NeZero p] : Inhabited (Fp2 p) := ⟨{ c0 := 0, c1 := 0 }⟩
+ 
+ namespace Fp2
+diff --git a/EvmSemantics/Crypto/Fp6.lean b/EvmSemantics/Crypto/Fp6.lean
+index 18f0cc9..15695cc 100644
+--- a/EvmSemantics/Crypto/Fp6.lean
++++ b/EvmSemantics/Crypto/Fp6.lean
+@@ -28,8 +28,6 @@ structure Fp6 (p : Nat) where
+   c2 : Fp2 p
+   deriving DecidableEq
+ 
+-attribute [nolint dupNamespace] Fp6 Fp6.mk Fp6.c0 Fp6.c1 Fp6.c2 Fp6.rec
+-
+ instance {p : Nat} [NeZero p] : Inhabited (Fp6 p) :=
+   ⟨{ c0 := 0, c1 := 0, c2 := 0 }⟩
+ 
+diff --git a/EvmSemantics/EVM/Equiv.lean b/EvmSemantics/EVM/Equiv.lean
+index 5665b81..31b01bf 100644
+--- a/EvmSemantics/EVM/Equiv.lean
++++ b/EvmSemantics/EVM/Equiv.lean
+@@ -6,6 +6,8 @@ public import EvmSemantics.EVM.Step
+ public import EvmSemantics.EVM.StepF
+ public import EvmSemantics.EVM.BigStep
+ 
++set_option maxRecDepth 10000
++
+ /-!
+ `Equiv` — soundness of `stepF` with respect to the relational `Step`.
+ 
+diff --git a/EvmSemantics/EVM/StepComplete/Calls.lean b/EvmSemantics/EVM/StepComplete/Calls.lean
+index 6d1e71a..9441d52 100644
+--- a/EvmSemantics/EVM/StepComplete/Calls.lean
++++ b/EvmSemantics/EVM/StepComplete/Calls.lean
+@@ -3,6 +3,8 @@ module
+ meta import EvmSemantics.Tactic.SplitIfs
+ public import EvmSemantics.EVM.StepComplete.Dispatch
+ 
++set_option maxRecDepth 10000
++
+ /-!
+ `StepComplete.Calls` — completeness cases for the Calls constructors of
+ `StepRunning`: each constructor's premises force `stepF` to compute
+@@ -190,7 +192,11 @@ theorem complete_callFail (s : State)
+   refine stepF_eq_ok ?_
+   rw [stepFE_dispatch h_run h_np h_dec h_cap h_base]
+   simp only [stepF.system, h_stack]
+-  rw [if_neg (by rintro ⟨hp, hv⟩; rcases h_static with h | h; exacts [hp h, hv h])]
++  rw [if_neg (by
++    rintro ⟨hp, hv⟩
++    rcases h_static with h | h
++    · exact hp h
++    · exact hv h)]
+   have h_mem : (s.consumeGas (Gas.baseCost s.fork .CALL) h_base).canExpandMemory2
+       argsOff.toNat argsLen.toNat retOff.toNat retLen.toNat := by
+     simp only [State.canExpandMemory2, State.consumeGas]; rw [hC] at h_gas; omega
+diff --git a/EvmSemantics/EVM/StepComplete/Creates.lean b/EvmSemantics/EVM/StepComplete/Creates.lean
+index 3f15ff2..3e67a9b 100644
+--- a/EvmSemantics/EVM/StepComplete/Creates.lean
++++ b/EvmSemantics/EVM/StepComplete/Creates.lean
+@@ -3,6 +3,8 @@ module
+ meta import EvmSemantics.Tactic.SplitIfs
+ public import EvmSemantics.EVM.StepComplete.Dispatch
+ 
++set_option maxRecDepth 10000
++
+ /-!
+ `StepComplete.Creates` — completeness cases for the Creates constructors of
+ `StepRunning`: each constructor's premises force `stepF` to compute
+@@ -39,7 +41,7 @@ theorem complete_return_ (s : State) (offset size : UInt256) (rest : List UInt25
+       + MachineState.memExpansionDelta s.activeWords.toNat offset.toNat size.toNat
+       ≤ s.gasAvailable := h_gas
+   have h_base : Gas.baseCost s.fork (.System .RETURN) ≤ s.gasAvailable :=
+-    le_trans (Nat.le_add_right _ _) h_gas'
++    Nat.le_trans (Nat.le_add_right _ _) h_gas'
+   have h_mem : (s.consumeGas (Gas.baseCost s.fork (.System .RETURN))
+       h_base).canExpandMemory offset.toNat size.toNat := by
+     show MachineState.memExpansionDelta s.activeWords.toNat offset.toNat size.toNat
+@@ -78,7 +80,7 @@ theorem complete_revert (s : State) (offset size : UInt256) (rest : List UInt256
+       + MachineState.memExpansionDelta s.activeWords.toNat offset.toNat size.toNat
+       ≤ s.gasAvailable := h_gas
+   have h_base : Gas.baseCost s.fork (.System .REVERT) ≤ s.gasAvailable :=
+-    le_trans (Nat.le_add_right _ _) h_gas'
++    Nat.le_trans (Nat.le_add_right _ _) h_gas'
+   have h_mem : (s.consumeGas (Gas.baseCost s.fork (.System .REVERT))
+       h_base).canExpandMemory offset.toNat size.toNat := by
+     show MachineState.memExpansionDelta s.activeWords.toNat offset.toNat size.toNat
+@@ -199,7 +201,7 @@ theorem complete_createCollision (s : State)
+     := by
+   obtain ⟨argOpt, h_dec⟩ := State.decodedOp_some h_op
+   have h_base : Gas.baseCost s.fork .CREATE ≤ s.gasAvailable := by
+-    exact le_trans ( Nat.le_add_right _ _ ) ( le_trans ( Nat.le_add_right _ _ ) h_gas )
++    exact Nat.le_trans (Nat.le_add_right _ _) (Nat.le_trans (Nat.le_add_right _ _) h_gas)
+   rw [stepF_eq_ok]
+   rw [stepFE_dispatch h_run h_np h_dec h_cap h_base]
+   simp +decide [ stepF.system, h_stack, h_perm, h_size ]
+@@ -252,7 +254,7 @@ theorem complete_create (s : State)
+     := by
+   obtain ⟨argOpt, h_dec⟩ := State.decodedOp_some h_op;
+   have h_base : Gas.baseCost s.fork .CREATE ≤ s.gasAvailable := by
+-    exact le_trans ( Nat.le_add_right _ _ ) ( le_trans ( Nat.le_add_right _ _ ) h_gas );
++    exact Nat.le_trans (Nat.le_add_right _ _) (Nat.le_trans (Nat.le_add_right _ _) h_gas);
+   rw [stepF_eq_ok];
+   rw [stepFE_dispatch h_run h_np h_dec h_cap h_base];
+   simp +decide [ stepF.system, h_stack, h_perm, h_size ];
+@@ -529,4 +531,4 @@ theorem complete_selfDestruct (s : State)
+ 
+ end StepComplete
+ end EVM
+-end EvmSemantics
+\ No newline at end of file
++end EvmSemantics
+diff --git a/EvmSemantics/EVM/StepComplete/Flow.lean b/EvmSemantics/EVM/StepComplete/Flow.lean
+index 1723698..b7893fe 100644
+--- a/EvmSemantics/EVM/StepComplete/Flow.lean
++++ b/EvmSemantics/EVM/StepComplete/Flow.lean
+@@ -193,7 +193,7 @@ theorem complete_jumpi_notTaken (s : State) (dest cond : UInt256) (rest : List U
+   refine stepF_eq_ok ?_
+   rw [stepFE_dispatch h_run h_np h_dec h_cap h_gas]
+   simp only [stepF.stackMemFlow, h_stack]
+-  rw [if_pos (not_not.mp h_cond)]
++  rw [if_pos (Decidable.not_not.mp h_cond)]
+   rfl
+ 
+ /-- Completeness for `StepRunning.pc`. -/

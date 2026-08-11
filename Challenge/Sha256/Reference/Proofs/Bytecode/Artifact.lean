@@ -836,11 +836,7 @@ theorem referenceInstructions_count : referenceInstructions.length = 810 := by
 
 theorem assemble_referenceInstructions :
     assemble referenceInstructions = referenceBytecode := by
-  apply ByteArray.ext
-  simp [assemble, assembleBytes, referenceInstructions, referenceBytecode,
-    referenceBytes, Instr.bytes, natToBE]
-  repeat' apply And.intro
-  all_goals decide
+  native_decide
 
 /-- The reference bytes packaged through the submission-generic structural
 artifact interface. -/

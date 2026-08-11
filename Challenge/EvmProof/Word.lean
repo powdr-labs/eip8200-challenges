@@ -37,6 +37,11 @@ theorem word_add_comm (a b : EvmSemantics.UInt256) : a + b = b + a := by
   change (a.val + b.val).val = (b.val + a.val).val
   rw [Fin.val_add, Fin.val_add, Nat.add_comm]
 
+theorem word_and_comm (a b : EvmSemantics.UInt256) : a &&& b = b &&& a := by
+  apply word_ext
+  change (a.val &&& b.val).val = (b.val &&& a.val).val
+  rw [Fin.and_val, Fin.and_val, Nat.and_comm]
+
 theorem word_toNat_add (a b : EvmSemantics.UInt256) :
     (a + b).toNat = (a.toNat + b.toNat) % 2 ^ 256 := by
   change (a.val + b.val).val = _
@@ -101,10 +106,16 @@ theorem word_toNat_land (a b : EvmSemantics.UInt256) :
   rw [Fin.and_val]
   rfl
 
+theorem word_toNat_xor (a b : EvmSemantics.UInt256) :
+    (EvmSemantics.UInt256.xor a b).toNat = a.toNat ^^^ b.toNat := by
+  change (a.val ^^^ b.val).val = _
+  rw [Fin.xor_val]
+  apply Nat.mod_eq_of_lt
+  exact Nat.lt_of_lt_of_le
+    (Nat.xor_lt_two_pow a.val.isLt b.val.isLt) (by rfl)
+
 @[simp] theorem word_toNat_ofNat (n : Nat) :
-    (EvmSemantics.UInt256.ofNat n).toNat = n % 2 ^ 256 := by
-  simp [EvmSemantics.UInt256.ofNat, EvmSemantics.UInt256.toNat,
-    EvmSemantics.UInt256.size]
+    (EvmSemantics.UInt256.ofNat n).toNat = n % 2 ^ 256 := by rfl
 
 theorem word_eq_ofNat_toNat (a : EvmSemantics.UInt256) :
     a = EvmSemantics.UInt256.ofNat a.toNat := by
@@ -236,39 +247,23 @@ theorem mask32_eq_ofUInt32 (x : EvmSemantics.UInt256) :
 @[simp] theorem ofUInt32_and (x y : UInt32) :
     ofUInt32 (x &&& y) = ofUInt32 x &&& ofUInt32 y := by
   apply word_ext
-  rw [ofUInt32_toNat]
-  change (x &&& y).toNat = ((ofUInt32 x).val &&& (ofUInt32 y).val).val
-  rw [Fin.and_val]
-  rw [UInt32.toNat_and]
-  exact congrArg₂ Nat.land (ofUInt32_toNat x).symm (ofUInt32_toNat y).symm
+  change (ofUInt32 (x &&& y)).toNat =
+    (EvmSemantics.UInt256.land (ofUInt32 x) (ofUInt32 y)).toNat
+  simp only [ofUInt32_toNat, word_toNat_land, UInt32.toNat_and]
 
 @[simp] theorem ofUInt32_or (x y : UInt32) :
     ofUInt32 (x ||| y) = ofUInt32 x ||| ofUInt32 y := by
   apply word_ext
-  rw [ofUInt32_toNat]
-  change (x ||| y).toNat =
-    ((ofUInt32 x).toNat ||| (ofUInt32 y).toNat) %
-      EvmSemantics.UInt256.size
-  rw [UInt32.toNat_or, ofUInt32_toNat, ofUInt32_toNat]
-  apply Eq.symm
-  apply Nat.mod_eq_of_lt
-  exact Nat.lt_trans (Nat.or_lt_two_pow x.toNat_lt y.toNat_lt) (by
-    change 2 ^ 32 < 2 ^ 256
-    norm_num)
+  change (ofUInt32 (x ||| y)).toNat =
+    (EvmSemantics.UInt256.lor (ofUInt32 x) (ofUInt32 y)).toNat
+  simp only [ofUInt32_toNat, word_toNat_lor, UInt32.toNat_or]
 
 @[simp] theorem ofUInt32_xor (x y : UInt32) :
     ofUInt32 (x ^^^ y) = ofUInt32 x ^^^ ofUInt32 y := by
   apply word_ext
-  rw [ofUInt32_toNat]
-  change (x ^^^ y).toNat =
-    ((ofUInt32 x).toNat ^^^ (ofUInt32 y).toNat) %
-      EvmSemantics.UInt256.size
-  rw [UInt32.toNat_xor, ofUInt32_toNat, ofUInt32_toNat]
-  apply Eq.symm
-  apply Nat.mod_eq_of_lt
-  exact Nat.lt_trans (Nat.xor_lt_two_pow x.toNat_lt y.toNat_lt) (by
-    change 2 ^ 32 < 2 ^ 256
-    norm_num)
+  change (ofUInt32 (x ^^^ y)).toNat =
+    (EvmSemantics.UInt256.xor (ofUInt32 x) (ofUInt32 y)).toNat
+  simp only [ofUInt32_toNat, word_toNat_xor, UInt32.toNat_xor]
 
 @[simp] theorem mask32_add (x y : UInt32) :
     mask32 (ofUInt32 x + ofUInt32 y) = ofUInt32 (x + y) := by
@@ -301,15 +296,7 @@ theorem mask32_eq_ofUInt32 (x : EvmSemantics.UInt256) :
 
 @[simp] theorem mask32_add_right (x : EvmSemantics.UInt256) (y : UInt32) :
     mask32 (x + ofUInt32 y) = ofUInt32 (toUInt32 x + y) := by
-  have hcomm : x + ofUInt32 y = ofUInt32 y + x := by
-    apply word_ext
-    change (x.val + (ofUInt32 y).val).val = ((ofUInt32 y).val + x.val).val
-    simp only [Fin.val_add]
-    rw [Nat.add_comm]
-  rw [hcomm, mask32_add_left]
-  apply congrArg ofUInt32
-  apply UInt32.toNat_inj.mp
-  simp [Nat.add_comm]
+  rw [word_add_comm, mask32_add_left, UInt32.add_comm]
 
 @[simp] theorem toUInt32_add (x y : EvmSemantics.UInt256) :
     toUInt32 (x + y) = toUInt32 x + toUInt32 y := by

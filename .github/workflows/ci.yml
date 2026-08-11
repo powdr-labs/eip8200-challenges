@@ -39,7 +39,7 @@ jobs:
       - name: Compute shared cache keys
         id: cache-keys
         env:
-          DEPENDENCY_HASH: ${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          DEPENDENCY_HASH: ${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'patches/lean-4.33/*.patch', 'scripts/apply-lean-4.33-dependency-patches.sh') }}
           PACKAGE_TARGET_HASH: ${{ hashFiles('.github/lean-package-cache-targets') }}
           SHARED_HASH: ${{ hashFiles('lakefile.toml', 'Challenge/EvmProof.lean', 'Challenge/EvmProof/**/*.lean', 'Checks/EvmProof.lean') }}
         run: |
@@ -85,6 +85,7 @@ jobs:
 
       - name: Build global package dependencies
         run: |
+          bash scripts/apply-lean-4.33-dependency-patches.sh
           mapfile -t targets < .github/lean-package-cache-targets
           lake build "${targets[@]}"
 

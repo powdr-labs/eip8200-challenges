@@ -327,9 +327,10 @@ theorem lengthLoop_eq_lengthBytes (input : ByteArray) :
       _ = UInt8.ofNat ((input.size * 8) / 256 ^ i % 256) :=
         lengthDigit_eq _ _ hi
       _ = (Padding.lengthBytes input)[i] := by
-        rw [Padding.lengthByte input i hi]
-        congr 2
-        rw [show 2 ^ (8 * i) = 256 ^ i by rw [Nat.pow_mul]]
+        convert (Padding.lengthByte input i hi).symm using 1
+        · congr 2
+          rw [show 2 ^ (8 * i) = 256 ^ i by rw [Nat.pow_mul]]
+        · congr
 
 def appendLength (tail : ByteArray) (n : Nat) : ByteArray :=
   (List.range' 0 8).foldl

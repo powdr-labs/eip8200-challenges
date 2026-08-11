@@ -30,7 +30,16 @@ rev = "00e49b6a59642129c23935aaec701b327591419b"
 [[require]]
 name = "evm_semantics"
 git = "https://github.com/powdr-labs/evm-semantics"
-rev = "26fdf59"
+rev = "192d611"
+
+# Keep the inherited dependency graph on the same release as this project's
+# Lean toolchain while preserving the pinned compiler and semantics revisions.
+# The small source-compatibility diffs for those pins live under
+# `patches/lean-4.33` and are applied by the documented build helper.
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.33.0"
 
 [[lean_lib]]
 name = "Challenge"

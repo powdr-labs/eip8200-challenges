@@ -278,9 +278,10 @@ private theorem lengthCopy_cost_potential (input : ByteArray)
   have hsize : input.size < 2 ^ 256 := Nat.lt_trans hfit (by norm_num)
   have hsizeWord : (UInt256.ofNat input.size).toNat = input.size := by
     rw [Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt hsize]
-  rw [Output.gasSteps_block_cost,
-    Challenge.EvmProof.Meter.runLocatedBlock_cost_potential
-      PaddingTrace.lengthCopyPath (run_lengthCopy input hfit)]
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+      PaddingTrace.lengthCopyPath (PaddingTrace.padLengthReady input) + _ = _
+  rw [Challenge.EvmProof.Meter.runLocatedBlock_cost_potential
+    PaddingTrace.lengthCopyPath (run_lengthCopy input hfit)]
   simp [Challenge.EvmProof.Meter.runLocatedBlockCostWithoutMemory,
     Challenge.EvmProof.Meter.instrCostWithoutMemory,
     PaddingTrace.lengthCopyPath, PaddingTrace.lengthSetupPath,
@@ -297,9 +298,10 @@ private theorem lengthSentinelAddress_cost_potential (input : ByteArray) :
         MachineState.memCost (PaddingTrace.padCopied input).activeWords.toNat =
       12 + MachineState.memCost
         (PaddingTrace.padSentinelAddressReady input).activeWords.toNat := by
-  rw [Output.gasSteps_block_cost,
-    Challenge.EvmProof.Meter.runLocatedBlock_cost_potential
-      PaddingTrace.lengthSentinelAddressPath (run_lengthSentinelAddress input)]
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+      PaddingTrace.lengthSentinelAddressPath (PaddingTrace.padCopied input) + _ = _
+  rw [Challenge.EvmProof.Meter.runLocatedBlock_cost_potential
+    PaddingTrace.lengthSentinelAddressPath (run_lengthSentinelAddress input)]
   simp [Challenge.EvmProof.Meter.runLocatedBlockCostWithoutMemory,
     Challenge.EvmProof.Meter.instrCostWithoutMemory,
     PaddingTrace.lengthSentinelAddressPath, PaddingTrace.lengthSentinelPath,
@@ -318,9 +320,11 @@ private theorem lengthSentinelStore_cost_potential (input : ByteArray)
           (PaddingTrace.padSentinelAddressReady input).activeWords.toNat =
       3 + MachineState.memCost
         (PaddingTrace.padSentinelStored input).activeWords.toNat := by
-  rw [Output.gasSteps_block_cost,
-    Challenge.EvmProof.Meter.runLocatedBlock_cost_potential
-      PaddingTrace.lengthSentinelStorePath (run_lengthSentinelStore input hfit)]
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+      PaddingTrace.lengthSentinelStorePath
+        (PaddingTrace.padSentinelAddressReady input) + _ = _
+  rw [Challenge.EvmProof.Meter.runLocatedBlock_cost_potential
+    PaddingTrace.lengthSentinelStorePath (run_lengthSentinelStore input hfit)]
   simp [Challenge.EvmProof.Meter.runLocatedBlockCostWithoutMemory,
     Challenge.EvmProof.Meter.instrCostWithoutMemory,
     PaddingTrace.lengthSentinelStorePath, PaddingTrace.lengthSentinelPath,
@@ -334,9 +338,10 @@ private theorem lengthFooterSetup_cost_potential (input : ByteArray) :
         MachineState.memCost (PaddingTrace.padSentinel input).activeWords.toNat =
       26 + MachineState.memCost
         (PaddingTrace.lengthLoopStart input).activeWords.toNat := by
-  rw [Output.gasSteps_block_cost,
-    Challenge.EvmProof.Meter.runLocatedBlock_cost_static_potential
-      PaddingTrace.lengthFooterSetupPath (run_lengthFooterSetup input) (by rfl)]
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+      PaddingTrace.lengthFooterSetupPath (PaddingTrace.padSentinel input) + _ = _
+  rw [Challenge.EvmProof.Meter.runLocatedBlock_cost_static_potential
+    PaddingTrace.lengthFooterSetupPath (run_lengthFooterSetup input) (by rfl)]
   · norm_num [Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
       Challenge.EvmProof.Meter.instrStaticCost,
       PaddingTrace.lengthFooterSetupPath, PaddingTrace.lengthSetupPath,
@@ -369,11 +374,17 @@ private theorem lengthSetup_cost_potential (input : ByteArray)
       52 + 3 * ((input.size + 31) / 32) +
         MachineState.memCost (PaddingTrace.padSentinel input).activeWords.toNat := by
   have hcopy := lengthCopy_cost_potential input hfit
-  rw [Output.gasSteps_block_cost, padLengthReady_activeWords input] at hcopy
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+      PaddingTrace.lengthCopyPath (PaddingTrace.padLengthReady input) +
+      MachineState.memCost (PaddingTrace.padLengthReady input).activeWords.toNat = _ at hcopy
+  rw [padLengthReady_activeWords input] at hcopy
   have haddr := lengthSentinelAddress_cost_potential input
-  rw [Output.gasSteps_block_cost] at haddr
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+      PaddingTrace.lengthSentinelAddressPath (PaddingTrace.padCopied input) + _ = _ at haddr
   have hstoreRaw := lengthSentinelStore_cost_potential input hfit
-  rw [Output.gasSteps_block_cost] at hstoreRaw
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+      PaddingTrace.lengthSentinelStorePath
+        (PaddingTrace.padSentinelAddressReady input) + _ = _ at hstoreRaw
   have hstore : Challenge.EvmProof.Stepper.runLocatedBlockCost
       PaddingTrace.lengthSentinelStorePath
         (PaddingTrace.padSentinelAddressReady input) +
@@ -388,7 +399,6 @@ private theorem lengthSetup_cost_potential (input : ByteArray)
     rw [← hendpoint]
     exact hstoreRaw
   have hfooter := lengthFooterSetup_cost_potential input
-  rw [Output.gasSteps_block_cost] at hfooter
   change Challenge.EvmProof.Stepper.runLocatedBlockCost
       PaddingTrace.lengthFooterSetupPath (PaddingTrace.padSentinel input) +
       MachineState.memCost (PaddingTrace.padSentinel input).activeWords.toNat =
