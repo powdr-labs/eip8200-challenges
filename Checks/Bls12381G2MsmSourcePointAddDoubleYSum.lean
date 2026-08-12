@@ -1,0 +1,9 @@
+import Challenge.Bls12381G2Msm.Reference.Proofs.SourcePointAddDoubleYSum
+
+set_option warningAsError true
+
+open Challenge.Bls12381G2Msm.Reference.Proofs.SourceSemantics
+
+#check step_pointAddDoubleYSum
+#check step_pointAddDoubleYZeroCondition
+#check step_pointAddDoubleYNonzero

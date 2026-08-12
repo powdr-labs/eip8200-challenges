@@ -1,0 +1,10 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddFullIdentity
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check step_pointAddFullLeftInfinity
+#check step_pointAddFullRightInfinity
+#print axioms step_pointAddFullLeftInfinity
+#print axioms step_pointAddFullRightInfinity

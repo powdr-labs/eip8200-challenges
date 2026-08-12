@@ -1,0 +1,10 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddFullEqual
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check step_pointAddFullVertical
+#check step_pointAddFullDouble_lawful
+#print axioms step_pointAddFullVertical
+#print axioms step_pointAddFullDouble_lawful

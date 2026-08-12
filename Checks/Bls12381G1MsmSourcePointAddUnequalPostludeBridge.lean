@@ -1,0 +1,5 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalPostludeBridge
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check step_pointAddUnequalPostlude
+#print axioms step_pointAddUnequalPostlude

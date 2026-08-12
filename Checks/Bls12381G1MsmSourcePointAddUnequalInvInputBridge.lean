@@ -1,0 +1,5 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalInvInputBridge
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check pointAddUnequalInvInputState_eq_fpInvInputState
+#print axioms pointAddUnequalInvInputState_eq_fpInvInputState

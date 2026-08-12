@@ -1,0 +1,12 @@
+import Challenge.Bls12381G2Msm.Reference.Proofs.SourcePointAddDoubleArithmetic
+
+set_option warningAsError true
+
+open Challenge.Bls12381G2Msm.Reference.Proofs.SourceSemantics
+
+#check step_pointAddDoubleSquare
+#check step_pointAddDoubleNum2
+#check step_pointAddDoubleNum3
+#check step_pointAddDoubleDenominator
+#check step_pointAddDoubleInverse
+#check step_pointAddDoubleSlope

@@ -1,0 +1,9 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalAfterDenominator
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalAfterDenominatorCode
+#check step_pointAddUnequalAfterDenominator
+#print axioms step_pointAddUnequalAfterDenominator

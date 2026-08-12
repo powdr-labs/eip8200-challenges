@@ -1,0 +1,8 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalXSubDefs
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check pointAddUnequalXSubStmt_eq
+#check pointAddUnequalXSubLeftRawPrefix_shape
+#check pointAddUnequalXSubLeftTail_shape
+#check pointAddUnequalXSubRightTail_length
+#print axioms pointAddUnequalXSubLeftRawPrefix_shape

@@ -1,0 +1,8 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalFinalReadback
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalFinalState_readbackX
+#check pointAddUnequalFinalState_readbackY

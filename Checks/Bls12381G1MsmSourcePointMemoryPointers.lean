@@ -1,0 +1,14 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointMemoryPointers
+
+set_option warningAsError true
+
+open YulSemantics YulSemantics.EVM
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalLeftPtr_eq
+#check pointAddUnequalRightPtr_eq
+#check pointAddUnequalLeftXLimbs_eq
+#check pointAddUnequalRightXLimbs_eq
+#check pointAddFiniteLeftYLimbs_eq
+#check pointAddFiniteRightYLimbs_eq
+#check pointAddDoubleLeftYLimbs_eq

@@ -1,0 +1,8 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalNumeratorWords
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check step_pointAddUnequalNumeratorLowGeneric
+#check step_pointAddUnequalNumeratorHighGeneric

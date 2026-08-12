@@ -1,0 +1,5 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalXSubRightFull
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check step_pointAddUnequalXSubRightGeneric
+#print axioms step_pointAddUnequalXSubRightGeneric

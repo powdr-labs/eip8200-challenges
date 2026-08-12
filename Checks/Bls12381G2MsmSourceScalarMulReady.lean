@@ -1,0 +1,9 @@
+import Challenge.Bls12381G2Msm.Reference.Proofs.SourceScalarMulReady
+
+set_option warningAsError true
+
+open Challenge.Bls12381G2Msm.Reference.Proofs.SourceSemantics
+
+#check ScalarMulIterationInvariant
+#check ScalarMulInvariantSchedule
+#check scalarMulTrace_of_invariant

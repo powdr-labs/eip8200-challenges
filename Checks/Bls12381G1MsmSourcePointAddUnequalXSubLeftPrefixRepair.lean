@@ -1,0 +1,5 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalXSubLeftPrefixRepair
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check step_pointAddUnequalXSubLeftPrefixRepair
+#print axioms step_pointAddUnequalXSubLeftPrefixRepair

@@ -41,12 +41,15 @@ jobs:
         env:
           DEPENDENCY_HASH: ${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
           PACKAGE_TARGET_HASH: ${{ hashFiles('.github/lean-package-cache-targets') }}
-          SHARED_HASH: ${{ hashFiles('lakefile.toml', 'Challenge/EvmProof.lean', 'Challenge/EvmProof/**/*.lean', 'Checks/EvmProof.lean') }}
+          SHARED_ARTIFACT_HASH: ${{ hashFiles('Challenge/Bls12381/Reference/Artifacts/*.hex') }}
+          SHARED_SOURCE_HASH: ${{ hashFiles('lakefile.toml', 'Challenge/EvmProof.lean', 'Challenge/EvmProof/**/*.lean', 'Checks/EvmProof.lean', 'Challenge/Bls12381.lean', 'Challenge/Bls12381/**/*.lean', 'Checks/Bls12381*.lean', '!Checks/Bls12381Codec.lean', '!Checks/Bls12381Fp.lean', '!Checks/Bls12381Fp2.lean', '!Checks/Bls12381Fp6.lean', '!Checks/Bls12381Fp12.lean', '!Checks/Bls12381G1Add*.lean', '!Checks/Bls12381G1Msm.lean', '!Checks/Bls12381G1Projective.lean', '!Checks/Bls12381G2Add*.lean', '!Checks/Bls12381G2Msm.lean', '!Checks/Bls12381G2Projective.lean', '!Checks/Bls12381MapFp*.lean', '!Checks/Bls12381Pairing.lean', '!Checks/Bls12381PrimeCertificate.lean', '!Checks/Bls12381PrimeField.lean', '!Checks/Bls12381Conformance.lean', '!Checks/Bls12381ReferenceBaseline.lean') }}
         run: |
           package_key="lake-packages-v4-${{ runner.os }}-${{ runner.arch }}-${DEPENDENCY_HASH}-${PACKAGE_TARGET_HASH}"
-          shared_key="project-shared-v3-${{ runner.os }}-${{ runner.arch }}-${DEPENDENCY_HASH}-${PACKAGE_TARGET_HASH}-${SHARED_HASH}"
+          shared_prefix="project-shared-v4-${{ runner.os }}-${{ runner.arch }}-${DEPENDENCY_HASH}-${PACKAGE_TARGET_HASH}-${SHARED_ARTIFACT_HASH}"
+          shared_key="${shared_prefix}-${SHARED_SOURCE_HASH}"
           echo "package-key=$package_key" >> "$GITHUB_OUTPUT"
           echo "shared-key=$shared_key" >> "$GITHUB_OUTPUT"
+          echo "shared-restore-prefix=${shared_prefix}-" >> "$GITHUB_OUTPUT"
 
       # This cache is the sole owner of dependency-package sources and build
       # outputs. Its target-set hash forces a new immutable cache whenever the
@@ -68,9 +71,7 @@ jobs:
           path: .lake/build
           key: ${{ steps.cache-keys.outputs.shared-key }}
           restore-keys: |
-            project-shared-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
-            project-shared-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
-            project-shared-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            ${{ steps.cache-keys.outputs.shared-restore-prefix }}
 
       - name: Set up Lean
         uses: leanprover/lean-action@v1
@@ -98,6 +99,188 @@ jobs:
             exit 1
           fi
           lake build +Checks.EvmProof
+
+      - name: Verify shared BLS12-381 proof support
+        run: |
+          if grep -rn --include='*.lean' -w 'sorry' \
+              Challenge/Bls12381/ProofSupport \
+              Challenge/Bls12381/ProofSupport.lean; then
+            echo "::error::found an unfinished proof in shared BLS12-381 support"
+            exit 1
+          fi
+          lake -Kjobs=1 build +Checks.Bls12381
+
+  # G1ADD is intentionally not part of the shared BLS cache: its source,
+  # compiler, bytecode, and execution certificates are challenge-owned.  Keep
+  # a dedicated gate so every focused axiom guard is enforced in standard CI.
+  bls12381-g1add:
+    name: BLS12-381 G1ADD proofs and frozen artifact
+    needs: shared-lean
+    runs-on: warp-ubuntu-2404-x64-32x
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Restore pinned packages
+        uses: actions/cache/restore@v5
+        with:
+          path: .lake/packages
+          key: ${{ needs.shared-lean.outputs.package-key }}
+          fail-on-cache-miss: true
+
+      - name: Restore shared project build
+        uses: actions/cache/restore@v5
+        with:
+          path: .lake/build
+          key: ${{ needs.shared-lean.outputs.shared-key }}
+          fail-on-cache-miss: true
+
+      # `reference.yul` and `reference.hex` are consumed through parser and
+      # `include_str` boundaries that Lake does not reliably trace.  Put their
+      # hash before the Lean-source hash, including in the restore namespace,
+      # so an artifact change cannot restore stale challenge oleans.
+      - name: Compute G1ADD cache keys
+        id: g1add-cache-keys
+        env:
+          ARTIFACT_HASH: ${{ hashFiles('Challenge/Bls12381G1Add/Reference/reference.yul', 'Challenge/Bls12381G1Add/Reference/reference.hex') }}
+          LEAN_HASH: ${{ hashFiles('Challenge/Bls12381G1Add.lean', 'Challenge/Bls12381G1Add/**/*.lean', 'Checks/Bls12381G1Add*.lean') }}
+        run: |
+          prefix="project-bls12381-g1add-v2-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-${ARTIFACT_HASH}"
+          echo "key=${prefix}-${LEAN_HASH}" >> "$GITHUB_OUTPUT"
+          echo "restore-prefix=${prefix}-" >> "$GITHUB_OUTPUT"
+
+      - name: Cache G1ADD project build
+        uses: actions/cache@v5
+        with:
+          path: .lake/build
+          key: ${{ steps.g1add-cache-keys.outputs.key }}
+          restore-keys: |
+            ${{ steps.g1add-cache-keys.outputs.restore-prefix }}
+
+      - name: Set up Lean
+        uses: leanprover/lean-action@v1
+        with:
+          use-mathlib-cache: "false"
+          build: "false"
+          test: "false"
+          lint: "false"
+          use-github-cache: "false"
+
+      - name: Verify G1ADD soundness
+        run: |
+          scripts/test-check-lean-proof-policy.sh
+          python3 scripts/check-lean-proof-policy.py \
+            Challenge/Bls12381G1Add Challenge/Bls12381G1Add.lean \
+            Checks/Bls12381G1Add*.lean
+
+      - name: Build every G1ADD proof and axiom guard
+        run: |
+          # These decision units peak near 5 GiB each. Build them in separate
+          # Lake invocations so a 16 GiB runner never overlaps their peaks.
+          lake -Kjobs=1 build Challenge.Bls12381G1Add.Reference.Proofs.StackCertificateChunk0
+          lake -Kjobs=1 build Challenge.Bls12381G1Add.Reference.Proofs.StackCertificateChunk5
+          mapfile -t checks < <(
+            find Checks -maxdepth 1 -type f -name 'Bls12381G1Add*.lean' \
+              -printf '%f\n' | sort | \
+              sed -e 's/\.lean$//' -e 's/^/+Checks./'
+          )
+          lake -Kjobs=1 build +Challenge.Bls12381G1Add:c.o "${checks[@]}"
+
+      - name: Verify frozen G1ADD source artifact
+        run: |
+          reference=Challenge/Bls12381G1Add/Reference
+          compiled="$(lake exe yulc "$reference/reference.yul")"
+          frozen="$(tr -d '[:space:]' < "$reference/reference.hex")"
+          if [ "$compiled" != "$frozen" ]; then
+            echo "::error::G1ADD reference.hex is stale"
+            exit 1
+          fi
+
+  # G2ADD uses a proof-friendly direct compiler boundary.  The ordinary Yul
+  # optimizer emits a different 3,339-byte program, so freshness is checked by
+  # the executable Lean guard for the proved 2,788-byte runtime below.
+  bls12381-g2add:
+    name: BLS12-381 G2ADD proofs and frozen direct artifact
+    needs: shared-lean
+    runs-on: warp-ubuntu-2404-x64-32x
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Restore pinned packages
+        uses: actions/cache/restore@v5
+        with:
+          path: .lake/packages
+          key: ${{ needs.shared-lean.outputs.package-key }}
+          fail-on-cache-miss: true
+
+      - name: Restore shared project build
+        uses: actions/cache/restore@v5
+        with:
+          path: .lake/build
+          key: ${{ needs.shared-lean.outputs.shared-key }}
+          fail-on-cache-miss: true
+
+      # Lake does not reliably track `include_str` inputs.  Keep the source,
+      # frozen hex, and proved byte-list representation ahead of the Lean hash
+      # in both the exact key and restore namespace.
+      - name: Compute G2ADD cache keys
+        id: g2add-cache-keys
+        env:
+          ARTIFACT_HASH: ${{ hashFiles('Challenge/Bls12381G2Add/Reference/reference.yul', 'Challenge/Bls12381G2Add/Reference/reference.hex', 'Challenge/Bls12381G2Add/Reference/FrozenBytecode.lean') }}
+          LEAN_HASH: ${{ hashFiles('Challenge/Bls12381G2Add.lean', 'Challenge/Bls12381G2Add/**/*.lean', 'Checks/Bls12381G2Add*.lean') }}
+        run: |
+          prefix="project-bls12381-g2add-v1-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-${ARTIFACT_HASH}"
+          echo "key=${prefix}-${LEAN_HASH}" >> "$GITHUB_OUTPUT"
+          echo "restore-prefix=${prefix}-" >> "$GITHUB_OUTPUT"
+
+      - name: Cache G2ADD project build
+        uses: actions/cache@v5
+        with:
+          path: .lake/build
+          key: ${{ steps.g2add-cache-keys.outputs.key }}
+          restore-keys: |
+            ${{ steps.g2add-cache-keys.outputs.restore-prefix }}
+
+      - name: Set up Lean
+        uses: leanprover/lean-action@v1
+        with:
+          use-mathlib-cache: "false"
+          build: "false"
+          test: "false"
+          lint: "false"
+          use-github-cache: "false"
+
+      - name: Verify G2ADD soundness
+        run: |
+          python3 scripts/test-bls-ci-cache-policy.py
+          scripts/test-check-lean-proof-policy.sh
+          python3 scripts/check-lean-proof-policy.py \
+            Challenge/Bls12381G2Add Challenge/Bls12381G2Add.lean \
+            Checks/Bls12381G2Add*.lean
+
+      - name: Build every G2ADD proof and axiom guard
+        run: |
+          # These decision units peak near 5 GiB each. Build them in separate
+          # Lake invocations so a 16 GiB runner never overlaps their peaks.
+          lake -Kjobs=1 build Challenge.Bls12381G2Add.Reference.Proofs.StackCertificateChunk0
+          lake -Kjobs=1 build Challenge.Bls12381G2Add.Reference.Proofs.StackCertificateChunk5
+          lake -Kjobs=1 build Challenge.Bls12381G2Add.Reference.Proofs.StackCertificateChunk10
+          mapfile -t checks < <(
+            find Checks -maxdepth 1 -type f -name 'Bls12381G2Add*.lean' \
+              -printf '%f\n' | sort | \
+              sed -e 's/\.lean$//' -e 's/^/+Checks./'
+          )
+          lake -Kjobs=1 build +Challenge.Bls12381G2Add:c.o "${checks[@]}"
+
+      - name: Verify exact 2,788-byte direct-compiler artifact
+        run: |
+          # This check evaluates `referenceBytecode?` directly and guards its
+          # equality with both FrozenBytecode.lean and reference.hex.  Do not
+          # replace it with yulc, whose optimized G2ADD artifact is 3,339 bytes.
+          lake -Kjobs=1 env lean Checks/Bls12381G2AddReference.lean
 
   # Each matrix entry has its own job and source-keyed project cache. A RIPEMD
   # submission therefore neither rebuilds nor invalidates SHA-256 or MODEXP.

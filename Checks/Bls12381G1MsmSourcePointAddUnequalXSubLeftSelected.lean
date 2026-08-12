@@ -1,0 +1,7 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalXSubLeftSelected
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check step_pointAddUnequalXSubLeftRepairSelected
+#check pointAddUnequalXSubLeftSelectedEnv_hi
+#check pointAddUnequalXSubLeftSelectedEnv_lo
+#print axioms step_pointAddUnequalXSubLeftRepairSelected

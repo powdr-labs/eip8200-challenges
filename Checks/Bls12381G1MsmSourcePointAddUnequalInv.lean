@@ -1,0 +1,7 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalInv
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check pointAddUnequalInvBody_eq
+#check pointAddUnequalInvStmt9_eq
+#check exec_pointAddUnequalInvVarsGeneric
+#check exec_pointAddUnequalInvFixedGeneric

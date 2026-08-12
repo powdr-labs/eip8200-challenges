@@ -1,0 +1,7 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalLambdaDefs
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check pointAddUnequalLambdaStmt_eq
+#check pointAddUnequalLambdaExpr_eq
+#check pointAddUnequalLambdaArgs_eq
+#print axioms pointAddUnequalLambdaArgs_eq

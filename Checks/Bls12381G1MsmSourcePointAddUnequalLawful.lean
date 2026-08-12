@@ -1,0 +1,12 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalLawful
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalDenominatorResult_toSource
+#check pointAddUnequalDenominatorResult_high_lt_of_canonical
+#check step_pointAddUnequalBranch_lawful
+#print axioms pointAddUnequalDenominatorResult_toSource
+#print axioms pointAddUnequalDenominatorResult_high_lt_of_canonical
+#print axioms step_pointAddUnequalBranch_lawful

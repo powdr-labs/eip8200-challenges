@@ -1,0 +1,8 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourceFpInvMemory
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check fpInvFinalState_readBytes_after_scratch
+#check fpInvFinalState_loadWord_after_scratch

@@ -1,0 +1,10 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddFiniteUnequal
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddFiniteUnequalCode
+#check pointAddFiniteUnequalCode_eq
+#check step_pointAddFiniteUnequal_lawful
+#print axioms step_pointAddFiniteUnequal_lawful

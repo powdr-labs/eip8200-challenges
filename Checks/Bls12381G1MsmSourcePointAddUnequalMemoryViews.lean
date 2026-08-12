@@ -1,0 +1,9 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalMemoryViews
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalX3State_loadWord_after_scratch
+#check pointAddUnequalXSubLeftPtr_eq
+#check pointAddUnequalXSubRightPtr_eq

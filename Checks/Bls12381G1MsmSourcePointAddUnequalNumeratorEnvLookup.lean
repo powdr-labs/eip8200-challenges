@@ -1,0 +1,6 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalNumeratorEnvLookup
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check pointAddUnequalNumeratorEnv_hi
+#check pointAddUnequalNumeratorEnv_lo
+#print axioms pointAddUnequalNumeratorEnv_hi

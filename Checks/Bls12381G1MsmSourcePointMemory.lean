@@ -1,0 +1,9 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointMemory
+
+set_option warningAsError true
+
+open YulSemantics YulSemantics.EVM
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check touchMemory_eq_of_range_end_le
+#check pointAddUnequalInputsState_eq_of_fixed_layout

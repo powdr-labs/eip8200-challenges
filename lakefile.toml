@@ -60,3 +60,7 @@ root = "Ripemd160Main"
 [[lean_exe]]
 name = "blake2fchallenge"
 root = "Blake2fMain"
+
+[[lean_exe]]
+name = "bls12381vectors"
+root = "Bls12381VectorsMain"

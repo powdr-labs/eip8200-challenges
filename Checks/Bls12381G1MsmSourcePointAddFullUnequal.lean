@@ -1,0 +1,8 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddFullUnequal
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check step_pointAddFullUnequal_lawful
+#print axioms step_pointAddFullUnequal_lawful

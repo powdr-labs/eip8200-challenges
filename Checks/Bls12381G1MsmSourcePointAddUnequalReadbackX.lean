@@ -1,0 +1,7 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalReadbackX
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalConcretePostState_readbackX

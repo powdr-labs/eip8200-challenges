@@ -1,0 +1,7 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalX3Defs
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check pointAddUnequalX3Stmt_eq
+#check pointAddUnequalX3Expr_eq
+#check pointAddUnequalX3Args_eq
+#print axioms pointAddUnequalX3Args_eq

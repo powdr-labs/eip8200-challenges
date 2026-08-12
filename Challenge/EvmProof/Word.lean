@@ -43,6 +43,12 @@ theorem word_toNat_add (a b : EvmSemantics.UInt256) :
   rw [Fin.val_add]
   rfl
 
+theorem word_toNat_mul (a b : EvmSemantics.UInt256) :
+    (a * b).toNat = (a.toNat * b.toNat) % 2 ^ 256 := by
+  change (a.val * b.val).val = _
+  rw [Fin.val_mul]
+  rfl
+
 theorem word_toNat_sub (a b : EvmSemantics.UInt256) :
     (a - b).toNat = (2 ^ 256 + a.toNat - b.toNat) % 2 ^ 256 := by
   change (a.val - b.val).val = _
@@ -78,6 +84,20 @@ theorem word_toNat_lt (a b : EvmSemantics.UInt256) :
     (EvmSemantics.UInt256.lt a b).toNat =
       if a.toNat < b.toNat then 1 else 0 := by
   simp only [EvmSemantics.UInt256.lt]
+  split <;> norm_num [EvmSemantics.UInt256.ofNat,
+    EvmSemantics.UInt256.toNat, EvmSemantics.UInt256.size]
+
+theorem word_toNat_gt (a b : EvmSemantics.UInt256) :
+    (EvmSemantics.UInt256.gt a b).toNat =
+      if b.toNat < a.toNat then 1 else 0 := by
+  simp only [EvmSemantics.UInt256.gt]
+  split <;> norm_num [EvmSemantics.UInt256.ofNat,
+    EvmSemantics.UInt256.toNat, EvmSemantics.UInt256.size]
+
+theorem word_toNat_eq (a b : EvmSemantics.UInt256) :
+    (EvmSemantics.UInt256.eq a b).toNat =
+      if a.toNat = b.toNat then 1 else 0 := by
+  simp only [EvmSemantics.UInt256.eq]
   split <;> norm_num [EvmSemantics.UInt256.ofNat,
     EvmSemantics.UInt256.toNat, EvmSemantics.UInt256.size]
 
@@ -376,6 +396,23 @@ theorem shiftRight_toNat (value : EvmSemantics.UInt256) {shift : Nat}
     (word_toNat_ofNat value.toNat).trans (Nat.mod_eq_of_lt value.val.isLt)
   rw [word_eq_ofNat_toNat value, hright, word_toNat_ofNat,
     Nat.mod_eq_of_lt hshifted, hvalue]
+
+/-- An in-range EVM left shift is multiplication by a power of two modulo one
+word.  This is the representation boundary needed by source schedules which
+splice a carry bit into the next word. -/
+theorem shiftLeft_toNat (value : EvmSemantics.UInt256) {shift : Nat}
+    (hshift : shift < 256) :
+    (EvmSemantics.UInt256.shiftLeft value
+      (EvmSemantics.UInt256.ofNat shift)).toNat =
+      (value.toNat * 2 ^ shift) % 2 ^ 256 := by
+  have hshift256 : shift < 2 ^ 256 := Nat.lt_trans hshift (by norm_num)
+  have hshiftWord : (EvmSemantics.UInt256.ofNat shift).toNat = shift := by
+    rw [word_toNat_ofNat, Nat.mod_eq_of_lt hshift256]
+  unfold EvmSemantics.UInt256.shiftLeft
+  rw [if_neg (by omega), hshiftWord, word_toNat_ofNat,
+    Nat.shiftLeft_eq]
+  simp only [EvmSemantics.UInt256.size]
+  rw [Nat.mod_mod]
 
 theorem shiftLeft_ofNat {value shift : Nat}
     (hvalue : value < 2 ^ 256) (hshift : shift < 256)

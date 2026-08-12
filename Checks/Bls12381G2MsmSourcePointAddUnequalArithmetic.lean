@@ -1,0 +1,10 @@
+import Challenge.Bls12381G2Msm.Reference.Proofs.SourcePointAddUnequalArithmetic
+
+set_option warningAsError true
+
+open Challenge.Bls12381G2Msm.Reference.Proofs.SourceSemantics
+
+#check step_pointAddUnequalYDiff
+#check step_pointAddUnequalXDiff
+#check step_pointAddUnequalInverse
+#check step_pointAddUnequalSlope

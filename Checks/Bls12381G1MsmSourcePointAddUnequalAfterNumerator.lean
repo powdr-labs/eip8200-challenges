@@ -1,0 +1,9 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalAfterNumerator
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalAfterNumeratorCode
+#check step_pointAddUnequalAfterNumerator
+#print axioms step_pointAddUnequalAfterNumerator

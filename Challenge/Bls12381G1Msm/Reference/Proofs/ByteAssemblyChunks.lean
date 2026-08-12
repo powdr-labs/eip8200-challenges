@@ -1,0 +1,23 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk0
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk1
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk2
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk3
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk4
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk5
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk6
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk7
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk8
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk9
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk10
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk11
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk12
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk13
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk14
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk15
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk16
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk17
+import Challenge.Bls12381G1Msm.Reference.Proofs.ByteAssemblyChunk18
+
+set_option warningAsError true
+
+/-! Aggregation boundary for bounded G1MSM byte-assembly checks. -/

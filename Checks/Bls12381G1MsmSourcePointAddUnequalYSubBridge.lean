@@ -1,0 +1,9 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalYSubEnvLookup
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check step_pointAddUnequalYSubStmt
+#check pointAddUnequalYSubConcreteEnv_xHi
+#check pointAddUnequalYSubConcreteEnv_xLo
+#check pointAddUnequalYSubConcreteEnv_yHi
+#check pointAddUnequalYSubConcreteEnv_yLo
+#print axioms step_pointAddUnequalYSubStmt

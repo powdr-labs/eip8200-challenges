@@ -1,0 +1,9 @@
+import Challenge.Bls12381G2Msm.Reference.Proofs.SourceFpMemory
+
+set_option warningAsError true
+
+open Challenge.Bls12381G2Msm.Reference.Proofs.SourceSemantics
+
+#check fpMulFinalState_loadWord_after_scratch
+#check fpInvFinalState_loadWord_before_scratch
+#check fpInvFinalState_loadWord_after_scratch

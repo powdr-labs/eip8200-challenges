@@ -1,1 +1,4 @@
 /.lake
+/.agent-logs/
+__pycache__/
+*.pyc

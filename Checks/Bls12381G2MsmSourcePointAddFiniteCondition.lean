@@ -1,0 +1,10 @@
+import Challenge.Bls12381G2Msm.Reference.Proofs.SourcePointAddFiniteCondition
+
+set_option warningAsError true
+
+open Challenge.Bls12381G2Msm.Reference.Proofs.SourceSemantics
+
+#check step_fp2Zero_of_args
+#check step_fp2Eq_of_args
+#check step_pointAddEqualCondition
+#check step_pointAddUnequalCondition

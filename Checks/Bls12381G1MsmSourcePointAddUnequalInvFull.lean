@@ -1,0 +1,6 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalInvFull
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check restore_pointAddUnequalInvFinalWorkEnv
+#check step_pointAddUnequalInvStmt
+#print axioms step_pointAddUnequalInvStmt

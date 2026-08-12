@@ -1,0 +1,11 @@
+import Challenge.Bls12381G2Add.Reference.Proofs.SourceMainValidationLawful
+
+open Challenge.Bls12381G2Add.Reference.Proofs.SourceSemantics
+
+#check pointValidValue_zero_or_one
+#check mainValidationValue_ne_zero_iff
+#check mainValidation_canonical
+#check mainAfterValidationReads_memory
+
+#print axioms mainValidationValue_ne_zero_iff
+#print axioms mainValidation_canonical

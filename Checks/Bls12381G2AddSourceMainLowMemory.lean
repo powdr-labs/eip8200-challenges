@@ -1,0 +1,10 @@
+import Challenge.Bls12381G2Add.Reference.Proofs.SourceMainLowMemory
+
+open Challenge.Bls12381G2Add.Reference.Proofs.SourceSemantics
+
+#check onCurveFinalState_loadWord_low
+#check mainAfterInf2Reads_memory
+#check mainAfterCurve1_loadWord_low
+#check mainValidatedState_loadWord_low
+
+#print axioms mainValidatedState_loadWord_low

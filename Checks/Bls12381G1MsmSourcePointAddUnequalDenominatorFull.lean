@@ -1,0 +1,4 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalDenominatorFull
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check step_pointAddUnequalDenominator

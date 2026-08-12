@@ -1,0 +1,6 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalInvRestore
+set_option warningAsError true
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+#check restore_pointAddUnequalInvGenericFinalEnv
+#check restore_pointAddUnequalInvFinalWorkEnv
+#print axioms restore_pointAddUnequalInvFinalWorkEnv

@@ -1,0 +1,10 @@
+import Challenge.Bls12381G1Msm.Reference.Proofs.SourcePointAddUnequalBranch
+
+set_option warningAsError true
+
+open Challenge.Bls12381G1Msm.Reference.Proofs.SourceSemantics
+
+#check pointAddUnequalBranchCode
+#check pointAddUnequalBranchCode_eq
+#check step_pointAddUnequalBranch
+#print axioms step_pointAddUnequalBranch
