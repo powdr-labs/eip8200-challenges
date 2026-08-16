@@ -1,4 +1,5 @@
 import Challenge.EvmProof.Execution
+import Mathlib.Order.Monotone.Basic
 set_option warningAsError true
 /-!
 # Gas-parametric direct EVM traces
@@ -28,6 +29,154 @@ def withGas (s : State) (gas : Nat) : State := { s with gasAvailable := gas }
   cases s
   rfl
 
+/-- Halting is independent of the remaining gas counter. -/
+@[simp] theorem withGas_isDone (s : State) (gas : Nat) :
+    (withGas s gas).isDone = s.isDone := by
+  cases s
+  rfl
+
+/-- The observable execution result is independent of remaining gas. -/
+@[simp] theorem withGas_toResult (s : State) (gas : Nat) :
+    (withGas s gas).toResult = s.toResult := by
+  cases s
+  rfl
+
+/-- A gas-parametric relational execution contract.  The postcondition sees
+only the gas-erased initial/final states and the exact cost; complete endpoint
+states can remain existentially hidden at composition boundaries. -/
+def GasContract (pre : State → Prop)
+    (post : State → State → Nat → Prop) : Prop :=
+  ∀ initial, pre initial →
+    ∃ final cost,
+      (∀ gas, cost ≤ gas →
+        Steps (withGas initial gas) (withGas final (gas - cost))) ∧
+      post initial final cost
+
+namespace GasContract
+
+/-- The zero-step gas contract. -/
+theorem refl (pre : State → Prop) :
+    GasContract pre (fun initial final cost =>
+      final = initial ∧ cost = 0) := by
+  intro initial hinitial
+  exact ⟨initial, 0, fun gas _ => by simpa using Steps.refl (withGas initial gas),
+    rfl, rfl⟩
+
+/-- Strengthen a precondition and weaken a relational gas postcondition. -/
+theorem consequence {pre pre' : State → Prop}
+    {post post' : State → State → Nat → Prop}
+    (hpre : ∀ state, pre' state → pre state)
+    (contract : GasContract pre post)
+    (hpost : ∀ initial final cost, pre' initial →
+      post initial final cost → post' initial final cost) :
+    GasContract pre' post' := by
+  intro initial hinitial
+  obtain ⟨final, cost, htrace, hfinal⟩ :=
+    contract initial (hpre initial hinitial)
+  exact ⟨final, cost, htrace,
+    hpost initial final cost hinitial hfinal⟩
+
+/-- Sequential composition with an explicit predicate connecting the first
+postcondition to the second precondition. -/
+theorem trans {pre nextPre : State → Prop}
+    {middle next : State → State → Nat → Prop}
+    (first : GasContract pre middle)
+    (second : GasContract nextPre next)
+    (seam : ∀ initial state cost, pre initial →
+      middle initial state cost → nextPre state) :
+    GasContract pre (fun initial final cost =>
+      ∃ state firstCost secondCost,
+        middle initial state firstCost ∧
+        next state final secondCost ∧
+        cost = firstCost + secondCost) := by
+  intro initial hinitial
+  obtain ⟨state, firstCost, hfirst, hmiddle⟩ := first initial hinitial
+  obtain ⟨final, secondCost, hsecond, hnext⟩ :=
+    second state (seam initial state firstCost hinitial hmiddle)
+  refine ⟨final, firstCost + secondCost, ?_, state, firstCost,
+    secondCost, hmiddle, hnext, rfl⟩
+  intro gas hgas
+  have hfirstGas : firstCost ≤ gas := by omega
+  have hsecondGas : secondCost ≤ gas - firstCost := by omega
+  have hsub : gas - firstCost - secondCost =
+      gas - (firstCost + secondCost) := by omega
+  simpa [hsub] using
+    (hfirst gas hfirstGas).append
+      (hsecond (gas - firstCost) hsecondGas)
+
+/-- Compose two gas contracts and immediately map away the intermediate
+state and component costs. -/
+theorem transMapped {pre nextPre : State → Prop}
+    {middle next post : State → State → Nat → Prop}
+    (first : GasContract pre middle)
+    (second : GasContract nextPre next)
+    (seam : ∀ initial state cost, pre initial →
+      middle initial state cost → nextPre state)
+    (mapPost : ∀ initial state final firstCost secondCost,
+      pre initial → middle initial state firstCost →
+      next state final secondCost →
+      post initial final (firstCost + secondCost)) :
+    GasContract pre post := by
+  apply consequence (fun state hstate => hstate)
+    (first.trans second seam)
+  intro initial final cost hinitial hfinal
+  obtain ⟨state, firstCost, secondCost, hmiddle, hnext, rfl⟩ := hfinal
+  exact mapPost initial state final firstCost secondCost
+    hinitial hmiddle hnext
+
+/-- Retain only a selected relation on a state projection and the cost. -/
+theorem project {pre : State → Prop}
+    {post : State → State → Nat → Prop} {α : Type}
+    (contract : GasContract pre post) (view : State → α)
+    (relation : α → α → Nat → Prop)
+    (hproject : ∀ initial final cost, pre initial →
+      post initial final cost →
+      relation (view initial) (view final) cost) :
+    GasContract pre (fun initial final cost =>
+      relation (view initial) (view final) cost) := by
+  exact contract.consequence (fun state hstate => hstate)
+    (fun initial final cost hinitial hfinal =>
+      hproject initial final cost hinitial hfinal)
+
+/-- Attach a frame fact for a projection known to be preserved. -/
+theorem frame {pre : State → Prop}
+    {post : State → State → Nat → Prop} {α : Type}
+    (contract : GasContract pre post) (view : State → α)
+    (hframe : ∀ initial final cost, pre initial →
+      post initial final cost → view final = view initial) :
+    GasContract pre (fun initial final cost =>
+      post initial final cost ∧ Preserves view initial final) := by
+  exact contract.consequence (fun state hstate => hstate)
+    (fun initial final cost hinitial hfinal =>
+      ⟨hfinal, hframe initial final cost hinitial hfinal⟩)
+
+/-- Turn exact-cost relational contracts ending in the expected done result
+into the challenge's eventual-evaluation obligation. -/
+theorem toEventuallyEvaluates {Input : Type}
+    (initial : Input → State) (expected : Input → ExecutionResult)
+    (post : Input → State → State → Nat → Prop)
+    (contract : ∀ input,
+      GasContract (fun state => state = initial input) (post input))
+    (hdone : ∀ input final cost,
+      post input (initial input) final cost → final.isDone = true)
+    (hresult : ∀ input final cost,
+      post input (initial input) final cost →
+        final.toResult = expected input) :
+    EventuallyEvaluates
+      (fun input gas => withGas (initial input) gas) expected := by
+  intro input
+  obtain ⟨final, cost, htrace, hpost⟩ :=
+    contract input (initial input) rfl
+  refine ⟨cost, fun gas hgas state hstate => ?_⟩
+  subst state
+  refine ⟨withGas final (gas - cost), htrace gas hgas, ?_, ?_⟩
+  · change final.isDone = true
+    exact hdone input final cost hpost
+  · change final.toResult = expected input
+    exact hresult input final cost hpost
+
+end GasContract
+
 /-- A direct EVM trace uniform in all sufficiently large initial gas budgets.
 The endpoints describe every field except gas; `withGas` supplies the actual
 initial and final counters. The cost is proof-relevant so a later theorem may
@@ -38,6 +187,24 @@ structure GasSteps (s t : State) where
     Steps (withGas s gas) (withGas t (gas - cost))
 
 namespace GasSteps
+
+/-- Hide an exact gas trace behind a relational singleton contract. -/
+theorem toContract {s t : State} (trace : GasSteps s t) :
+    GasContract (fun initial => initial = s)
+      (fun _ final cost => final = t ∧ cost = trace.cost) := by
+  intro initial hinitial
+  subst initial
+  exact ⟨t, trace.cost, trace.trace, rfl, rfl⟩
+
+/-- Hide an exact gas trace while exposing only a caller-selected
+postcondition. -/
+theorem toContractWhere {s t : State} (trace : GasSteps s t)
+    (post : State → State → Nat → Prop)
+    (hpost : post s t trace.cost) :
+    GasContract (fun initial => initial = s) post := by
+  intro initial hinitial
+  subst initial
+  exact ⟨t, trace.cost, trace.trace, hpost⟩
 
 def refl (s : State) : GasSteps s s := by
   refine ⟨0, fun gas _ => ?_⟩
@@ -204,15 +371,15 @@ theorem toEventuallyEvaluates {Input : Type}
     (hresult : ∀ input, (final input).toResult = expected input) :
     EventuallyEvaluates
       (fun input gas => withGas (initial input) gas) expected := by
-  intro input
-  let htrace := hsteps input
-  refine ⟨htrace.cost, fun gas hgas s hs => ?_⟩
-  subst s
-  refine ⟨withGas (final input) (gas - htrace.cost),
-    htrace.trace gas hgas, ?_, ?_⟩
-  · change (final input).isDone = true
+  apply GasContract.toEventuallyEvaluates initial expected
+    (fun input _ state cost =>
+      state = final input ∧ cost = (hsteps input).cost)
+    (fun input => (hsteps input).toContract)
+  · intro input state _ hpost
+    rw [hpost.1]
     exact hdone input
-  · change (final input).toResult = expected input
+  · intro input state _ hpost
+    rw [hpost.1]
     exact hresult input
 
 end GasSteps

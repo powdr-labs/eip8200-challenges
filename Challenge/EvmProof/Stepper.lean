@@ -1085,4 +1085,21 @@ def runLocatedBlock_sound (artifact : ProgramArtifact)
     (runLocatedBlock_sound artifact fork path hcode hfork hresult hrun hnp).cost =
       runLocatedBlockCost path s := rfl
 
+/-- A successfully evaluated located path exposed through the relational gas
+contract boundary.  The exact endpoint remains available in the leaf
+postcondition, while callers may immediately weaken it to selected
+observations with `GasContract.consequence` or `GasContract.project`. -/
+theorem runLocatedBlock_contract (artifact : ProgramArtifact)
+    (fork : Fork) (path : List (Located artifact fork)) {s t : State}
+    (hcode : s.executionEnv.code = artifact.code)
+    (hfork : s.fork = fork)
+    (hresult : runLocatedBlock path s = some t)
+    (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig
+      s.executionEnv.fork s.executionEnv.codeAddr = false) :
+    GasContract (fun initial => initial = s)
+      (fun _ final cost =>
+        final = t ∧ cost = runLocatedBlockCost path s) := by
+  exact (runLocatedBlock_sound artifact fork path hcode hfork hresult hrun hnp).toContract
+
 end Challenge.EvmProof.Stepper

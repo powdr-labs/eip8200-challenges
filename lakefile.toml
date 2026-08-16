@@ -25,12 +25,16 @@ rev = "00e49b6a59642129c23935aaec701b327591419b"
 # `Precompile.runSha256` computes for the 0x02 precompile. Required explicitly
 # (rather than relied on transitively) because the pin is part of the trust
 # boundary a submission is judged against — it must stay identical to the
-# revision `yul-evm-compiler` pins, or Lake resolves the conflict silently in
-# this root package's favour and the two would drift apart.
+# revision `yul-evm-compiler` pins unless the delta is audited as
+# proof/API-only. The revision below adds relational contracts and includes
+# Mathlib-removal/determinism proof maintenance, but does not change the
+# executable EVM transition definitions. Lake recompiles the pinned compiler
+# correctness proofs against this root-selected semantics revision; the
+# compiler implementation and frozen bytecode artifacts remain unchanged.
 [[require]]
 name = "evm_semantics"
 git = "https://github.com/powdr-labs/evm-semantics"
-rev = "26fdf59"
+rev = "bc3c23395b87e0960e8852138dec66f9e84d49ee"
 
 [[lean_lib]]
 name = "Challenge"

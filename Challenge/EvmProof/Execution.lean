@@ -1,4 +1,5 @@
 import EvmSemantics.EVM.Equiv
+import EvmSemantics.EVM.Contract
 set_option warningAsError true
 /-!
 # Direct EVM execution proof combinators
@@ -38,9 +39,23 @@ theorem steps_execN {n : Nat} {s : State} (h : CanStepN n s) :
 
 /-- State-predicate reachability over zero or more relational EVM steps. -/
 def Reaches (P Q : State → Prop) : Prop :=
-  ∀ ⦃s⦄, P s → ∃ t, Steps s t ∧ Q t
+  ∀ ⦃initial⦄, P initial →
+    ∃ final, Steps initial final ∧ Q final
 
 namespace Reaches
+
+/-- View challenge reachability as the generic upstream relational contract. -/
+theorem toContract {P Q : State → Prop} (h : Reaches P Q) :
+    StepsContract P (fun _ final => Q final) := by
+  intro initial hinitial
+  exact h hinitial
+
+/-- Specialize a generic relational contract whose postcondition ignores the
+initial state to challenge reachability. -/
+theorem ofContract {P Q : State → Prop}
+    (h : StepsContract P (fun _ final => Q final)) : Reaches P Q := by
+  intro initial hinitial
+  exact h initial hinitial
 
 theorem refl (P : State → Prop) : Reaches P P := by
   intro s hs
@@ -118,8 +133,7 @@ theorem Reaches.toEval {P : State → Prop} {result : ExecutionResult}
     (h : Reaches P (fun t => t.isDone = true ∧ t.toResult = result)) :
     ∀ ⦃s⦄, P s → Eval s result := by
   intro s hs
-  obtain ⟨t, hsteps, hdone, hresult⟩ := h hs
-  simpa [hresult] using eval_of_steps hsteps hdone
+  exact StepsContract.toEval h.toContract s hs
 
 /-- Reusable direct-bytecode obligation for an arbitrary input type and challenge:
 from the gas-parameterized initial state, reach a done state with the expected

@@ -1,5 +1,6 @@
 import Challenge.EvmProof.Bytecode
 import EvmSemantics.Machine.MachineState
+import Lean.Elab.Tactic.Omega
 import YulEvmCompiler.Instr
 set_option warningAsError true
 /-!
@@ -179,12 +180,12 @@ theorem readPadded_getElem?_getD (bs : ByteArray) (start n i : Nat) :
   let take := min (bs.size - start') n
   change ((bs.extract start' (start' + take) ++
     ByteArray.mk (Array.replicate (n - take) 0))[i]?.getD 0) = _
-  have hstartLe : start' ≤ bs.size := by simp [start']
-  have htakeLe : take ≤ bs.size - start' := by simp [take]
-  have htakeN : take ≤ n := by simp [take]
+  have hstartLe : start' ≤ bs.size := Nat.min_le_right _ _
+  have htakeLe : take ≤ bs.size - start' := Nat.min_le_left _ _
+  have htakeN : take ≤ n := Nat.min_le_right _ _
   have hstop : start' + take ≤ bs.size := by omega
   have hextractSize : (bs.extract start' (start' + take)).size = take := by
-    rw [ByteArray.size_extract, min_eq_left hstop]
+    rw [ByteArray.size_extract, Nat.min_eq_left hstop]
     omega
   rw [getElem?_getD_append, hextractSize]
   by_cases hi : i < n
@@ -192,12 +193,13 @@ theorem readPadded_getElem?_getD (bs : ByteArray) (start n i : Nat) :
     by_cases hitake : i < take
     · rw [if_pos hitake]
       have hsle : start ≤ bs.size := by
-        by_contra h
-        have hge : bs.size ≤ start := by omega
-        have hstartEq : start' = bs.size := by simp [start', hge]
-        rw [hstartEq] at htakeLe
-        simp at htakeLe
-        omega
+        by_cases hsle : start ≤ bs.size
+        · exact hsle
+        · have hge : bs.size ≤ start := by omega
+          have hstartEq : start' = bs.size := by simp [start', hge]
+          rw [hstartEq] at htakeLe
+          simp at htakeLe
+          omega
       have hstartEq : start' = start := by simp [start', hsle]
       simp only [hstartEq] at hstop hextractSize ⊢
       have hextract : i < (bs.extract start (start + take)).size := by
@@ -240,7 +242,7 @@ theorem readPadded_getElem?_getD (bs : ByteArray) (start n i : Nat) :
   unfold MachineState.readPadded
   change (bs.extract start' (start' + take) ++
     ByteArray.mk (Array.replicate (n - take) 0)).size = n
-  rw [ByteArray.size_append, ByteArray.size_extract, min_eq_left hstop]
+  rw [ByteArray.size_append, ByteArray.size_extract, Nat.min_eq_left hstop]
   change start' + take - start' + (Array.replicate (n - take) 0).size = n
   rw [Array.size_replicate]
   omega

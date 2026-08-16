@@ -234,7 +234,7 @@ theorem schedule_finalMemory (input : ByteArray) :
   · exact schedule_flaggedMemory input
 
 def sigmaIndex (round column : Nat) : Nat :=
-  Crypto.Blake2f.SIGMA[round % 10]![column]!
+  (Crypto.Blake2f.SIGMA[round % 10]!)[column]!
 
 theorem sigmaIndex_lt_16 (round column : Nat) (hcolumn : column < 16) :
     sigmaIndex round column < 16 := by

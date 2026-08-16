@@ -123,22 +123,52 @@ theorem validFinalState_toResult (input : ByteArray)
   exact OutputCorrectness.finalState_return_eq_spec
     (Initialization.constantsFinalState input) input hflag
 
-private theorem eval_of_gasSteps {initial final : State}
-    (trace : Challenge.EvmProof.GasSteps initial final)
-    (gas : Nat) (hgas : trace.cost ≤ gas)
-    (hdone : final.isDone = true) :
-    Eval (Challenge.EvmProof.withGas initial gas) final.toResult := by
-  have steps := trace.trace gas hgas
-  have result := Challenge.EvmProof.eval_of_steps steps (by
-    change final.isDone = true
-    exact hdone)
-  have hresult :
-      (Challenge.EvmProof.withGas final (gas - trace.cost)).toResult =
-        final.toResult := by
-    cases final
-    rfl
-  rw [hresult] at result
-  exact result
+/-- The observation retained from every valid or invalid execution branch.
+Complete final states stay behind this relation. -/
+def ReferencePost (input : ByteArray) (_initial final : State)
+    (cost : Nat) : Prop :=
+  final.isDone = true ∧ Matches input final.toResult ∧
+    cost = GasCost.referenceGas input
+
+/-- One relation-valued execution certificate covers all BLAKE2f branches. -/
+theorem referenceContract (input : ByteArray) (hfit : CalldataFits input) :
+    Challenge.EvmProof.GasContract
+      (fun state => state = initialState referenceBytecode input 0)
+      (ReferencePost input) := by
+  by_cases hsize : input.size = 213
+  · by_cases hflag : input[212]!.toNat ≤ 1
+    · let trace := validGasSteps input hfit hsize hflag
+      apply trace.toContractWhere
+      refine ⟨validFinalState_isDone input, ?_, ?_⟩
+      · rw [Matches, if_pos ((validInput_iff input).2 ⟨hsize, hflag⟩)]
+        exact validFinalState_toResult input hflag
+      · rw [validGasSteps_cost, GasCost.referenceGas, if_pos hsize,
+          if_pos (show GasCost.finalFlag input ≤ 1 from hflag)]
+        rfl
+    · have hbad : 1 < input[212]!.toNat := by omega
+      let trace := Invalid.gasSteps_invalidFlag input hfit hsize hbad
+      apply trace.toContractWhere
+      refine ⟨?_, ?_, ?_⟩
+      · simp [Invalid.invalidFlagFinal, State.isDone, State.isHalted,
+          State.isRunning, initialState]
+      · rw [Matches, if_neg]
+        · exact ⟨.InvalidInstruction, by
+            simp [Invalid.invalidFlagFinal, State.toResult]⟩
+        · exact fun hvalid => hflag ((validInput_iff input).1 hvalid).2
+      · rw [Invalid.gasSteps_invalidFlag_cost, GasCost.referenceGas,
+          if_pos hsize,
+          if_neg (show ¬GasCost.finalFlag input ≤ 1 from hflag)]
+  · let trace := Invalid.gasSteps_invalidLength input hfit hsize
+    apply trace.toContractWhere
+    refine ⟨?_, ?_, ?_⟩
+    · simp [Invalid.invalidLengthFinal, State.isDone, State.isHalted,
+        State.isRunning, initialState]
+    · rw [Matches, if_neg]
+      · exact ⟨.InvalidInstruction, by
+          simp [Invalid.invalidLengthFinal, State.toResult]⟩
+      · exact fun hvalid => hsize ((validInput_iff input).1 hvalid).1
+    · rw [Invalid.gasSteps_invalidLength_cost]
+      simp [GasCost.referenceGas, hsize]
 
 private theorem withGas_initialState (code input : ByteArray) (gas : Nat) :
     Challenge.EvmProof.withGas (initialState code input 0) gas =
@@ -149,46 +179,17 @@ private theorem withGas_initialState (code input : ByteArray) (gas : Nat) :
 theorem reference_correctWithExactGas :
     CorrectWithSchedule referenceBytecode GasCost.referenceGas := by
   intro input hfit gas hgas
-  by_cases hsize : input.size = 213
-  · by_cases hflag : input[212]!.toNat ≤ 1
-    · let trace := validGasSteps input hfit hsize hflag
-      have hcost : trace.cost = GasCost.referenceGas input := by
-        rw [validGasSteps_cost, GasCost.referenceGas, if_pos hsize,
-          if_pos (show GasCost.finalFlag input ≤ 1 from hflag)]
-        rfl
-      refine ⟨.returned (spec input), ?_, ?_⟩
-      · have heval := eval_of_gasSteps trace gas (by omega)
-          (validFinalState_isDone input)
-        simpa [validFinalState_toResult input hflag, initialState,
-          Challenge.EvmProof.withGas] using heval
-      · rw [Matches, if_pos ((validInput_iff input).2 ⟨hsize, hflag⟩)]
-    · have hbad : 1 < input[212]!.toNat := by omega
-      let trace := Invalid.gasSteps_invalidFlag input hfit hsize hbad
-      have hcost : trace.cost = GasCost.referenceGas input := by
-        rw [Invalid.gasSteps_invalidFlag_cost, GasCost.referenceGas,
-          if_pos hsize, if_neg (show ¬GasCost.finalFlag input ≤ 1 from hflag)]
-      refine ⟨.exception .InvalidInstruction, ?_, ?_⟩
-      · have heval := eval_of_gasSteps trace gas (by omega) (by
-          simp [Invalid.invalidFlagFinal, State.isDone, State.isHalted,
-            State.isRunning, initialState])
-        rw [withGas_initialState] at heval
-        simpa [Invalid.invalidFlagFinal, State.toResult] using heval
-      · rw [Matches, if_neg]
-        · exact ⟨.InvalidInstruction, rfl⟩
-        · exact fun hvalid => hflag ((validInput_iff input).1 hvalid).2
-  · let trace := Invalid.gasSteps_invalidLength input hfit hsize
-    have hcost : trace.cost = GasCost.referenceGas input := by
-      rw [Invalid.gasSteps_invalidLength_cost]
-      simp [GasCost.referenceGas, hsize]
-    refine ⟨.exception .InvalidInstruction, ?_, ?_⟩
-    · have heval := eval_of_gasSteps trace gas (by omega) (by
-        simp [Invalid.invalidLengthFinal, State.isDone, State.isHalted,
-          State.isRunning, initialState])
-      rw [withGas_initialState] at heval
-      simpa [Invalid.invalidLengthFinal, State.toResult] using heval
-    · rw [Matches, if_neg]
-      · exact ⟨.InvalidInstruction, rfl⟩
-      · exact fun hvalid => hsize ((validInput_iff input).1 hvalid).1
+  obtain ⟨final, cost, htrace, hdone, hmatches, hcost⟩ :=
+    referenceContract input hfit
+      (initialState referenceBytecode input 0) rfl
+  subst cost
+  refine ⟨final.toResult, ?_, hmatches⟩
+  have heval := Challenge.EvmProof.eval_of_steps
+    (htrace gas hgas) (by
+      change final.isDone = true
+      exact hdone)
+  rw [withGas_initialState] at heval
+  simpa using heval
 
 /-- The public symbolic formula is a sufficient gas schedule. -/
 theorem reference_correctWithSchedule :
