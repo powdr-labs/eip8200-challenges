@@ -31,6 +31,10 @@ rev = "00e49b6a59642129c23935aaec701b327591419b"
 # executable EVM transition definitions. Lake recompiles the pinned compiler
 # correctness proofs against this root-selected semantics revision; the
 # compiler implementation and frozen bytecode artifacts remain unchanged.
+# The API was squash-merged by evm-semantics #146 at `2f8714d`, after that
+# repository had moved to Lean 4.33 and removed `Substate.touchedAccounts`.
+# Pin its Lean-4.31-compatible PR head until this repository and its pinned
+# compiler/Mathlib dependencies can migrate toolchains together.
 [[require]]
 name = "evm_semantics"
 git = "https://github.com/powdr-labs/evm-semantics"
