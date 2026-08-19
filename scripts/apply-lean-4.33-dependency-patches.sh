@@ -18,8 +18,5 @@ apply_dependency_patch() {
 }
 
 apply_dependency_patch \
-  "$project_root/.lake/packages/evm_semantics" \
-  "$project_root/patches/lean-4.33/evm-semantics.patch"
-apply_dependency_patch \
   "$project_root/.lake/packages/yul-evm-compiler" \
   "$project_root/patches/lean-4.33/yul-evm-compiler.patch"

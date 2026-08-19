@@ -12,6 +12,8 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 theorem t1_cost_potential (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (j : Nat) (hj : j < 64)
@@ -218,9 +220,8 @@ theorem t1_cost_potential (s : State) (msgOff returnDest : UInt256)
   have hawH7 :
       (Compression.callH7 s msgOff returnDest rest j).activeWords =
         (Compression.gotBigSigma1 s msgOff returnDest rest j).activeWords := by rfl
-  simp only [Compression.gasSteps_t1, Compression.gasSteps_condition,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  unfold Compression.gasSteps_t1
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
   rw [hawW] at hsetupW
   rw [hawK] at hsetupK
   rw [hawH6] at hsetupH6
@@ -242,6 +243,17 @@ theorem t1_cost_potential (s : State) (msgOff returnDest : UInt256)
     (Compression.gotBigSigma1 s msgOff returnDest rest j).activeWords.toNat at hb1
   change _ = 37 + MachineState.memCost
     (Compression.gotH7 s msgOff returnDest rest j).activeWords.toNat at hh7
+  change (potentialCost hcond + (potentialCost hsetupW +
+    (potentialCost hw + (potentialCost hsetupK +
+    (potentialCost hk + (potentialCost hsetupH6 +
+    (potentialCost hh6 + (potentialCost hsetupH5 +
+    (potentialCost hh5 + (potentialCost hsetupCh +
+    (potentialCost hch + (potentialCost hsetupB1 +
+    (potentialCost hb1 + (potentialCost hsetupH7 +
+    (potentialCost hh7 + potentialCost hfinish))))))))))))))) +
+    MachineState.memCost
+      (Compression.roundAt s msgOff returnDest rest j).activeWords.toNat = _
+  simp only [potentialCost]
   omega
 
 

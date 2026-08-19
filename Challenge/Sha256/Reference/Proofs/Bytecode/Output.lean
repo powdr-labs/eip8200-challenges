@@ -28,7 +28,7 @@ open EvmSemantics.EVM
 
 private theorem uintZero : (0 : UInt256) = UInt256.ofNat 0 := by decide
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :

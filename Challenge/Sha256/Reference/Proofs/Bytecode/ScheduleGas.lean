@@ -5,6 +5,7 @@ import Challenge.Sha256.Reference.Proofs.Bytecode.Schedule
 set_option warningAsError true
 set_option maxRecDepth 100000
 set_option maxHeartbeats 0
+set_option linter.unusedSimpArgs false
 
 namespace Challenge.Sha256.Reference.Proofs.Bytecode.ScheduleGas
 
@@ -13,6 +14,9 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 open Challenge.Sha256.Reference.Proofs.Bytecode
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 private def CopyFree : Instr → Prop
   | .op .CALLDATACOPY => False
@@ -95,8 +99,8 @@ private theorem wAt_cost_potential (s : State)
   have hmeter := blockCost_potential_of_static Accessors.wAtPath 37 hresult hfork
     (by simp [Accessors.wAtPath, CopyFree]) (by rfl)
   unfold Accessors.gasSteps_wAt
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  exact hmeter
+  change potentialCost hmeter + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost, Accessors.loadEntry] using hmeter
 
 private theorem wSet_cost_potential (s : State)
     (index value returnDest : UInt256) (rest : List UInt256)
@@ -115,8 +119,8 @@ private theorem wSet_cost_potential (s : State)
   have hmeter := blockCost_potential_of_static Accessors.wSetPath 34 hresult hfork
     (by simp [Accessors.wSetPath, CopyFree]) (by rfl)
   unfold Accessors.gasSteps_wSet
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  exact hmeter
+  change potentialCost hmeter + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost, Accessors.storeEntry] using hmeter
 
 theorem firstIteration_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256) (j : Nat)
@@ -150,9 +154,13 @@ theorem firstIteration_cost_potential (s : State)
     (by simpa [Schedule.afterFirstStore, Schedule.afterFirstLoad,
       Schedule.afterFirstCondition, Schedule.firstAt, State.fork] using hfork)
     (by simp [Schedule.firstIncrementPath, CopyFree]) (by rfl)
-  simp only [Schedule.gasSteps_firstIteration,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  unfold Schedule.gasSteps_firstIteration
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hcond + (potentialCost hload +
+    (potentialCost hstore + potentialCost hinc))) +
+    MachineState.memCost
+      (Schedule.firstAt s msgOff returnDest rest j).activeWords.toNat = _
+  simp only [potentialCost]
   omega
 
 theorem firstLoop_cost_potential (s : State)
@@ -188,7 +196,9 @@ theorem firstLoop_cost_potential (s : State)
         103 + MachineState.memCost
           (Schedule.firstLoopState s msgOff returnDest rest (i + 1)).activeWords.toNat := by
     simpa [Schedule.firstAt, Schedule.firstLoopState] using h
-  simpa only [Challenge.EvmProof.GasSteps.cast_cost] using h'
+  change potentialCost h' + MachineState.memCost
+      (Schedule.firstLoopState s msgOff returnDest rest i).activeWords.toNat = _
+  simpa only [potentialCost] using h'
 
 theorem secondIteration_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256) (j : Nat)
@@ -351,11 +361,6 @@ theorem secondIteration_cost_potential (s : State)
   dsimp only [q7] at hcall7 hcall2 hcallS1
   dsimp only [q2] at hcall2 hcallS1
   dsimp only [qs1] at hcallS1 hset
-  simp only [Accessors.gasSteps_wAt, Accessors.gasSteps_wSet,
-    Functions.gasSteps_ssig0, Functions.gasSteps_ssig1,
-    Functions.gasSteps_rotr, Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-    at hcall16 hcall15 hcallS0 hcall7 hcall2 hcallS1 hset
   change _ + MachineState.memCost s.activeWords.toNat =
     26 + MachineState.memCost s.activeWords.toNat at hcond
   change _ + MachineState.memCost s.activeWords.toNat =
@@ -415,15 +420,18 @@ theorem secondIteration_cost_potential (s : State)
       (Schedule.gotWSet s msgOff returnDest rest j).activeWords.toNat =
     26 + MachineState.memCost
       (Schedule.gotWSet s msgOff returnDest rest j).activeWords.toNat at hinc
-  simp only [Schedule.gasSteps_secondIteration,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost,
-    Accessors.gasSteps_wAt, Accessors.gasSteps_wSet,
-    Functions.gasSteps_ssig0, Functions.gasSteps_ssig1,
-    Functions.gasSteps_rotr]
-  change _ + MachineState.memCost s.activeWords.toNat =
-    780 + MachineState.memCost
-      (Schedule.gotWSet s msgOff returnDest rest j).activeWords.toNat
+  unfold Schedule.gasSteps_secondIteration
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (((((((((((((((potentialCost hcond + potentialCost hW16) +
+    potentialCost hcall16) + potentialCost hW15) + potentialCost hcall15) +
+    potentialCost hsetupS0) + potentialCost hcallS0) + potentialCost hW7) +
+    potentialCost hcall7) + potentialCost hW2) + potentialCost hcall2) +
+    potentialCost hsetupS1) + potentialCost hcallS1) + potentialCost hfinish) +
+    potentialCost hset) + potentialCost hinc) +
+    MachineState.memCost s.activeWords.toNat =
+      780 + MachineState.memCost
+        (Schedule.gotWSet s msgOff returnDest rest j).activeWords.toNat
+  simp only [potentialCost]
   omega
 
 theorem secondLoop_cost_potential (s : State)
@@ -459,7 +467,9 @@ theorem secondLoop_cost_potential (s : State)
         780 + MachineState.memCost
           (Schedule.secondLoopState s msgOff returnDest rest (n + 1)).activeWords.toNat := by
     simpa [Schedule.secondAt, Schedule.secondLoopState] using h
-  simpa only [Challenge.EvmProof.GasSteps.cast_cost] using h'
+  change potentialCost h' + MachineState.memCost
+      (Schedule.secondLoopState s msgOff returnDest rest n).activeWords.toNat = _
+  simpa only [potentialCost] using h'
 
 theorem scheduleStart_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256)
@@ -478,8 +488,9 @@ theorem scheduleStart_cost_potential (s : State)
     (by simpa [Schedule.scheduleEntry, State.fork] using hfork)
     (by simp [Schedule.scheduleStartPath, CopyFree]) (by rfl)
   unfold Schedule.gasSteps_scheduleStart
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  exact h
+  change potentialCost h + MachineState.memCost
+    (Schedule.scheduleEntry s msgOff returnDest rest).activeWords.toNat = _
+  simpa only [potentialCost] using h
 
 theorem firstExit_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256)
@@ -499,8 +510,9 @@ theorem firstExit_cost_potential (s : State)
     (by simp [Schedule.firstExitPath, Schedule.firstConditionPath, CopyFree])
     (by rfl)
   unfold Schedule.gasSteps_firstExit
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  exact h
+  change potentialCost h + MachineState.memCost
+    (Schedule.firstAt s msgOff returnDest rest 16).activeWords.toNat = _
+  simpa only [potentialCost] using h
 
 theorem secondExit_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256)
@@ -521,8 +533,9 @@ theorem secondExit_cost_potential (s : State)
     (by simp [Schedule.secondExitPath, Schedule.secondConditionPath, CopyFree])
     (by rfl)
   unfold Schedule.gasSteps_secondExit
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  exact h
+  change potentialCost h + MachineState.memCost
+    (Schedule.secondAt s msgOff returnDest rest 64).activeWords.toNat = _
+  simpa only [potentialCost] using h
 
 theorem schedule_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256)
@@ -559,9 +572,6 @@ theorem schedule_cost_potential (s : State)
       q2.executionEnv.codeAddr = false := by simpa [q2] using q1np
   have hfinish := secondExit_cost_potential q2 msgOff returnDest rest (by omega)
     q2code q2fork q2run q2np hreturn
-  simp only [Schedule.gasSteps_scheduleCost, Schedule.gasSteps_schedule,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
   dsimp only [q1] at hbridge hsecond
   dsimp only [q2, q1] at hfinish
   change _ + MachineState.memCost
@@ -577,6 +587,13 @@ theorem schedule_cost_potential (s : State)
     48 * 780 + MachineState.memCost q2.activeWords.toNat at hsecond
   change _ + MachineState.memCost q2.activeWords.toNat =
     39 + MachineState.memCost q2.activeWords.toNat at hfinish
+  unfold Schedule.gasSteps_scheduleCost Schedule.gasSteps_schedule
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change ((((potentialCost hstart + potentialCost hfirst) +
+    potentialCost hbridge) + potentialCost hsecond) + potentialCost hfinish) +
+    MachineState.memCost
+      (Schedule.scheduleEntry s msgOff returnDest rest).activeWords.toNat = _
+  simp only [potentialCost]
   dsimp [Schedule.scheduleResult]
   change _ + MachineState.memCost
       (Schedule.scheduleEntry s msgOff returnDest rest).activeWords.toNat =

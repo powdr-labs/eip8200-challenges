@@ -1,188 +1,52 @@
-diff --git a/YulEvmCompiler/BytesLemmas.lean b/YulEvmCompiler/BytesLemmas.lean
-index 0a90e17..1e93d53 100644
---- a/YulEvmCompiler/BytesLemmas.lean
-+++ b/YulEvmCompiler/BytesLemmas.lean
-@@ -69,9 +69,9 @@ private theorem second_fold_mkEmpty_get (le : Array UInt8) (width m cap j : Nat)
- 
- private theorem first_fold_mprod_props (n m cap : Nat) :
-     let s := (List.range' 0 m).foldl
--      (fun (b : MProd Nat (Array UInt8)) (_a : Nat) =>
--        ⟨b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))⟩)
--      (⟨n, Array.mkEmpty cap⟩ : MProd Nat (Array UInt8))
-+      (fun (b : Nat × Array UInt8) (_a : Nat) =>
-+        (b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))))
-+      (n, Array.mkEmpty cap)
-     s.snd.size = m ∧ s.fst = n / 256 ^ m ∧
-       ∀ j, j < m → s.snd[j]! = UInt8.ofNat (n / 256 ^ j % 256) := by
-   induction m with
-@@ -95,15 +95,15 @@ private theorem first_fold_mprod_props (n m cap : Nat) :
-           rw [getElem!_pos _ m (by rw [Array.size_push, hsz]; omega)]
-           rw [hk]
-           have hsz' : (List.foldl
--              (fun (b : MProd Nat (Array UInt8)) (_a : Nat) =>
--                ⟨b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))⟩)
--              (⟨n, #[]⟩ : MProd Nat (Array UInt8)) (List.range' 0 m)).snd.size = m := by
-+              (fun (b : Nat × Array UInt8) (_a : Nat) =>
-+                (b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))))
-+              (n, #[]) (List.range' 0 m)).snd.size = m := by
-             simpa using hsz
-           have hpush := Array.getElem_push_eq
-             (xs := (List.foldl
--              (fun (b : MProd Nat (Array UInt8)) (_a : Nat) =>
--                ⟨b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))⟩)
--              (⟨n, #[]⟩ : MProd Nat (Array UInt8)) (List.range' 0 m)).snd)
-+              (fun (b : Nat × Array UInt8) (_a : Nat) =>
-+                (b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))))
-+              (n, #[]) (List.range' 0 m)).snd)
-             (x := UInt8.ofNat (n / 256 ^ m % 256))
-           simpa [hsz'] using hpush
- 
-diff --git a/YulEvmCompiler/Optimizer/Implementation/Normalization/Disambiguate/Alpha.lean b/YulEvmCompiler/Optimizer/Implementation/Normalization/Disambiguate/Alpha.lean
-index 8cd1e60..6194ea3 100644
---- a/YulEvmCompiler/Optimizer/Implementation/Normalization/Disambiguate/Alpha.lean
-+++ b/YulEvmCompiler/Optimizer/Implementation/Normalization/Disambiguate/Alpha.lean
-@@ -510,9 +510,14 @@ theorem funNames_eq_funDefNames : ∀ ss : List (Stmt Op),
-     funNames ss = NormalForm.funDefNames ss
-   | [] => rfl
-   | s :: rest => by
--      cases s <;>
--        simp [funNames, NormalForm.funDefNames, NormalForm.funDefName?,
--          funNames_eq_funDefNames rest]
-+      cases s with
-+      | funDef fn params rets body =>
-+          change fn :: funNames rest = fn :: NormalForm.funDefNames rest
-+          exact congrArg (List.cons fn) (funNames_eq_funDefNames rest)
-+      | block | letDecl | assign | cond | switch | forLoop | exprStmt |
-+          «break» | «continue» | leave =>
-+          change funNames rest = NormalForm.funDefNames rest
-+          exact funNames_eq_funDefNames rest
- 
- set_option maxHeartbeats 1600000 in
- mutual
-diff --git a/YulEvmCompiler/Optimizer/Implementation/StackLayoutSound.lean b/YulEvmCompiler/Optimizer/Implementation/StackLayoutSound.lean
-index 1076f73..a33e0df 100644
---- a/YulEvmCompiler/Optimizer/Implementation/StackLayoutSound.lean
-+++ b/YulEvmCompiler/Optimizer/Implementation/StackLayoutSound.lean
-@@ -5410,6 +5410,7 @@ mutual
-         addCasesMentionPositions_getD, addOptExprMentionPositions_getD,
-         addOptBlockMentionPositions_getD, addNamesMentionPositions_getD] <;>
-       repeat' split <;> simp_all
-+    all_goals grind
- 
-   theorem addStmtsMentionPositions_getD (position : Nat)
-       (seen : StackV2.MentionPositions) (x : Ident) : ∀ body : Block Op,
-diff --git a/YulEvmCompiler/StackScalable.lean b/YulEvmCompiler/StackScalable.lean
-index c1d639d..a7d6e81 100644
---- a/YulEvmCompiler/StackScalable.lean
-+++ b/YulEvmCompiler/StackScalable.lean
-@@ -1429,6 +1429,7 @@ theorem frameStepLookupB_eq_frameStepB (prog : List Asm) (lookup : CertLookup)
-               | nil => simp [CertLookup.toCert, ht]
-               | cons head c' =>
-                   cases head <;> simp [CertLookup.toCert, ht]
-+                  all_goals grind [Bool.decide_and]
-   | dup | pop | swap | op | jumpi | dynJump =>
-       simp only [frameStepLookupB, frameStepB]
-       repeat' split <;> simp_all
-diff --git a/YulEvmCompiler/StateRel.lean b/YulEvmCompiler/StateRel.lean
-index 9019f1f..855829b 100644
---- a/YulEvmCompiler/StateRel.lean
-+++ b/YulEvmCompiler/StateRel.lean
-@@ -2,6 +2,7 @@ import YulEvmCompiler.Decode
- import YulEvmCompiler.Value
- import YulEvmCompiler.BytesLemmas
- import EvmSemantics.EVM.BigStep
-+import Init.Data.Fin.Lemmas
- set_option warningAsError true
- /-!
- # YulEvmCompiler.StateRel
-@@ -145,9 +146,6 @@ theorem MemMatch.mkCode_eq {bytes : List UInt8} {code : ByteArray}
-     convert hm using 1 <;>
-       simp [YulSemantics.EVM.byteFrom, List.getD, hi,
-         ByteArray.toList_eq_data, ByteArray.getElem_eq_getElem_data]
--    all_goals
--      apply congrArg (fun proof => code.data[i]'proof)
--      apply Subsingleton.elim
- 
- /-! ### `MLOAD` agreement -/
- 
-@@ -517,12 +515,12 @@ theorem accountAddress_eq_iff_accountKey (a b : YulSemantics.EVM.U256) :
-   constructor
-   · intro h
-     have hv := congrArg Fin.val h
--    simpa [AccountAddress.ofUInt256, AccountAddress.size,
--      YulSemantics.EVM.accountKey] using hv
-+    simp only [AccountAddress.ofUInt256, Fin.val_ofNat, Nat.mod_mod] at hv
-+    simpa [AccountAddress.size, YulSemantics.EVM.accountKey] using hv
-   · intro h
-     apply Fin.ext
--    simpa [AccountAddress.ofUInt256, AccountAddress.size,
--      YulSemantics.EVM.accountKey] using h
-+    simp only [AccountAddress.ofUInt256, Fin.val_ofNat, Nat.mod_mod]
-+    simpa [AccountAddress.size, YulSemantics.EVM.accountKey] using h
- 
- @[simp] theorem accountAddress_ofUInt256_toUInt256 (a : AccountAddress) :
-     AccountAddress.ofUInt256 a.toUInt256 = a := by
-diff --git a/YulEvmCompiler/Value.lean b/YulEvmCompiler/Value.lean
-index 5ef4521..30045e8 100644
---- a/YulEvmCompiler/Value.lean
-+++ b/YulEvmCompiler/Value.lean
-@@ -171,19 +171,13 @@ theorem conv_lt (a b : U256) :
-     conv (b2w (a.ult b)) = UInt256.lt (conv a) (conv b) := by
-   rw [conv_bool]
-   unfold UInt256.lt
--  simp only [conv_toNat]
--  by_cases h : a.toNat < b.toNat
--  · rw [if_pos (by simp [BitVec.ult, h]), if_pos h]
--  · rw [if_neg (by simp [BitVec.ult, h]), if_neg h]
-+  grind [BitVec.ult, conv_toNat]
- 
- theorem conv_gt (a b : U256) :
-     conv (b2w (b.ult a)) = UInt256.gt (conv a) (conv b) := by
-   rw [conv_bool]
-   unfold UInt256.gt
--  simp only [conv_toNat]
--  by_cases h : b.toNat < a.toNat
--  · rw [if_pos (by simp [BitVec.ult, h]), if_pos h]
--  · rw [if_neg (by simp [BitVec.ult, h]), if_neg h]
-+  grind [BitVec.ult, conv_toNat]
- 
- private theorem toSignedNat_conv (a : U256) :
-     (conv a).toSignedNat = a.toInt := by
-@@ -198,11 +192,7 @@ private theorem toSignedNat_conv (a : U256) :
-     rw [h2]
-     omega
-   rw [hhalf]
--  by_cases h : a.toNat < 2 ^ 255
--  · rw [if_pos h, if_pos (by rw [h2]; omega)]
--  · rw [if_neg h, if_neg (by rw [h2]; omega)]
--    show (a.toNat : Int) - (EvmSemantics.UInt256.size : Nat) = _
--    rw [show EvmSemantics.UInt256.size = 2 ^ 256 from rfl]
-+  grind [show EvmSemantics.UInt256.size = 2 ^ 256 from rfl]
- 
- theorem conv_slt (a b : U256) :
-     conv (b2w (a.slt b)) = UInt256.slt (conv a) (conv b) := by
-@@ -230,19 +220,17 @@ theorem conv_eq (a b : U256) :
-     conv (b2w (a = b)) = UInt256.eq (conv a) (conv b) := by
-   rw [conv_bool]
-   unfold UInt256.eq
--  simp only [conv_toNat]
--  by_cases h : a = b
--  · rw [if_pos (decide_eq_true h), if_pos (congrArg BitVec.toNat h)]
--  · rw [if_neg (by simp [h]), if_neg (fun hc => h (BitVec.toNat_injective hc))]
-+  grind [conv_toNat, BitVec.toNat_injective]
- 
- theorem conv_iszero (a : U256) :
-     conv (b2w (a = 0)) = UInt256.isZero (conv a) := by
-   rw [conv_bool]
-   unfold UInt256.isZero
--  simp only [conv_toNat]
-   by_cases h : a = 0
--  · rw [if_pos (decide_eq_true h), if_pos (by simp [h])]
--  · rw [if_neg (by simpa using h), if_neg (toNat_ne_zero h)]
-+  · subst a
-+    rfl
-+  · have hn := toNat_ne_zero h
-+    grind [conv_toNat]
- 
- theorem conv_and (a b : U256) :
-     conv (a &&& b) = UInt256.land (conv a) (conv b) := by
+diff --git a/YulParser/Compile.lean b/YulParser/Compile.lean
+index 2b7349e..74913d3 100644
+--- a/YulParser/Compile.lean
++++ b/YulParser/Compile.lean
+@@ -463,7 +463,7 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+       let pipelined := (YulEvmCompiler.Optimizer.optimizerPipeline
+           (calls := YulSemantics.EVM.ExternalCalls.none)
+           (creates := YulSemantics.EVM.ExternalCreates.none)).run b
+-      let ssa := YulEvmCompiler.SsaCfg.compileViaSsa pipelined
++      let _ssa := YulEvmCompiler.SsaCfg.compileViaSsa pipelined
+       let classic := tryLayouts pipelined
+         <|> tryLayouts ((YulEvmCompiler.Optimizer.optimizerPipelineNoRejoin
+           (calls := YulSemantics.EVM.ExternalCalls.none)
+@@ -487,13 +487,7 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+               YulEvmCompiler.compile spilledOpt
+                 <|> YulEvmCompiler.compile spilled.block
+           | none => none)
+-      let asm :=
+-        match ssa, classic with
+-        | some a, some b =>
+-            if YulEvmCompiler.SsaCfg.instrCost a ≤ YulEvmCompiler.SsaCfg.instrCost b
+-            then some a else some b
+-        | some a, none => some a
+-        | none, cb => cb
++      let asm := classic
+       return YulEvmCompiler.assemble (← asm)
+   | some (.object o) =>
+       -- The root has no parent to copy and patch its code, so a `loadimmutable`
+@@ -535,7 +529,7 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+       -- independently and records no offsets, so a winning SSA artifact could
+       -- be patched at the wrong positions. Withhold that candidate whenever the
+       -- tree touches an immutable.
+-      let ssaLayout :=
++      let _ssaLayout :=
+         if usesImmutablesObject optimized then none
+         else (expandSetImmutablesObject optimized).bind YulEvmCompiler.SsaCfg.compileObjectViaSsa
+       let classicLayout := tryLayouts optimized
+@@ -581,13 +575,6 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+                           YulEvmCompiler.compileObject
+                       <|> some plainLayout
+           | none => none)
+-      let layout ←
+-        match ssaLayout, classicLayout with
+-        | some a, some b =>
+-            if YulEvmCompiler.SsaCfg.byteCodeCost a.code
+-                ≤ YulEvmCompiler.SsaCfg.byteCodeCost b.code
+-            then some a else some b
+-        | some a, none => some a
+-        | none, cb => cb
++      let layout ← classicLayout
+       return ByteArray.mk layout.code.toArray
+   | none => none

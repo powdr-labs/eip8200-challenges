@@ -11,10 +11,8 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
-private theorem potential_trans {a b p q r k l : Nat}
-    (h₁ : a + p = k + q) (h₂ : b + q = l + r) :
-    (a + b) + p = (k + l) + r := by
-  omega
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 private theorem shift_cost_potential
     (loadPath storePath : List
@@ -107,14 +105,16 @@ private theorem shift_cost_potential
         (Compression.shiftLoaded q src loadReturn storeReturn context).activeWords := by
     rfl
   unfold Compression.gasSteps_shift
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
   rw [hawLoad] at hsetupLoad
   rw [hawStore] at hsetupStore
   change _ = 37 + MachineState.memCost
     (Compression.shiftLoaded q src loadReturn storeReturn context).activeWords.toNat at hget
   change _ = 34 + MachineState.memCost
     (Compression.shiftReturned q src dest loadReturn storeReturn context).activeWords.toNat at hset
+  change (potentialCost hsetupLoad + (potentialCost hget +
+    (potentialCost hsetupStore + potentialCost hset))) +
+    MachineState.memCost q.activeWords.toNat = _
+  simp only [potentialCost]
   omega
 
 theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
@@ -287,9 +287,6 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
       Accessors.storeReturned, Compression.shiftLoaded,
       Accessors.loadReturned, State.fork] using q5fork)
     (by simp [Compression.finishRoundPath, CopyFree]) (by rfl)
-  unfold Compression.gasSteps_updates
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
   have hawH4Load :
       (Compression.h4LoadEntry s msgOff returnDest rest j).activeWords =
         q3.activeWords := by rfl
@@ -308,20 +305,16 @@ theorem updates_cost_potential (s : State) (msgOff returnDest : UInt256)
   change _ = 109 + MachineState.memCost
     (Compression.afterShift2 s msgOff returnDest rest j).activeWords.toNat at hs2
   dsimp only [q0, q1, q2, q3, q4, q5, q5rawState, ctx] at *
-  have h₁ := potential_trans hs7 hs6
-  have h₂ := potential_trans h₁ hstoreE
-  have h₃ := potential_trans h₂ hsetupH4
-  have h₄ := potential_trans h₃ hgetH4
-  have h₅ := potential_trans h₄ hstoreH4
-  have h₆ := potential_trans h₅ hsetH4
-  have h₇ := potential_trans h₆ hs3
-  have h₈ := potential_trans h₇ hs2
-  have h₉ := potential_trans h₈ hfinish
-  unfold Compression.gasSteps_shift at h₉ ⊢
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost,
-    Compression.afterShift2, Compression.afterShift3] at h₉ ⊢
-  simpa only [Nat.add_assoc, Nat.reduceAdd] using h₉
+  unfold Compression.gasSteps_updates
+  change (potentialCost hs7 + (potentialCost hs6 +
+    (potentialCost hstoreE + (potentialCost hsetupH4 +
+    (potentialCost hgetH4 + (potentialCost hstoreH4 +
+    (potentialCost hsetH4 + (potentialCost hs3 +
+    (potentialCost hs2 + potentialCost hfinish))))))))) +
+    MachineState.memCost
+      (Compression.afterT2 s msgOff returnDest rest j).activeWords.toNat = _
+  simp only [potentialCost]
+  omega
 
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.CompressionGas

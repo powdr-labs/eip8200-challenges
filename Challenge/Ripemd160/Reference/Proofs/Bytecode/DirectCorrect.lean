@@ -525,6 +525,71 @@ private def gasSteps_output (s : State) (input : ByteArray)
       (gexit.trans gfinish)))
     rfl rfl
 
+private noncomputable def gasSteps_outputRawCost (s : State) (input : ByteArray)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) : Nat := by
+  have gpre := Output.gasSteps_prelude s
+    (DriverTrace.blockOffsetWord (DriverTrace.blockCount input))
+    [Padding.paddedWord input] (by simp) hcode hfork hrun hnp
+  let q := outputLoopState s input 5
+  have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
+  have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
+  have qrun : q.halt = .Running := by simpa [q] using hrun
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
+      q.executionEnv.codeAddr = false := by simpa [q] using hnp
+  have gexitRaw : GasSteps
+      { q with
+        pc := UInt256.ofNat 0x654
+        stack := [UInt256.ofNat 5, Padding.paddedWord input] }
+      { q with
+        pc := UInt256.ofNat 0x681
+        stack := [UInt256.ofNat 5, Padding.paddedWord input] } := by
+    apply Output.gasSteps_block OutputTrace.outerTestPath
+    · exact qcode
+    · exact qfork
+    · simpa [q] using OutputTrace.run_outerTest_exit q
+        [Padding.paddedWord input] (by simp) qcode qrun
+    · exact qrun
+    · exact qnp
+  have gexit : GasSteps q
+      { q with
+        pc := UInt256.ofNat 0x681
+        stack := [UInt256.ofNat 5, Padding.paddedWord input] } :=
+    GasSteps.cast gexitRaw
+      (by simpa [q] using outputLoopState_normalized s input 5) rfl
+  have gfinish := Output.gasSteps_finish q [Padding.paddedWord input]
+    (by simp) qcode qfork qrun qnp
+  exact gpre.cost + ((gasSteps_outputLoop s input hcode hfork hrun hnp).cost +
+    (gexit.cost + gfinish.cost))
+
+@[simp] private theorem gasSteps_output_cost (s : State) (input : ByteArray)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    (gasSteps_output s input hcode hfork hrun hnp).cost =
+      gasSteps_outputRawCost s input hcode hfork hrun hnp := by
+  rfl
+
+@[simp] private theorem gasSteps_outputRawCost_eq (s : State) (input : ByteArray)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    gasSteps_outputRawCost s input hcode hfork hrun hnp =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.preludePath
+          (DriverTrace.afterExit s input) +
+        ((gasSteps_outputLoop s input hcode hfork hrun hnp).cost +
+          (Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.outerTestPath
+              (outputLoopState s input 5) +
+            Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.finishPath
+              { outputLoopState s input 5 with
+                pc := UInt256.ofNat 0x681
+                stack := [UInt256.ofNat 5, Padding.paddedWord input] })) := by
+  rfl
+
 /-- The one remaining end-to-end hypothesis: a certified compression trace
 for each padded block, plus the resulting five mathematical chaining words. -/
 structure CompressionSeam (input : ByteArray) where
@@ -566,6 +631,20 @@ private noncomputable def gasSteps_driver (input : ByteArray)
     (seam.running _ (by omega)) (seam.noPrecompile _ (by omega))
   exact GasSteps.cast (gsetup.trans (gloop.trans gexit)) seam.initial
     (by simp [final, DriverTrace.afterExit])
+
+@[simp] private theorem gasSteps_driver_cost (input : ByteArray)
+    (hfit : CalldataFits input) (seam : CompressionSeam input) :
+    (gasSteps_driver input hfit seam).cost =
+      (DriverTrace.gasSteps_setup (seam.states 0) input
+        (seam.code 0 (by omega)) (seam.fork 0 (by omega))
+        (seam.running 0 (by omega)) (seam.noPrecompile 0 (by omega))).cost +
+      ((DriverTrace.gasSteps_loop_of_compress seam.states input hfit
+        seam.code seam.fork seam.running seam.noPrecompile seam.compress).cost +
+      (DriverTrace.gasSteps_condition_exit
+        (seam.states (DriverTrace.blockCount input)) input hfit
+        (seam.code _ (by omega)) (seam.fork _ (by omega))
+        (seam.running _ (by omega)) (seam.noPrecompile _ (by omega))).cost) := by
+  rfl
 
 noncomputable def fullTrace (input : ByteArray) (hfit : CalldataFits input)
     (seam : CompressionSeam input) :

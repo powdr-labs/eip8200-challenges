@@ -13,6 +13,9 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 theorem roundIteration_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256) (j : Nat)
     (hj : j < 64) (hcap : rest.length < 988)
@@ -72,7 +75,8 @@ theorem roundLoop_cost_potential (s : State)
         1799 + MachineState.memCost
           (Compression.roundLoopState s msgOff returnDest rest (i + 1)).activeWords.toNat := by
     simpa [Compression.roundAt, Compression.roundLoopState] using h
-  simpa only [Challenge.EvmProof.GasSteps.cast_cost] using h'
+  change potentialCost h' + MachineState.memCost
+    (Compression.roundLoopState s msgOff returnDest rest i).activeWords.toNat = _
+  simpa only [potentialCost] using h'
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.CompressionGas
-

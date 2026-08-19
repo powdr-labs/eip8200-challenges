@@ -4,6 +4,7 @@ import Challenge.Sha256.Reference.Proofs.Bytecode.BigSigma
 set_option warningAsError true
 set_option maxRecDepth 100000
 set_option maxHeartbeats 0
+set_option linter.unusedSimpArgs false
 
 namespace Challenge.Sha256.Reference.Proofs.Bytecode.ArithmeticGas
 
@@ -11,6 +12,11 @@ open Challenge.Sha256
 open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
+
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 private def CopyFree : Instr → Prop
   | .op .CALLDATACOPY => False
@@ -111,8 +117,8 @@ theorem gasSteps_rotr_cost_potential (s : State) (x : UInt256) (n : Nat)
     (by simp [Functions.rotrPath, CopyFree])
   rw [rotr_static] at hmeter
   unfold Functions.gasSteps_rotr
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Functions.rotrEntry] using hmeter
+  change potentialCost hmeter + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost, Functions.rotrEntry] using hmeter
 
 theorem gasSteps_rotr_cost (s : State) (x : UInt256) (n : Nat)
     (output returnDest : UInt256) (rest : List UInt256)
@@ -150,8 +156,8 @@ theorem gasSteps_ch_cost_potential (s : State) (x y z output returnDest : UInt25
     (by simp [Functions.chPath, CopyFree])
   rw [ch_static] at hmeter
   unfold Functions.gasSteps_ch
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Functions.ternaryEntry] using hmeter
+  change potentialCost hmeter + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost, Functions.ternaryEntry] using hmeter
 
 private theorem maj_static :
     Challenge.EvmProof.Meter.runLocatedBlockStaticCost Functions.majPath = 56 := by
@@ -174,8 +180,8 @@ theorem gasSteps_maj_cost_potential (s : State) (x y z output returnDest : UInt2
     (by simp [Functions.majPath, CopyFree])
   rw [maj_static] at hmeter
   unfold Functions.gasSteps_maj
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Functions.ternaryEntry] using hmeter
+  change potentialCost hmeter + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost, Functions.ternaryEntry] using hmeter
 
 private theorem ssig0_setup_static :
     Challenge.EvmProof.Meter.runLocatedBlockStaticCost Functions.ssig0SetupPath = 32 := by
@@ -223,8 +229,11 @@ theorem gasSteps_ssig0_cost_potential (s : State) (x output returnDest : UInt256
     finishResult hfork (by simp [Functions.ssig0FinishPath, CopyFree]) (by rfl)
   rw [ssig0_finish_static] at finishCost
   unfold Functions.gasSteps_ssig0
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (exactCost setupCost + (exactCost firstCost +
+    (exactCost middleCost + (exactCost secondCost + exactCost finishCost)))) +
+    MachineState.memCost s.activeWords.toNat = _
+  simp only [exactCost]
   simp only [Functions.unaryReturned] at ⊢
   omega
 
@@ -274,8 +283,11 @@ theorem gasSteps_ssig1_cost_potential (s : State) (x output returnDest : UInt256
     finishResult hfork (by simp [Functions.ssig1FinishPath, CopyFree]) (by rfl)
   rw [ssig1_finish_static] at finishCost
   unfold Functions.gasSteps_ssig1
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (exactCost setupCost + (exactCost firstCost +
+    (exactCost middleCost + (exactCost secondCost + exactCost finishCost)))) +
+    MachineState.memCost s.activeWords.toNat = _
+  simp only [exactCost]
   simp only [Functions.unaryReturned] at ⊢
   omega
 
@@ -345,8 +357,12 @@ theorem gasSteps_bigSigma0_cost_potential (s : State)
     finishResult hfork (by simp [BigSigma.bigSigma0FinishPath, CopyFree]) (by rfl)
   rw [bigSigma0_finish_static] at finishCost
   unfold BigSigma.gasSteps_bigSigma0
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (exactCost setupCost + (exactCost firstCost +
+    (exactCost middle1Cost + (exactCost secondCost +
+    (exactCost middle2Cost + (exactCost thirdCost + exactCost finishCost)))))) +
+    MachineState.memCost s.activeWords.toNat = _
+  simp only [exactCost]
   simp only [Functions.unaryReturned] at ⊢
   omega
 
@@ -416,8 +432,12 @@ theorem gasSteps_bigSigma1_cost_potential (s : State)
     finishResult hfork (by simp [BigSigma.bigSigma1FinishPath, CopyFree]) (by rfl)
   rw [bigSigma1_finish_static] at finishCost
   unfold BigSigma.gasSteps_bigSigma1
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (exactCost setupCost + (exactCost firstCost +
+    (exactCost middle1Cost + (exactCost secondCost +
+    (exactCost middle2Cost + (exactCost thirdCost + exactCost finishCost)))))) +
+    MachineState.memCost s.activeWords.toNat = _
+  simp only [exactCost]
   simp only [Functions.unaryReturned] at ⊢
   omega
 

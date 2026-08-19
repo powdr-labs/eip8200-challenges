@@ -12,6 +12,11 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 private def osakaBaseCost : Instr → Nat
   | .push width _ => Gas.baseCost .Osaka (.Push ⟨width⟩)
   | .op op => Gas.baseCost .Osaka op
@@ -169,8 +174,8 @@ theorem hAt_cost_potential (s : State) (index output returnDest : UInt256)
     (by simp [Accessors.hAtPath, CopyFree])
   rw [hAt_base] at hmeter
   unfold Accessors.gasSteps_hAt
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Accessors.loadEntry, pathBaseCost] using hmeter
+  change potentialCost hmeter + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost, Accessors.loadEntry, pathBaseCost] using hmeter
 
 theorem start_cost_potential (s : State) (offset : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1019)
@@ -646,10 +651,16 @@ theorem gasSteps_output_cost_potential (s : State) (offset : UInt256)
       Output.hWord, Output.shifted1, Output.pair23, Output.lowHalf,
       Output.digestWord, Output.digestBytes, Accessors.loadReturned] using hFinish
   unfold Output.gasSteps_output
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
   dsimp only [q7, q6, q5, q4, q3, q2, q1, q0] at *
+  change ((((((((((((((((exactCost hStart' + potentialCost hH7') +
+    exactCost hSetup6') + potentialCost hH6') + exactCost hSetup5') +
+    potentialCost hH5') + exactCost hSetup4') + potentialCost hH4') +
+    exactCost hSetup3') + potentialCost hH3') + exactCost hSetup2') +
+    potentialCost hH2') + exactCost hSetup1') + potentialCost hH1') +
+    exactCost hSetup0') + potentialCost hH0') + potentialCost hFinish') +
+    MachineState.memCost s.activeWords.toNat = _
+  simp only [exactCost, potentialCost]
   omega
 
 private theorem activeWordsAfter_eq_of_end_le (curr offset size : Nat)
@@ -666,8 +677,7 @@ private theorem activeWordsAfter_eq_of_end_le (curr offset size : Nat)
     omega
 
 private theorem ofNat_toNat (w : UInt256) : UInt256.ofNat w.toNat = w := by
-  cases w with
-  | mk val => simp [UInt256.ofNat, UInt256.toNat, UInt256.size]
+  exact (Challenge.EvmProof.Word.word_eq_ofNat_toNat w).symm
 
 private theorem activeWordsAfterUInt256_eq (s : State) (offset size : Nat)
     (hend : offset + size ≤ s.activeWords.toNat * 32) :

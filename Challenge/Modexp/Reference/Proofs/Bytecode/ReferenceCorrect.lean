@@ -254,10 +254,19 @@ private def certifiedBigNonzeroTotal (input : ByteArray)
   have hactive : (Main.headerState input).activeWords.toNat = 0 := rfl
   rw [hactive] at hcoreCost
   norm_num [MachineState.memCost] at hcoreCost
-  simp only [total, Challenge.EvmProof.GasSteps.trans_cost, hcore',
-    Challenge.EvmProof.GasSteps.cast_cost]
+  have hcoreCost' : hcore'.cost =
+      BigComplete.nonzeroWork (BigComplete.limbCount (modulusSize input))
+        (baseSize input) (exponentSize input) (modulusSize input) +
+        MachineState.memCost
+          (BigComplete.completedState (Main.headerState input) (baseSize input)
+            (exponentSize input) (modulusSize input) 96 (Word.expOffset input)
+            (Word.modulusOffset input) bigReturnDest
+            (bigRest input)).activeWords.toNat := by
+    change hcore.cost = _
+    exact hcoreCost
+  simp only [total, Challenge.EvmProof.GasSteps.trans_cost]
   rw [Main.gasSteps_header_cost, BigDispatch.gasSteps_bigEntry_cost]
-  rw [hcoreCost]
+  rw [hcoreCost']
   simp [bigCompletedState, MachineState.memCost, BigComplete.limbCount,
     Nat.add_assoc]
 
@@ -331,10 +340,18 @@ private def certifiedBigZeroTotal (input : ByteArray) (hvalid : ValidInput input
   have hactive : (Main.headerState input).activeWords.toNat = 0 := rfl
   rw [hactive] at hcoreCost
   norm_num [MachineState.memCost] at hcoreCost
-  simp only [total, Challenge.EvmProof.GasSteps.trans_cost, hcore',
-    Challenge.EvmProof.GasSteps.cast_cost]
+  have hcoreCost' : hcore'.cost =
+      BigZeroCorrect.zeroWork (Limbs.limbCount (modulusSize input))
+        (modulusSize input) + MachineState.memCost
+          (BigZeroCorrect.zeroFinalState (Main.headerState input)
+            (baseSize input) (exponentSize input) (modulusSize input) 96
+            (Word.expOffset input) (Word.modulusOffset input) bigReturnDest
+            (bigRest input)).activeWords.toNat := by
+    change hcore.cost = _
+    exact hcoreCost
+  simp only [total, Challenge.EvmProof.GasSteps.trans_cost]
   rw [Main.gasSteps_header_cost, BigDispatch.gasSteps_bigEntry_cost]
-  rw [hcoreCost]
+  rw [hcoreCost']
   simp [bigZeroFinalState, MachineState.memCost, Nat.add_assoc]
 
 def gasSteps_bigZeroTotal (input : ByteArray) (hvalid : ValidInput input)

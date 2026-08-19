@@ -119,6 +119,7 @@ theorem run (input : ByteArray) (hfit : CalldataFits input)
   have hpc355 := Challenge.EvmProof.Word.ofNat_add_ofNat (a := 353) (b := 2) (by norm_num)
   have hpc361 := Challenge.EvmProof.Word.ofNat_add_ofNat (a := 358) (b := 3) (by norm_num)
   have hpc368 := Challenge.EvmProof.Word.ofNat_add_ofNat (a := 366) (b := 2) (by norm_num)
+  simp only [validPreludePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 1000000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock, Challenge.EvmProof.Stepper.runLocated,
     Challenge.EvmProof.Stepper.runInstr, Challenge.EvmProof.Stepper.WellFormed,

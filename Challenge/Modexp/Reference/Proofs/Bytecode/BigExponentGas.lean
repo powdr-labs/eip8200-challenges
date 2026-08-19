@@ -2,12 +2,16 @@ import Challenge.Modexp.Reference.Proofs.Bytecode.BigExponent
 set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 3000000
+set_option linter.unusedSimpArgs false
 /-! # Aggregate gas proofs for multi-limb exponentiation -/
 
 namespace Challenge.Modexp.Reference.Proofs.Bytecode.BigExponent
 
 open EvmSemantics
 open EvmSemantics.EVM
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 private theorem jump1000 :
     Decode.isValidJumpDest referenceBytecode 1000 = true :=
@@ -419,14 +423,26 @@ theorem gasSteps_exponentBit_cost_potential (s : State)
   have hselect := gasSteps_selection_cost_potential s accumulatorWord count b e
     m baseOff expOff i j offset byte rest (by omega) hcount hj hcode hfork hrun
     hnp
-  unfold gasSteps_exponentBit
-  simp only [id_eq, Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
   dsimp only [frame] at hguard htoSquare hsquare htoCopy hcopy htoProduct hproduct htoSelect hselect
   simp only [innerLoop, innerBody, squareEntry, squareReturned, mulResult,
     copiedSquare, productReturned, selectLoop, afterSelectedBit,
     BigMul.mulEntry, BigMul.mulReturned, BigHelpers.copyEntry,
-    BigHelpers.copyReturned] at hguard htoSquare hsquare htoCopy hcopy htoProduct hproduct htoSelect hselect ⊢
+    BigHelpers.copyReturned] at hguard htoSquare hsquare htoCopy hcopy htoProduct hproduct htoSelect hselect
+  unfold gasSteps_exponentBit
+  simp only [id_eq, Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hguard + (potentialCost htoSquare +
+      (potentialCost hsquare + (potentialCost htoCopy +
+      (potentialCost hcopy + (potentialCost htoProduct +
+      (potentialCost hproduct +
+      (potentialCost htoSelect + potentialCost hselect)))))))) +
+    MachineState.memCost
+      (innerLoop s accumulatorWord count b e m baseOff expOff i offset byte
+        rest j).activeWords.toNat = _
+  simp only [potentialCost]
+  simp only [innerLoop, innerBody, squareEntry, squareReturned, mulResult,
+    copiedSquare, productReturned, selectLoop, afterSelectedBit,
+    BigMul.mulEntry, BigMul.mulReturned, BigHelpers.copyEntry,
+    BigHelpers.copyReturned] at ⊢
   omega
 
 def exponentBitProgress (s : State) (accumulatorWord : UInt256)
@@ -515,8 +531,15 @@ theorem gasSteps_exponentBitAt_cost_potential (s : State)
     (by simpa [current, State.fork] using hfork)
     (by simpa [current] using hrun)
     (by simpa [current, State.fork] using hnp)
-  simpa [gasSteps_exponentBitAt, exponentBitLoopState, afterSelectedBit,
-    exponentBitProgress, current] using hstep
+  simp only [exponentBitLoopState, afterSelectedBit, exponentBitProgress,
+    current] at hstep
+  unfold gasSteps_exponentBitAt
+  change potentialCost hstep + MachineState.memCost
+      (exponentBitLoopState s accumulatorWord count b e m baseOff expOff i
+        offset byte rest j).activeWords.toNat = _
+  simp only [potentialCost]
+  simpa only [exponentBitLoopState, afterSelectedBit, exponentBitProgress,
+    current] using hstep
 
 def gasSteps_exponentBits (s : State) (accumulatorWord : UInt256)
     (count b e m baseOff expOff i : Nat) (offset byte : UInt256)
@@ -642,12 +665,18 @@ theorem gasSteps_exponentByteFinish_cost_potential (s : State)
           (by simpa [current] using hrun))
         (by simpa [innerExit, innerLoop, current, State.fork] using hfork)
         (by decide) (by decide)
+  simp only [exponentBitLoopState, innerExit, innerLoop, afterExponentByte,
+    outerLoop, current] at hguard hfinish
   unfold gasSteps_exponentByteFinish
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hguard + potentialCost hfinish) +
+    MachineState.memCost
+      (exponentBitLoopState s accumulatorWord count b e m baseOff expOff i
+        offset byte rest 8).activeWords.toNat = _
+  simp only [potentialCost]
   simp only [exponentBitLoopState, innerExit, innerLoop, afterExponentByte,
-    outerLoop, current] at hguard hfinish ⊢
+    outerLoop, current] at ⊢
   omega
 
 def gasSteps_exponentByte (s : State) (accumulatorWord : UInt256)
@@ -728,12 +757,18 @@ theorem gasSteps_exponentByte_cost_potential (s : State)
   have hfinish := gasSteps_exponentByteFinish_cost_potential s accumulatorWord
     count b e m baseOff expOff i offset byte rest hcap hcount (by omega) hcode
     hfork hrun hnp
+  simp only [outerLoop, outerBody, exponentBitLoopState,
+    exponentBitProgress, afterExponentByte, offset, byte] at hguard hload hbits hfinish
   unfold gasSteps_exponentByte
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hguard + (potentialCost hload +
+      (potentialCost hbits + potentialCost hfinish))) +
+    MachineState.memCost
+      (outerLoop s accumulatorWord count b e m baseOff expOff rest i).activeWords.toNat = _
+  simp only [potentialCost]
   simp only [outerLoop, outerBody, exponentBitLoopState,
-    exponentBitProgress, afterExponentByte, offset, byte] at hguard hload hbits hfinish ⊢
+    exponentBitProgress, afterExponentByte, offset, byte] at ⊢
   omega
 
 def exponentByteProgress (s : State) (accumulatorWord : UInt256)
@@ -821,8 +856,15 @@ theorem gasSteps_exponentByteAt_cost_potential (s : State)
     (by simpa [current, State.fork] using hfork)
     (by simpa [current] using hrun)
     (by simpa [current, State.fork] using hnp)
-  simpa [gasSteps_exponentByteAt, exponentOuterState, afterExponentByte,
-    exponentByteProgress, current] using hstep
+  simp only [exponentOuterState, afterExponentByte, exponentByteProgress,
+    current] at hstep
+  unfold gasSteps_exponentByteAt
+  change potentialCost hstep + MachineState.memCost
+      (exponentOuterState s accumulatorWord count b e m baseOff expOff rest
+        i).activeWords.toNat = _
+  simp only [potentialCost]
+  simpa only [exponentOuterState, afterExponentByte, exponentByteProgress,
+    current] using hstep
 
 def gasSteps_exponentLoop (s : State) (accumulatorWord : UInt256)
     (count b e m baseOff expOff : Nat) (rest : List UInt256)
