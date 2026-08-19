@@ -54,7 +54,8 @@ noncomputable def gasSteps_short (s : State) (H : Array UInt32)
     (by simpa [q] using hcode) (by simpa [q] using hfork)
     (by simpa [q] using hrun) (by simpa [q] using hnp)
   let gco := GasSteps.transKnown gc go 21167 122 (by simp [gc]) (by simp [go])
-  let glco := GasSteps.transKnown gl gco 42 21289 (by simp [gl]) rfl
+  let glco := GasSteps.transKnown gl gco 42 21289
+    (by apply TailControl.gasSteps_lengthCall_cost) rfl
   let gblco := GasSteps.transKnown gb glco 10 21331 (by simp [gb]) rfl
   simpa [shortResult, q] using
     GasSteps.transKnown gp gblco 46 21341 (by simp [gp]) rfl
@@ -99,7 +100,8 @@ noncomputable def gasSteps_long (s : State) (H : Array UInt32)
     (by simpa [c] using hcode) (by simpa [c] using hfork)
     (by simpa [c] using hrun) (by simpa [c] using hnp)
   let gco := GasSteps.transKnown gc go 21167 122 (by simp [gc]) (by simp [go])
-  let glco := GasSteps.transKnown gl gco 42 21289 (by simp [gl]) rfl
+  let glco := GasSteps.transKnown gl gco 42 21289
+    (by apply TailControl.gasSteps_lengthCall_cost) rfl
   let gclco := GasSteps.transKnown gclear glco 17 21331 (by simp [gclear]) rfl
   let grclco := GasSteps.transKnown gr gclco 21167 21348 (by simp [gr]) rfl
   let gerclco := GasSteps.transKnown ge grclco 14 42515 (by simp [ge]) rfl
@@ -120,7 +122,8 @@ noncomputable def gasSteps_long (s : State) (H : Array UInt32)
     (hH : HashCorrect s.memory H) (hK : ConstantsCorrect s.memory) :
     (gasSteps_short s H off endWord rem n rest hcap hrem haw hcode hfork hrun hpc
       hstack hnp hshort hH hK).cost = 21387 := by
-  simp [gasSteps_short]
+  change 46 + (10 + (42 + (21167 + 122))) = 21387
+  rfl
 
 @[simp] theorem gasSteps_long_cost (s : State) (H : Array UInt32)
     (off endWord rem n : UInt256) (rest : List UInt256)
@@ -135,6 +138,8 @@ noncomputable def gasSteps_long (s : State) (H : Array UInt32)
     (hH : HashCorrect s.memory H) (hK : ConstantsCorrect s.memory) :
     (gasSteps_long s H off endWord rem n rest hcap hrem haw hcode hfork hrun hpc
       hstack hnp hlong hH hK).cost = 42585 := by
-  simp [gasSteps_long]
+  change 46 + (10 + (14 + (21167 + (17 + (42 + (21167 + 122)))))) =
+    42585
+  rfl
 
 end Challenge.Sha256.Submissions.Sha256Fast.Proofs.TailCorrect

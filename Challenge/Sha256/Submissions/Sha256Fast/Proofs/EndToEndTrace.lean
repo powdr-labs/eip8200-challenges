@@ -58,7 +58,8 @@ noncomputable def gasSteps_tailReady (input : ByteArray)
       (GasSteps.transKnown gi gb 1155 10 (by simp [gi]) (by simp [gb]))
       rfl (by simp [tailReady, hz])
     exact GasSteps.reprice raw (1165 + blockCount input * 21229) (by
-      simp [raw, hz])
+      change 1155 + 10 = 1165 + blockCount input * 21229
+      simp [hz])
   · have hb : 0 < blockCount input := Nat.pos_of_ne_zero hz
     let gb := InitializationDriver.gasSteps_fullBranch input hfit hb
     let gl := DriverLoop.gasSteps_toTail (fullStart input) input [] hfit
@@ -71,13 +72,16 @@ noncomputable def gasSteps_tailReady (input : ByteArray)
         simpa [fullStart, initialized] using
           InitializationMemory.finalState_constants (initial input) (sizeWord input))
     let gbl := GasSteps.transKnown gb gl 10 (blockCount input * 21229)
-      (by simp [gb]) (by simp [gl])
+      (by simp [gb]) (by
+        dsimp only [gl]
+        apply DriverLoop.gasSteps_toTail_cost)
     let raw : GasSteps (initial input) (tailReady input) :=
       GasSteps.cast (GasSteps.transKnown gi gbl 1155
       (10 + blockCount input * 21229) (by simp [gi]) rfl)
       rfl (by simp [tailReady, hz])
     exact GasSteps.reprice raw (1165 + blockCount input * 21229) (by
-      simp [raw]
+      change 1155 + (10 + blockCount input * 21229) =
+        1165 + blockCount input * 21229
       omega)
 
 @[simp] theorem gasSteps_tailReady_cost (input : ByteArray)
@@ -219,12 +223,20 @@ noncomputable def gasSteps_finalState (input : ByteArray)
       (by simpa [s] using tailReady_constants input)
     let raw : GasSteps (initial input) (finalState input) := GasSteps.cast
       (GasSteps.transKnown gt g (1165 + blockCount input * 21229) 21387
-        (by simp [gt]) (by simp [g]))
+        (by
+          dsimp only [gt]
+          apply gasSteps_tailReady_cost)
+        (by
+          dsimp only [g]
+          apply TailCorrect.gasSteps_short_cost))
       rfl (by simp [finalState, s, H, hs])
     exact GasSteps.reprice raw
       (22552 + blockCount input * 21229 +
         (if input.size % 64 < 56 then 0 else 21198)) (by
-      simp [raw, hs]
+      change (1165 + blockCount input * 21229) + 21387 =
+        22552 + blockCount input * 21229 +
+          (if input.size % 64 < 56 then 0 else 21198)
+      simp [hs]
       omega)
   · let g := TailCorrect.gasSteps_long s H
       (endWord input) (endWord input) (remWord input) (sizeWord input) []
@@ -236,12 +248,20 @@ noncomputable def gasSteps_finalState (input : ByteArray)
       (by simpa [s] using tailReady_constants input)
     let raw : GasSteps (initial input) (finalState input) := GasSteps.cast
       (GasSteps.transKnown gt g (1165 + blockCount input * 21229) 42585
-        (by simp [gt]) (by simp [g]))
+        (by
+          dsimp only [gt]
+          apply gasSteps_tailReady_cost)
+        (by
+          dsimp only [g]
+          apply TailCorrect.gasSteps_long_cost))
       rfl (by simp [finalState, s, H, hs])
     exact GasSteps.reprice raw
       (22552 + blockCount input * 21229 +
         (if input.size % 64 < 56 then 0 else 21198)) (by
-      simp [raw, hs]
+      change (1165 + blockCount input * 21229) + 42585 =
+        22552 + blockCount input * 21229 +
+          (if input.size % 64 < 56 then 0 else 21198)
+      simp [hs]
       omega)
 
 @[simp] theorem gasSteps_finalState_cost (input : ByteArray)
