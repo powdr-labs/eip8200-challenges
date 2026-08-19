@@ -233,17 +233,17 @@ noncomputable def gasSteps_initialize (s : State) (n : UInt256)
                 (GasSteps.transKnown g5
                   (GasSteps.transKnown g6
                     (GasSteps.transKnown g7 gd 100 35
-                      (by simp [g7, c7Trace, growingTrace])
-                      (by simp [gd, driverTrace, growingTrace]))
-                    100 135 (by simp [g6, c6Trace, growingTrace]) rfl)
-                  100 235 (by simp [g5, c5Trace, growingTrace]) rfl)
-                100 335 (by simp [g4, c4Trace, growingTrace]) rfl)
-              99 435 (by simp [g3, c3Trace, growingTrace]) rfl)
-            99 534 (by simp [g2, c2Trace, growingTrace]) rfl)
-          99 633 (by simp [g1, c1Trace, growingTrace]) rfl)
-        310 732 (by simp [g0, c0Trace, growingTrace]) rfl)
-      102 1042 (by simp [gh, hashTrace, growingTrace]) rfl)
-    11 1144 (by simp [ge, entryTrace, growingTrace]) rfl
+                      (by simp only [g7, c7Trace]; rfl)
+                      (by simp only [gd, driverTrace]; rfl))
+                    100 135 (by simp only [g6, c6Trace]; rfl) rfl)
+                  100 235 (by simp only [g5, c5Trace]; rfl) rfl)
+                100 335 (by simp only [g4, c4Trace]; rfl) rfl)
+              99 435 (by simp only [g3, c3Trace]; rfl) rfl)
+            99 534 (by simp only [g2, c2Trace]; rfl) rfl)
+          99 633 (by simp only [g1, c1Trace]; rfl) rfl)
+        310 732 (by simp only [g0, c0Trace]; rfl) rfl)
+      102 1042 (by simp only [gh, hashTrace]; rfl) rfl)
+    11 1144 (by simp only [ge, entryTrace]; rfl) rfl
 
 @[simp] theorem gasSteps_initialize_cost (s : State) (n : UInt256)
     (hcode : s.executionEnv.code = Loop.bytes) (hfork : s.fork = .Osaka)

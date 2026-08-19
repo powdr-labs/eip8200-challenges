@@ -31,6 +31,7 @@ def digestOf (calldata : List UInt8) : List UInt8 :=
 
 /-- The gas-free source dialect used by the functional obligation. -/
 abbrev localDialect := evmWithExternal ExternalCalls.none ExternalCreates.none
+  YulSemantics.EVM.ExternalGas.any
 
 /-- A target initial state is represented by a fresh Yul state carrying the
 same calldata. `StateMatch` is gas-independent, so one source state suffices
@@ -40,6 +41,7 @@ def AbstractsInitialState (code : ByteArray) : Prop :=
     (∀ g : Nat, StateMatch yst (initialState code calldata g)) ∧
     yst.memory = (fun _ => 0) ∧
     yst.env.calldata = calldata.toList ∧
+    (∀ k, yst.env.immutable k = 0) ∧
     yst.halted = none
 
 /-- From any fresh source state, the program returns the 32-byte, left-padded
@@ -70,10 +72,11 @@ theorem correct_of_computesDigest {prog : Block Op} {is : List Instr}
     (hyul : ComputesDigest prog) :
     Correct (assemble is) := by
   intro calldata _hfit
-  obtain ⟨yst, hmatch, hmem, hcd, hhalted⟩ := habs calldata
+  obtain ⟨yst, hmatch, hmem, hcd, himm, hhalted⟩ := habs calldata
   obtain ⟨V, yst', hrun, hres⟩ := hyul yst hmem hhalted
   obtain ⟨b, H⟩ :=
-    compile_correct_eval (model := localModel) ExternalsRealized.none hcomp hrun
+    compile_correct_eval (model := localModel) ExternalsRealized.none hcomp
+      (fun key => (himm _).symm) hrun
   refine ⟨b, fun g hg => ?_⟩
   obtain ⟨-, hhalt⟩ :=
     H (initialState (assemble is) calldata g) (initialState_frameOK hsize) (hmatch g)

@@ -43,7 +43,8 @@ calls and creates no contracts, so the open-world relations are empty and
   { calls := ExternalCalls.none, creates := ExternalCreates.none }
 
 /-- The gas-free source dialect the obligation is stated against. -/
-abbrev localDialect := evmWithExternal ExternalCalls.none ExternalCreates.none
+abbrev localDialect :=
+  evmWithExternal ExternalCalls.none ExternalCreates.none YulSemantics.EVM.ExternalGas.any
 
 /-- Every fixed initial state for `code` is matched by a yul-semantics state
 that has the same calldata, empty memory, and has
@@ -54,6 +55,7 @@ def AbstractsInitialState (code : ByteArray) : Prop :=
     (∀ g : Nat, StateMatch yst (initialState code calldata g)) ∧
     yst.memory = (fun _ => 0) ∧
     yst.env.calldata = calldata.toList ∧
+    (∀ k, yst.env.immutable k = 0) ∧
     yst.halted = none
 
 /-- From any fresh yul-semantics state, `prog` halts via `return` with exactly
@@ -89,10 +91,11 @@ theorem correct_of_computesDigest {prog : Block Op} {is : List Instr}
     (hyul : ComputesDigest prog) :
     Correct (assemble is) := by
   intro calldata _hfit
-  obtain ⟨yst, hmatch, hmem, hcd, hhalted⟩ := habs calldata
+  obtain ⟨yst, hmatch, hmem, hcd, himm, hhalted⟩ := habs calldata
   obtain ⟨V, yst', hrun, hres⟩ := hyul yst hmem hhalted
   obtain ⟨b, H⟩ :=
-    compile_correct_eval (model := localModel) ExternalsRealized.none hcomp hrun
+    compile_correct_eval (model := localModel) ExternalsRealized.none hcomp
+      (fun key => (himm _).symm) hrun
   refine ⟨b, fun g hg => ?_⟩
   obtain ⟨-, hhalt⟩ :=
     H (initialState (assemble is) calldata g) (initialState_frameOK hsize) (hmatch g)

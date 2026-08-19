@@ -66,12 +66,34 @@ def validFinalState (input : ByteArray) : State :=
       (Prelude.roundsWord input).toNat)
     (Prelude.roundsWord input) (Prelude.finalFlagWord input)
 
+private theorem constants_code (input : ByteArray) :
+    (Initialization.constantsFinalState input).executionEnv.code = referenceBytecode := rfl
+
+private theorem constants_fork (input : ByteArray) :
+    (Initialization.constantsFinalState input).fork = .Osaka := rfl
+
+private theorem constants_running (input : ByteArray) :
+    (Initialization.constantsFinalState input).halt = .Running := rfl
+
+private theorem constants_notPrecompile (input : ByteArray) :
+    Precompile.isPrecompileWithConfig
+      (Initialization.constantsFinalState input).executionEnv.precompileConfig
+      (Initialization.constantsFinalState input).executionEnv.fork
+      (Initialization.constantsFinalState input).executionEnv.codeAddr = false := by
+  exact deployAddress_not_precompile
+
 /-- The complete successful trace for a valid EIP-152 input. -/
 def validGasSteps (input : ByteArray) (hfit : CalldataFits input)
     (hsize : input.size = 213) (hflag : input[212]!.toNat ≤ 1) :
     Challenge.EvmProof.GasSteps (initialState referenceBytecode input 0)
       (validFinalState input) := by
   let s := Initialization.constantsFinalState input
+  have scode : s.executionEnv.code = referenceBytecode := constants_code input
+  have sfork : s.fork = .Osaka := constants_fork input
+  have srun : s.halt = .Running := constants_running input
+  have snp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig
+      s.executionEnv.fork s.executionEnv.codeAddr = false := by
+    exact constants_notPrecompile input
   have safe : ∀ round, round < (Prelude.roundsWord input).toNat →
       Round.IterationSafe
         (Round.memories (ScalarInitialization.finalMemory input) round) round := by
@@ -84,14 +106,20 @@ def validGasSteps (input : ByteArray) (hfit : CalldataFits input)
   have ginit := ScalarInitialization.fullGasSteps input hfit hsize hflag
   have ground := Round.loopGasSteps s (ScalarInitialization.finalMemory input)
     (Prelude.roundsWord input) (Prelude.finalFlagWord input) safe
-    (by rfl) (by rfl) (by rfl) (by exact deployAddress_not_precompile)
+    srun scode sfork snp
+  have ground' : Challenge.EvmProof.GasSteps
+      (ScalarInitialization.roundEntryState input) _ :=
+    Challenge.EvmProof.GasSteps.cast ground (by
+      unfold ScalarInitialization.roundEntryState
+        ScalarInitialization.roundLoopState Round.loopState Round.baseState
+      rfl) rfl
   have gout := Output.gasSteps s
     (Round.memories (ScalarInitialization.finalMemory input)
       (Prelude.roundsWord input).toNat)
     (Prelude.roundsWord input) (Prelude.finalFlagWord input)
-    (by rfl) (by rfl) (by rfl) (by exact deployAddress_not_precompile)
+    scode sfork srun snp
   exact Challenge.EvmProof.GasSteps.cast
-    (ginit.trans (ground.trans gout)) rfl rfl
+    (ginit.trans (ground'.trans gout)) rfl (by unfold validFinalState; rfl)
 
 @[simp] theorem validGasSteps_cost (input : ByteArray)
     (hfit : CalldataFits input) (hsize : input.size = 213)

@@ -33,7 +33,7 @@ private theorem rightTestExit_cost (s : State)
     (gasSteps_rightTest_exit s messageOffset returnDest rest hstack hcode
       hfork hrun hnp).cost = Stepper.runLocatedBlockCost rightTestLocated
         (rightLoopAt s messageOffset returnDest rest 80) := by
-  simp only [gasSteps_rightTest_exit, Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 private theorem rightExit_cost (s : State)
     (messageOffset returnDest : UInt256) (rest : List UInt256)
@@ -45,7 +45,7 @@ private theorem rightExit_cost (s : State)
     (gasSteps_rightExit s messageOffset returnDest rest hstack hcode hfork
       hrun hnp).cost = Stepper.runLocatedBlockCost rightExitLocated
         (rightExitTested s messageOffset returnDest rest) := by
-  simp only [gasSteps_rightExit, Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 private theorem leftTestExit_cost (s : State)
     (messageOffset returnDest : UInt256) (rest : List UInt256)
@@ -57,7 +57,7 @@ private theorem leftTestExit_cost (s : State)
     (gasSteps_leftTest_exit s messageOffset returnDest rest hstack hcode
       hfork hrun hnp).cost = Stepper.runLocatedBlockCost leftTestLocated
         (leftLoopAt s messageOffset returnDest rest 80) := by
-  simp only [gasSteps_leftTest_exit, Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 private theorem leftExit_cost (s : State)
     (messageOffset returnDest : UInt256) (rest : List UInt256)
@@ -69,7 +69,7 @@ private theorem leftExit_cost (s : State)
     (gasSteps_leftExit s messageOffset returnDest rest hstack hcode hfork
       hrun hnp).cost = Stepper.runLocatedBlockCost leftExitLocated
         (leftExitCompared s messageOffset returnDest rest) := by
-  simp only [gasSteps_leftExit, Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 private theorem rightInit_cost (s : State)
     (messageOffset returnDest : UInt256) (rest : List UInt256)
@@ -82,8 +82,7 @@ private theorem rightInit_cost (s : State)
       hcode hfork hrun hnp).cost =
       Stepper.runLocatedBlockCost rightInitLocated
         (leftExited s messageOffset returnDest rest) := by
-  simp only [CompressionTrace.gasSteps_rightInit,
-    Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 def rightLoopAndTailWork : Nat := rightLoopWork +
   Meter.runLocatedBlockStaticCost rightTestLocated +

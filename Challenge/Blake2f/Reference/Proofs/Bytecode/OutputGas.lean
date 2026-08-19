@@ -188,8 +188,11 @@ private def iterationGasSteps (s : State) (initial : ByteArray)
       using hfork)
     (by simpa [returnedState, StoreLE64.finalState, baseState] using hrun)
     (by simpa [returnedState, StoreLE64.finalState, baseState] using hnp)
+  have gstore' : Challenge.EvmProof.GasSteps _
+      (returnedState s initial rounds flag i) :=
+    Challenge.EvmProof.GasSteps.cast gstore rfl (by unfold returnedState; rfl)
   exact Challenge.EvmProof.GasSteps.cast
-    (gtest.trans (gsetup.trans (gstore.trans gincrement))) rfl rfl
+    (gtest.trans (gsetup.trans (gstore'.trans gincrement))) rfl rfl
 
 @[simp] private theorem iterationGasSteps_cost (s : State) (initial : ByteArray)
     (rounds flag : UInt256) (i : Nat) (hi : i < 8)

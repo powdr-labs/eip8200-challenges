@@ -37,9 +37,12 @@ theorem left80_cost_potential (s : State)
   have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, leftStates_executionEnv] using hnp
-  simpa [q, leftStates, leftLoopAt] using
-    leftIteration_cost_potential q messageOffset returnDest rest i hi hstack
-      hqcode hqfork hqrun hqnp
+  change (gasSteps_leftIterationConcrete q messageOffset returnDest rest i hi hstack
+      hqcode hqfork hqrun hqnp).cost + MachineState.memCost q.activeWords.toNat =
+    leftIterationWork i + MachineState.memCost
+      (leftRoundState q messageOffset returnDest rest i).activeWords.toNat
+  exact leftIteration_cost_potential q messageOffset returnDest rest i hi hstack
+    hqcode hqfork hqrun hqnp
 
 theorem right80_cost_potential (s : State)
     (messageOffset returnDest : UInt256) (rest : List UInt256)
@@ -66,8 +69,11 @@ theorem right80_cost_potential (s : State)
   have hqnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
       q.executionEnv.codeAddr = false := by
     simpa [q, rightStates_executionEnv] using hnp
-  simpa [q, rightStates, rightLoopAt] using
-    rightIteration_cost_potential q messageOffset returnDest rest i hi hstack
-      hqcode hqfork hqrun hqnp
+  change (gasSteps_rightIterationConcrete q messageOffset returnDest rest i hi hstack
+      hqcode hqfork hqrun hqnp).cost + MachineState.memCost q.activeWords.toNat =
+    rightIterationWork i + MachineState.memCost
+      (rightRoundState q messageOffset returnDest rest i).activeWords.toNat
+  exact rightIteration_cost_potential q messageOffset returnDest rest i hi hstack
+    hqcode hqfork hqrun hqnp
 
 end Challenge.Ripemd160.Reference.Proofs.Bytecode.CompressionGasIntegration

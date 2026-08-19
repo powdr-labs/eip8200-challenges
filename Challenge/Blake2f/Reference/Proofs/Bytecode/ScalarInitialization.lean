@@ -122,6 +122,7 @@ private theorem ofNatAdd (a b : Nat) (h : a + b < 2 ^ 256) :
 theorem run_t0Setup (input : ByteArray) :
     Challenge.EvmProof.Stepper.runLocatedBlock t0SetupPath
       (Initialization.constantsFinalState input) = some (t0CallState input) := by
+  simp only [t0SetupPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -139,6 +140,7 @@ theorem run_t0Setup (input : ByteArray) :
 theorem run_t0Store (input : ByteArray) :
     Challenge.EvmProof.Stepper.runLocatedBlock t0StorePath
       (t0LoadedState input) = some (t0FinalState input) := by
+  simp only [t0StorePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -157,6 +159,7 @@ theorem run_t0Store (input : ByteArray) :
 theorem run_t1Setup (input : ByteArray) :
     Challenge.EvmProof.Stepper.runLocatedBlock t1SetupPath
       (t0FinalState input) = some (t1CallState input) := by
+  simp only [t1SetupPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -174,6 +177,7 @@ theorem run_t1Setup (input : ByteArray) :
 theorem run_t1Store (input : ByteArray) :
     Challenge.EvmProof.Stepper.runLocatedBlock t1StorePath
       (t1LoadedState input) = some (flagEntryState input) := by
+  simp only [t1StorePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -196,6 +200,7 @@ theorem run_flagTestZero (input : ByteArray) (hflag : input[212]!.toNat = 0) :
   have h875' : Decode.isValidJumpDest referenceBytecode 875 = true := by
     simpa [Artifact.referenceArtifact, Challenge.EvmProof.ProgramArtifact.instructionPC,
       Artifact.referenceInstructions] using h875
+  simp only [flagTestPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -216,6 +221,7 @@ theorem run_flagTestZero (input : ByteArray) (hflag : input[212]!.toNat = 0) :
 theorem run_flagTestOne (input : ByteArray) (hflag : input[212]!.toNat = 1) :
     Challenge.EvmProof.Stepper.runLocatedBlock flagTestPath
       (flagEntryState input) = some (flagMutationState input) := by
+  simp only [flagTestPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -236,6 +242,7 @@ theorem run_flagTestOne (input : ByteArray) (hflag : input[212]!.toNat = 1) :
 theorem run_flagMutation (input : ByteArray) :
     Challenge.EvmProof.Stepper.runLocatedBlock flagMutationPath
       (flagMutationState input) = some (flagJoinState input (flaggedMemory input)) := by
+  simp only [flagMutationPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -256,6 +263,7 @@ theorem run_flagFinish (input : ByteArray) (memory : ByteArray) :
     Challenge.EvmProof.Stepper.runLocatedBlock flagFinishPath
       (flagJoinState input memory) = some (roundLoopState input 0 memory) := by
   have hzero : ({ val := 0 } : UInt256) = UInt256.ofNat 0 := by decide
+  simp only [flagFinishPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,

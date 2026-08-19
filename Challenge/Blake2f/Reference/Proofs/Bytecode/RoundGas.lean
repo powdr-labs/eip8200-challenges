@@ -152,6 +152,25 @@ private def mixGasSteps (s : State) (memory : ByteArray) (round : Nat)
       Nat.mod_eq_of_lt hreturnLt]
     exact hreturn
 
+@[simp] private theorem mixGasSteps_cost (s : State) (memory : ByteArray)
+    (round : Nat) (rounds flag : UInt256) (a b c d xColumn yColumn returnDest : Nat)
+    (safe : AccessSafe memory round)
+    (hxColumn : xColumn < 16) (hyColumn : yColumn < 16)
+    (hrun : s.halt = .Running)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig
+      s.executionEnv.fork s.executionEnv.codeAddr = false)
+    (ha : a + 32 ≤ 58 * 32) (hb : b + 32 ≤ 58 * 32)
+    (hc : c + 32 ≤ 58 * 32) (hd : d + 32 ≤ 58 * 32)
+    (hreturnLt : returnDest < 2 ^ 256)
+    (hreturn : Decode.isValidJumpDest referenceBytecode returnDest = true) :
+    (mixGasSteps s memory round rounds flag a b c d xColumn yColumn returnDest
+      safe hxColumn hyColumn hrun hcode hfork hnp ha hb hc hd hreturnLt hreturn).cost =
+      454 := by
+  unfold mixGasSteps
+  apply MixG.gasSteps_cost
+
 def iterationGasSteps (s : State) (memory : ByteArray) (round : Nat)
     (rounds flag : UInt256) (safe : IterationSafe memory round)
     (hrun : s.halt = .Running)
@@ -271,10 +290,12 @@ def iterationGasSteps (s : State) (memory : ByteArray) (round : Nat)
     (by simpa [MixG.finalState, baseState, State.fork] using hfork)
     (by simpa [MixG.finalState, baseState] using hrun)
     (by simpa [MixG.finalState, baseState] using hnp)
-  exact gtest.trans (g1.trans (gsetup2.trans (g2.trans
-    (gsetup3.trans (g3.trans (gsetup4.trans (g4.trans
-      (gsetup5.trans (g5.trans (gsetup6.trans (g6.trans
-        (gsetup7.trans (g7.trans (gsetup8.trans (g8.trans ginc)))))))))))))))
+  exact Challenge.EvmProof.GasSteps.cast
+    (gtest.trans (g1.trans (gsetup2.trans (g2.trans
+      (gsetup3.trans (g3.trans (gsetup4.trans (g4.trans
+        (gsetup5.trans (g5.trans (gsetup6.trans (g6.trans
+          (gsetup7.trans (g7.trans (gsetup8.trans (g8.trans ginc))))))))))))))))
+    rfl (by unfold transition; rfl)
 
 private theorem locatedCost_eq
     (path : List (Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka))
@@ -427,7 +448,9 @@ theorem increment_cost (s : State) (memory : ByteArray) (round : Nat)
     (hfork : s.fork = .Osaka) (hround : round < rounds.toNat) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost incrementPath
       (MixG.finalState (baseState s (memory7 memory round))
-        864 896 1056 1216 (UInt256.ofNat round) 14 15 1084
+        (UInt256.ofNat 864) (UInt256.ofNat 896) (UInt256.ofNat 1056)
+        (UInt256.ofNat 1216) (UInt256.ofNat round) (UInt256.ofNat 14)
+        (UInt256.ofNat 15) (UInt256.ofNat 1084)
         (tail round rounds flag)) = 27 := by
   apply locatedCost_eq incrementPath 27
     (run_increment s memory round rounds flag hrun hcode hround)
@@ -445,9 +468,9 @@ theorem increment_cost (s : State) (memory : ByteArray) (round : Nat)
     (hround : round < rounds.toNat) :
     (iterationGasSteps s memory round rounds flag safe hrun hcode hfork hnp
       hround).cost = 3970 := by
-  unfold iterationGasSteps mixGasSteps
-  simp only [Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost,
-    MixG.gasSteps_cost]
+  unfold iterationGasSteps
+  simp only [Challenge.EvmProof.GasSteps.cast_cost,
+    Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost, mixGasSteps_cost]
   rw [testSetup_cost s memory round rounds flag hrun hcode hfork hround,
     setup2_cost s memory round rounds flag hrun hcode hfork,
     setup3_cost s memory round rounds flag hrun hcode hfork,

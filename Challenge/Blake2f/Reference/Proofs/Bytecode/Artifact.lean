@@ -607,7 +607,7 @@ def referenceInstructions : List Instr :=
 
 theorem assemble_referenceInstructions :
     assemble referenceInstructions = referenceBytecode := by
-  native_decide
+  rfl
 
 
 def referenceArtifact : Challenge.EvmProof.ProgramArtifact where

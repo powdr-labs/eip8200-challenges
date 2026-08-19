@@ -836,7 +836,7 @@ theorem referenceInstructions_count : referenceInstructions.length = 810 := by
 
 theorem assemble_referenceInstructions :
     assemble referenceInstructions = referenceBytecode := by
-  native_decide
+  rfl
 
 /-- The reference bytes packaged through the submission-generic structural
 artifact interface. -/

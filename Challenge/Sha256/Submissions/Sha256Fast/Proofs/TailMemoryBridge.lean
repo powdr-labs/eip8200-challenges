@@ -279,14 +279,15 @@ theorem prepared_window (s : State) (input : ByteArray)
     have honeHex : (ByteArray.mk #[0x80]).size = 1 := rfl
     rw [honeOfNat, honeHex, Challenge.EvmProof.Memory.readPadded_size]
     have hr := Nat.mod_lt input.size (by omega : 0 < 64)
-    simp only [remainder]
-    by_cases hsentinel : i = input.size % 64
+    by_cases hsentinel : i = remainder input
     · subst i
-      simp [hi]
+      simp [remainder, hi]
     · have hcL : ¬(288 + input.size % 64 ≤ 288 + i ∧
-          288 + i < 288 + input.size % 64 + 1) := by omega
-      have hcR : ¬(input.size % 64 ≤ i ∧
-          i < input.size % 64 + 1) := by omega
+          288 + i < 288 + input.size % 64 + 1) := by
+        simp only [remainder] at hsentinel
+        omega
+      have hcR : ¬(remainder input ≤ i ∧
+          i < remainder input + 1) := by omega
       have hb : 288 ≤ 288 + i ∧ 288 + i < 288 + 64 := by omega
       rw [if_neg hcL, if_pos hb, if_neg hcR]
       simp

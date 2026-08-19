@@ -66,8 +66,7 @@ private theorem ofNatAdd (a b : Nat) (h : a + b < 2 ^ 256) :
   Challenge.EvmProof.Word.ofNat_add_ofNat h
 
 private theorem ofNat_toNat (w : UInt256) : UInt256.ofNat w.toNat = w := by
-  cases w with
-  | mk val => simp [UInt256.ofNat, UInt256.toNat, UInt256.size]
+  exact (Challenge.EvmProof.Word.word_eq_ofNat_toNat w).symm
 
 private theorem activeWordsAfter_eq (offset size : Nat)
     (hend : offset + size ≤ 58 * 32) :
@@ -109,6 +108,7 @@ theorem run_roundExit (s : State) (memory : ByteArray) (rounds flag : UInt256)
       some { Round.loopState s rounds.toNat rounds flag memory with
         pc := UInt256.ofNat 1095 } := by
   have hroundWord : UInt256.ofNat rounds.toNat = rounds := ofNat_toNat rounds
+  simp only [roundExitPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -132,6 +132,7 @@ theorem run_init (s : State) (memory : ByteArray) (rounds flag : UInt256)
       some (loopState s memory rounds flag 0) := by
   have hroundWord : UInt256.ofNat rounds.toNat = rounds := ofNat_toNat rounds
   have hzero : (⟨0⟩ : UInt256) = UInt256.ofNat 0 := by decide
+  simp only [initPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -154,6 +155,7 @@ theorem run_test_continue (s : State) (initial : ByteArray)
       some { loopState s initial rounds flag i with pc := UInt256.ofNat 1108 } := by
   have hito : (UInt256.ofNat i).toNat = i := by
     rw [Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  simp only [testPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 250000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -174,6 +176,7 @@ theorem run_test_exit (s : State) (initial : ByteArray)
     Challenge.EvmProof.Stepper.runLocatedBlock testPath
         (loopState s initial rounds flag 8) =
       some { loopState s initial rounds flag 8 with pc := UInt256.ofNat 1161 } := by
+  simp only [testPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 250000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -226,6 +229,7 @@ theorem run_setup (s : State) (initial : ByteArray) (rounds flag : UInt256)
   have hcap6 : 6 < 1024 := by omega
   have hcap7 : 7 < 1024 := by omega
   have hcap8 : 8 < 1024 := by omega
+  simp only [setupPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 2000000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -262,6 +266,7 @@ theorem run_increment (s : State) (initial : ByteArray)
   have hswap (a b : UInt256) (rho : List UInt256) :
       (a :: b :: rho).exchange 0 1 = some (b :: a :: rho) := by
     rfl
+  simp only [incrementPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 600000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -288,6 +293,7 @@ theorem run_finish (s : State) (initial : ByteArray) (rounds flag : UInt256)
   have hpc1168 : UInt256.ofNat 1165 + UInt256.ofNat 3 = UInt256.ofNat 1168 :=
     ofNatAdd 1165 3 (by omega)
   have hactive : MachineState.activeWordsAfter 58 1280 64 = 58 := by decide
+  simp only [finishPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 250000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
