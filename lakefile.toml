@@ -7,12 +7,13 @@ defaultTargets = ["Challenge"]
 # bytecode-level reasoning (see Challenge/Sha256/ProofSupport/Yul.lean). It also
 # brings in the two semantics it is proved against.
 #
-# The pinned Lean-4.33 compiler contains both verified backends. Its production
+# The pinned compiler contains both verified backends. Its production
 # selector prefers SSA for two reference sources and would re-layout their
 # frozen artifacts (SHA-256: 1699 rather than 1524 bytes; RIPEMD-160: 1689
-# rather than 1671). CI applies the small patch under `patches/lean-4.33` to
-# select the compiler's verified classic backend, preserving all four frozen
-# artifacts byte-for-byte while keeping the current 4.33 dependency graph.
+# rather than 1671). CI applies
+# `patches/frozen-artifacts/yul-compiler-classic-artifacts.patch` to select
+# the compiler's verified classic backend, preserving all four frozen artifacts
+# byte-for-byte.
 [[require]]
 name = "yul-evm-compiler"
 git = "https://github.com/powdr-labs/yul-compiler"
@@ -37,8 +38,7 @@ git = "https://github.com/powdr-labs/evm-semantics"
 rev = "2f8714d6ba960a3de67720019b54513f5bc1a2e3"
 
 # Keep the inherited dependency graph on the same release as this project's
-# Lean toolchain. The backend-selection patch described above is applied by the
-# documented build helper.
+# Lean toolchain.
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4.git"

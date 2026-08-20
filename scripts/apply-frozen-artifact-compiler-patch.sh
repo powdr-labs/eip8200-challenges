@@ -3,7 +3,11 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-apply_dependency_patch() {
+# Lake pins dependency revisions but has no declarative patch mechanism. This
+# repository keeps reference bytecode frozen, so force the pinned Yul compiler
+# to select its verified classic backend. The helper is idempotent for local
+# builds and restored CI caches.
+apply_frozen_artifact_patch() {
   local package_dir="$1"
   local patch_file="$2"
 
@@ -17,6 +21,6 @@ apply_dependency_patch() {
   fi
 }
 
-apply_dependency_patch \
+apply_frozen_artifact_patch \
   "$project_root/.lake/packages/yul-evm-compiler" \
-  "$project_root/patches/lean-4.33/yul-evm-compiler.patch"
+  "$project_root/patches/frozen-artifacts/yul-compiler-classic-artifacts.patch"

@@ -45,9 +45,15 @@ It is independent of any particular precompile or challenge specification.
 
 ## Build and verify
 
+Apply the local compiler policy patch to reproduce the checked-in reference
+bytecode. It keeps `YulParser.compileSource` on the verified classic backend;
+it is not a Lean version compatibility patch. The rationale and removal
+criteria are documented in
+[`patches/frozen-artifacts/`](patches/frozen-artifacts/README.md).
+
 ```sh
 lake exe cache get
-bash scripts/apply-lean-4.33-dependency-patches.sh
+bash scripts/apply-frozen-artifact-compiler-patch.sh
 lake build
 lake env lean Checks.lean
 ```
