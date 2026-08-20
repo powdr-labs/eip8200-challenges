@@ -19,7 +19,7 @@ from the direct bytecode correctness proof.
 namespace Challenge.Blake2f.Reference.Proofs.Yul
 
 open YulSemantics (Block)
-open YulSemantics.EVM (Op ExternalCalls ExternalCreates)
+open YulSemantics.EVM (Op ExternalCalls ExternalCreates ExternalGas)
 open YulEvmCompiler
 open Challenge.Blake2f.ProofSupport.Yul
 
@@ -33,7 +33,8 @@ def referenceNormalizedBlock : Block Op :=
 
 def referenceOptimizedBlock : Block Op :=
   (Optimizer.optimizerPipeline
-    (calls := ExternalCalls.none) (creates := ExternalCreates.none)).run
+    (calls := ExternalCalls.none) (creates := ExternalCreates.none)
+    (gasOracle := ExternalGas.any)).run
       referenceNormalizedBlock
 
 theorem referenceCompileSucceeded :
@@ -81,6 +82,7 @@ theorem reference_runEquiv :
     Optimizer.optimizerPipeline] using
     (Optimizer.normalize_optimizerPipelineRounds_runEquiv
       (calls := ExternalCalls.none) (creates := ExternalCreates.none)
+      (gasOracle := ExternalGas.any)
       Optimizer.pipelineRounds referenceParsedBlock)
 
 theorem computesBehavior_optimized_iff :

@@ -29,7 +29,8 @@ namespace Challenge.Sha256
 open EvmSemantics
 open EvmSemantics.EVM
 open YulSemantics (Block Run VEnv)
-open YulSemantics.EVM (EvmState Op evmWithExternal ExternalCalls ExternalCreates)
+open YulSemantics.EVM
+  (EvmState Op evmWithExternal ExternalCalls ExternalCreates ExternalGas)
 open YulEvmCompiler
 
 /-- The SHA specification at the byte-list view used by Yul semantics. -/
@@ -40,7 +41,7 @@ def digestOf (calldata : List UInt8) : List UInt8 :=
 calls and creates no contracts, so the open-world relations are empty and
 `ExternalsRealized.none` discharges the compiler theorem's side condition. -/
 @[reducible] def localModel : ExternalModel :=
-  { calls := ExternalCalls.none, creates := ExternalCreates.none }
+  { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.any }
 
 /-- The gas-free source dialect the obligation is stated against. -/
 abbrev localDialect :=

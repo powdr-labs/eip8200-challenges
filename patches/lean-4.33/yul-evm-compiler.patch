@@ -1,11 +1,11 @@
 diff --git a/YulParser/Compile.lean b/YulParser/Compile.lean
-index 2b7349e..74913d3 100644
+index 6d7358e..e4fb09d 100644
 --- a/YulParser/Compile.lean
 +++ b/YulParser/Compile.lean
 @@ -463,7 +463,7 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
        let pipelined := (YulEvmCompiler.Optimizer.optimizerPipeline
            (calls := YulSemantics.EVM.ExternalCalls.none)
-           (creates := YulSemantics.EVM.ExternalCreates.none)).run b
+           (creates := YulSemantics.EVM.ExternalCreates.none) (gasOracle := YulSemantics.EVM.ExternalGas.any)).run b
 -      let ssa := YulEvmCompiler.SsaCfg.compileViaSsa pipelined
 +      let _ssa := YulEvmCompiler.SsaCfg.compileViaSsa pipelined
        let classic := tryLayouts pipelined

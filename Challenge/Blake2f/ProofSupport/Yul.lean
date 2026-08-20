@@ -20,7 +20,7 @@ open YulSemantics.EVM
 open YulEvmCompiler
 
 @[reducible] def localModel : ExternalModel :=
-  { calls := ExternalCalls.none, creates := ExternalCreates.none }
+  { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.any }
 
 abbrev localDialect :=
   evmWithExternal ExternalCalls.none ExternalCreates.none ExternalGas.any

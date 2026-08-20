@@ -17,7 +17,8 @@ namespace Challenge.Ripemd160
 open EvmSemantics
 open EvmSemantics.EVM
 open YulSemantics (Block Run VEnv)
-open YulSemantics.EVM (EvmState Op evmWithExternal ExternalCalls ExternalCreates)
+open YulSemantics.EVM
+  (EvmState Op evmWithExternal ExternalCalls ExternalCreates ExternalGas)
 open YulEvmCompiler
 
 /-- The RIPEMD-160 precompile result at the byte-list view used by Yul
@@ -27,7 +28,7 @@ def digestOf (calldata : List UInt8) : List UInt8 :=
 
 /-- The reference implementation neither calls contracts nor creates them. -/
 @[reducible] def localModel : ExternalModel :=
-  { calls := ExternalCalls.none, creates := ExternalCreates.none }
+  { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.any }
 
 /-- The gas-free source dialect used by the functional obligation. -/
 abbrev localDialect := evmWithExternal ExternalCalls.none ExternalCreates.none
