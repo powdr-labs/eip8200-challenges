@@ -15,7 +15,7 @@ namespace Challenge.Modexp.Reference.Proofs.Bytecode.BigDispatch
 open EvmSemantics
 open EvmSemantics.EVM
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -170,7 +170,9 @@ theorem gasSteps_bigTail_cost (input : ByteArray) :
   rw [hactive] at hmeter
   have hcost : Challenge.EvmProof.Stepper.runLocatedBlockCost bigTailPath
       (bigCheckedState input) = 33 := by omega
-  simpa [gasSteps_bigTail] using hcost
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost bigTailPath
+    (bigCheckedState input) = 33
+  exact hcost
 
 def gasSteps_bigCheck (input : ByteArray) (hvalid : ValidInput input)
     (hbig : 32 < modulusSize input) :
@@ -205,7 +207,9 @@ theorem gasSteps_bigJump_cost (input : ByteArray) (hvalid : ValidInput input)
   rw [hactive] at hmeter
   have hcost : Challenge.EvmProof.Stepper.runLocatedBlockCost
       Dispatch.wordJumpPath (Main.headerState input) = 17 := by omega
-  simpa [gasSteps_bigJump] using hcost
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost Dispatch.wordJumpPath
+    (Main.headerState input) = 17
+  exact hcost
 
 def gasSteps_bigEntry (input : ByteArray) (hvalid : ValidInput input)
     (hpositive : 0 < modulusSize input) (hbig : 32 < modulusSize input) :

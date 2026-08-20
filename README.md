@@ -47,6 +47,7 @@ It is independent of any particular precompile or challenge specification.
 
 ```sh
 lake exe cache get
+bash scripts/apply-lean-4.33-dependency-patches.sh
 lake build
 lake env lean Checks.lean
 ```

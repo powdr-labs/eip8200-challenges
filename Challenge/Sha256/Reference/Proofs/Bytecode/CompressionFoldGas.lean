@@ -13,6 +13,9 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 theorem foldIteration_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256) (i : Nat)
     (hi : i < 8) (hcap : rest.length < 988)
@@ -96,13 +99,18 @@ theorem foldIteration_cost_potential (s : State)
         288 (UInt256.ofNat i) (Compression.foldedValue s msgOff returnDest rest i)
         (UInt256.ofNat 982) ([UInt256.ofNat i, msgOff, returnDest] ++ rest)).activeWords =
         (Compression.foldGotSet s msgOff returnDest rest i).activeWords := by rfl
-  simp only [Compression.gasSteps_foldIteration,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  unfold Compression.gasSteps_foldIteration
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
   rw [hawSetup] at hsetup
   rw [hawH] at hh
   rw [hawStore] at hstore
   rw [hawSet] at hset
+  change (potentialCost hcond + (potentialCost hsetup +
+    (potentialCost hh + (potentialCost hstore +
+      (potentialCost hset + potentialCost hinc))))) +
+    MachineState.memCost
+      (Compression.foldAt s msgOff returnDest rest i).activeWords.toNat = _
+  simp only [potentialCost]
   omega
 
 theorem foldLoop_cost_potential (s : State)
@@ -138,7 +146,9 @@ theorem foldLoop_cost_potential (s : State)
         187 + MachineState.memCost
           (Compression.foldLoopState s msgOff returnDest rest (i + 1)).activeWords.toNat := by
     simpa [Compression.foldAt, Compression.foldLoopState] using h
-  simpa only [Challenge.EvmProof.GasSteps.cast_cost] using h'
+  change potentialCost h' + MachineState.memCost
+    (Compression.foldLoopState s msgOff returnDest rest i).activeWords.toNat = _
+  simpa only [potentialCost] using h'
 
 theorem roundsExit_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256)
@@ -159,8 +169,9 @@ theorem roundsExit_cost_potential (s : State)
     (by simp [Compression.roundsExitPath, Compression.conditionPath, CopyFree])
     (by rfl)
   unfold Compression.gasSteps_roundsExit
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  exact hmeter
+  change potentialCost hmeter + MachineState.memCost
+    (Compression.roundAt s msgOff returnDest rest 64).activeWords.toNat = _
+  simpa only [potentialCost] using hmeter
 
 theorem foldExit_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256)
@@ -182,7 +193,8 @@ theorem foldExit_cost_potential (s : State)
     (by simp [Compression.foldExitPath, Compression.foldConditionPath, CopyFree])
     (by rfl)
   unfold Compression.gasSteps_foldExit
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  exact hmeter
+  change potentialCost hmeter + MachineState.memCost
+    (Compression.foldAt s msgOff returnDest rest 8).activeWords.toNat = _
+  simpa only [potentialCost] using hmeter
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.CompressionGas

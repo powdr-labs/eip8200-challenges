@@ -68,7 +68,11 @@ private theorem activeWordsAfter_ge (curr offset size : Nat) :
 
 private theorem ofNat_toNat (w : UInt256) : UInt256.ofNat w.toNat = w := by
   cases w with
-  | mk val => simp [UInt256.ofNat, UInt256.toNat, UInt256.size]
+  | mk val =>
+      unfold UInt256.ofNat UInt256.toNat
+      congr 1
+      apply Fin.ext
+      simp [Fin.ofNat, Nat.mod_eq_of_lt val.isLt]
 
 private theorem activeWordsAfterUInt256_eq (s : State) (offset size : Nat)
     (hend : offset + size ≤ s.activeWords.toNat * 32) :

@@ -250,132 +250,229 @@ private def gasSteps_writeWord (s : State) (offset : Nat) (word ret : UInt256)
   exact ginit.trans ((gasSteps_writeLoop s offset word ret tail htail hoff hcode hfork
     hrun hnp).trans (gtest.trans gexit))
 
+private def outputConditionStart (q : State) (input : ByteArray) (i : Nat) : State :=
+  { q with
+    pc := UInt256.ofNat 0x654
+    stack := [UInt256.ofNat i, Padding.paddedWord input] }
+
+private def outputConditionEnd (q : State) (input : ByteArray) (i : Nat) : State :=
+  { q with
+    pc := UInt256.ofNat 0x65e
+    stack := [UInt256.ofNat i, Padding.paddedWord input] }
+
+private def outputCallEnd (q : State) (input : ByteArray) (i : Nat) : State :=
+  { q with
+    pc := UInt256.ofNat 0x20
+    stack := [UInt256.ofNat i, ⟨0⟩, UInt256.ofNat 0x66a,
+      UInt256.ofNat 0x676, UInt256.ofNat i, Padding.paddedWord input] }
+
+private def outputHEnd (q : State) (input : ByteArray) (i : Nat) : State :=
+  { loadedH q i with
+    pc := UInt256.ofNat 0x66a
+    stack := [OutputTrace.hWord q i, UInt256.ofNat 0x676,
+      UInt256.ofNat i, Padding.paddedWord input] }
+
+private def outputWriteStart (q : State) (input : ByteArray) (i : Nat) : State :=
+  { loadedH q i with
+    pc := UInt256.ofNat 0x3c6
+    stack := [UInt256.ofNat (12 + 4 * i), OutputTrace.hWord q i,
+      UInt256.ofNat 0x676, UInt256.ofNat i, Padding.paddedWord input] }
+
+private def outputWritten (q : State) (input : ByteArray) (i : Nat) : State :=
+  writeLoopState (loadedH q i) (12 + 4 * i) (OutputTrace.hWord q i)
+    (UInt256.ofNat 0x676) [UInt256.ofNat i, Padding.paddedWord input] 4
+
+private def outputWrittenReturned (q : State) (input : ByteArray) (i : Nat) : State :=
+  { outputWritten q input i with
+    pc := UInt256.ofNat 0x676
+    stack := [UInt256.ofNat i, Padding.paddedWord input] }
+
+private def gasSteps_outputCondition (s : State) (input : ByteArray)
+    (i : Nat) (hi : i < 5)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    GasSteps (outputLoopState s input i)
+      (outputConditionEnd (outputLoopState s input i) input i) := by
+  let q := outputLoopState s input i
+  have raw : GasSteps (outputConditionStart q input i)
+      (outputConditionEnd q input i) := by
+    apply Output.gasSteps_block OutputTrace.outerTestPath
+    · simpa [q, outputConditionStart] using hcode
+    · simpa [q, outputConditionStart, State.fork] using hfork
+    · simpa [outputConditionStart, outputConditionEnd] using
+        OutputTrace.run_outerTest_continue q i [Padding.paddedWord input]
+          hi (by simp) (by simpa [q] using hrun)
+    · simpa [q, outputConditionStart] using hrun
+    · simpa [q, outputConditionStart] using hnp
+  exact GasSteps.cast raw
+    (by simpa [q, outputConditionStart] using outputLoopState_normalized s input i) rfl
+
+private def gasSteps_outputCall (s : State) (input : ByteArray) (i : Nat)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    GasSteps (outputConditionEnd (outputLoopState s input i) input i)
+      (outputCallEnd (outputLoopState s input i) input i) := by
+  let q := outputLoopState s input i
+  apply Output.gasSteps_block OutputTrace.hAtCallPath
+  · simpa [q, outputConditionEnd] using hcode
+  · simpa [q, outputConditionEnd, State.fork] using hfork
+  · simpa [q, outputConditionEnd, outputCallEnd] using
+      OutputTrace.run_hAtCall q i [Padding.paddedWord input] (by simp)
+        (by simpa [q] using hcode) (by simpa [q] using hrun)
+  · simpa [q, outputConditionEnd] using hrun
+  · simpa [q, outputConditionEnd] using hnp
+
+private def gasSteps_outputH (s : State) (input : ByteArray) (i : Nat)
+    (hi : i < 5) (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    GasSteps (outputCallEnd (outputLoopState s input i) input i)
+      (outputHEnd (outputLoopState s input i) input i) := by
+  let q := outputLoopState s input i
+  apply Output.gasSteps_block OutputTrace.hAtPath
+  · simpa [q, outputCallEnd] using hcode
+  · simpa [q, outputCallEnd, State.fork] using hfork
+  · simpa [q, outputCallEnd, outputHEnd, loadedH] using
+      OutputTrace.run_hAt q i
+        [UInt256.ofNat 0x676, UInt256.ofNat i, Padding.paddedWord input]
+        hi (by simp) (by simpa [q] using hcode) (by simpa [q] using hrun)
+  · simpa [q, outputCallEnd] using hrun
+  · simpa [q, outputCallEnd] using hnp
+
+private def gasSteps_outputWriteCall (s : State) (input : ByteArray) (i : Nat)
+    (hi : i < 5) (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    GasSteps (outputHEnd (outputLoopState s input i) input i)
+      (outputWriteStart (outputLoopState s input i) input i) := by
+  let q := outputLoopState s input i
+  let loaded := loadedH q i
+  apply Output.gasSteps_block OutputTrace.writeCallPath
+  · simpa [q, loaded, outputHEnd] using hcode
+  · simpa [q, loaded, outputHEnd, State.fork] using hfork
+  · simpa [q, outputHEnd, outputWriteStart, loaded] using
+      OutputTrace.run_writeCall loaded i (OutputTrace.hWord q i)
+        [Padding.paddedWord input] hi (by simp)
+        (by simpa [q, loaded] using hcode) (by simpa [q, loaded] using hrun)
+  · simpa [q, loaded, outputHEnd] using hrun
+  · simpa [q, loaded, outputHEnd] using hnp
+
+private def gasSteps_outputWrite (s : State) (input : ByteArray) (i : Nat)
+    (hi : i < 5)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    GasSteps (outputWriteStart (outputLoopState s input i) input i)
+      (outputWrittenReturned (outputLoopState s input i) input i) := by
+  let q := outputLoopState s input i
+  let gone := gasSteps_writeWord (loadedH q i) (12 + 4 * i)
+      (OutputTrace.hWord q i)
+      (UInt256.ofNat 0x676) [UInt256.ofNat i, Padding.paddedWord input]
+      (by simp) (by omega) (by simpa [q] using hcode)
+      (by simpa [q, State.fork] using hfork) (by simpa [q] using hrun)
+      (by simpa [q] using hnp) (by decide)
+  exact GasSteps.cast gone
+    (by simp [q, gone, outputWriteStart])
+    (by simp [q, gone, outputWrittenReturned, outputWritten])
+
+private def gasSteps_outputNext (s : State) (input : ByteArray) (i : Nat)
+    (hi : i < 5) (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    GasSteps (outputWrittenReturned (outputLoopState s input i) input i)
+      (outputLoopState s input (i + 1)) := by
+  let q := outputLoopState s input i
+  let written := outputWritten q input i
+  have raw : GasSteps (outputWrittenReturned q input i)
+      (afterWrittenWord q input i) := by
+    apply Output.gasSteps_block OutputTrace.outerNextPath
+    · simpa [q, written, outputWrittenReturned, outputWritten] using hcode
+    · simpa [q, written, outputWrittenReturned, outputWritten, State.fork] using hfork
+    · simpa [q, outputWrittenReturned, written, outputWritten,
+        afterWrittenWord] using
+        OutputTrace.run_outerNext written i [Padding.paddedWord input] hi
+          (by simp) (by simpa [q, written, outputWritten] using hcode)
+          (by simpa [q, written, outputWritten] using hrun)
+    · simpa [q, written, outputWrittenReturned, outputWritten] using hrun
+    · simpa [q, written, outputWrittenReturned, outputWritten] using hnp
+  exact GasSteps.cast raw rfl (by rfl)
+
+@[simp] private theorem gasSteps_outputCondition_cost (s : State)
+    (input : ByteArray) (i : Nat) (hi : i < 5)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    (gasSteps_outputCondition s input i hi hcode hfork hrun hnp).cost =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.outerTestPath
+        (outputConditionStart (outputLoopState s input i) input i) := by
+  rfl
+
+@[simp] private theorem gasSteps_outputCall_cost (s : State)
+    (input : ByteArray) (i : Nat)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    (gasSteps_outputCall s input i hcode hfork hrun hnp).cost =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.hAtCallPath
+        (outputConditionEnd (outputLoopState s input i) input i) := by
+  rfl
+
+@[simp] private theorem gasSteps_outputH_cost (s : State)
+    (input : ByteArray) (i : Nat) (hi : i < 5)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    (gasSteps_outputH s input i hi hcode hfork hrun hnp).cost =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.hAtPath
+        (outputCallEnd (outputLoopState s input i) input i) := by
+  rfl
+
+@[simp] private theorem gasSteps_outputWriteCall_cost (s : State)
+    (input : ByteArray) (i : Nat) (hi : i < 5)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    (gasSteps_outputWriteCall s input i hi hcode hfork hrun hnp).cost =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.writeCallPath
+        (outputHEnd (outputLoopState s input i) input i) := by
+  rfl
+
+@[simp] private theorem gasSteps_outputNext_cost (s : State)
+    (input : ByteArray) (i : Nat) (hi : i < 5)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    (gasSteps_outputNext s input i hi hcode hfork hrun hnp).cost =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.outerNextPath
+        (outputWrittenReturned (outputLoopState s input i) input i) := by
+  rfl
+
 private def gasSteps_outputIteration (s : State) (input : ByteArray)
     (i : Nat) (hi : i < 5)
     (hcode : s.executionEnv.code = referenceBytecode)
     (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
     (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
       s.executionEnv.codeAddr = false) :
-    GasSteps (outputLoopState s input i) (outputLoopState s input (i + 1)) := by
-  let q := outputLoopState s input i
-  have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
-  have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
-  have qrun : q.halt = .Running := by simpa [q] using hrun
-  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
-      q.executionEnv.codeAddr = false := by simpa [q] using hnp
-  have gconditionRaw : GasSteps
-      { q with
-        pc := UInt256.ofNat 0x654
-        stack := [UInt256.ofNat i, Padding.paddedWord input] }
-      { q with
-        pc := UInt256.ofNat 0x65e
-        stack := [UInt256.ofNat i, Padding.paddedWord input] } := by
-    apply Output.gasSteps_block OutputTrace.outerTestPath
-    · exact qcode
-    · exact qfork
-    · simpa using OutputTrace.run_outerTest_continue q i
-        [Padding.paddedWord input] hi (by simp) qrun
-    · exact qrun
-    · exact qnp
-  have gcondition : GasSteps q
-      { q with
-        pc := UInt256.ofNat 0x65e
-        stack := [UInt256.ofNat i, Padding.paddedWord input] } :=
-    GasSteps.cast gconditionRaw
-      (by simpa [q] using outputLoopState_normalized s input i) rfl
-  have gcall : GasSteps
-      { q with
-        pc := UInt256.ofNat 0x65e
-        stack := [UInt256.ofNat i, Padding.paddedWord input] }
-      { q with
-        pc := UInt256.ofNat 0x20
-        stack := [UInt256.ofNat i, ⟨0⟩, UInt256.ofNat 0x66a,
-          UInt256.ofNat 0x676, UInt256.ofNat i, Padding.paddedWord input] } := by
-    apply Output.gasSteps_block OutputTrace.hAtCallPath
-    · exact qcode
-    · exact qfork
-    · simpa using OutputTrace.run_hAtCall q i [Padding.paddedWord input]
-        (by simp) qcode qrun
-    · exact qrun
-    · exact qnp
-  have gh : GasSteps
-      { q with
-        pc := UInt256.ofNat 0x20
-        stack := [UInt256.ofNat i, ⟨0⟩, UInt256.ofNat 0x66a,
-          UInt256.ofNat 0x676, UInt256.ofNat i, Padding.paddedWord input] }
-      { loadedH q i with
-        pc := UInt256.ofNat 0x66a
-        stack := [OutputTrace.hWord q i, UInt256.ofNat 0x676,
-          UInt256.ofNat i, Padding.paddedWord input] } := by
-    apply Output.gasSteps_block OutputTrace.hAtPath
-    · exact qcode
-    · exact qfork
-    · simpa [loadedH] using OutputTrace.run_hAt q i
-        [UInt256.ofNat 0x676, UInt256.ofNat i, Padding.paddedWord input]
-        hi (by simp) qcode qrun
-    · exact qrun
-    · exact qnp
-  let loaded := loadedH q i
-  have loadedCode : loaded.executionEnv.code = referenceBytecode := by
-    change q.executionEnv.code = referenceBytecode
-    exact qcode
-  have loadedFork : loaded.fork = .Osaka := by
-    change q.executionEnv.fork = .Osaka
-    exact qfork
-  have loadedRun : loaded.halt = .Running := by
-    change q.halt = .Running
-    exact qrun
-  have loadedNp : Precompile.isPrecompileWithConfig loaded.executionEnv.precompileConfig loaded.executionEnv.fork
-      loaded.executionEnv.codeAddr = false := by
-    change Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
-      q.executionEnv.codeAddr = false
-    exact qnp
-  have gwcall : GasSteps
-      { loaded with
-        pc := UInt256.ofNat 0x66a
-        stack := [OutputTrace.hWord q i, UInt256.ofNat 0x676,
-          UInt256.ofNat i, Padding.paddedWord input] }
-      { loaded with
-        pc := UInt256.ofNat 0x3c6
-        stack := [UInt256.ofNat (12 + 4 * i), OutputTrace.hWord q i,
-          UInt256.ofNat 0x676, UInt256.ofNat i, Padding.paddedWord input] } := by
-    apply Output.gasSteps_block OutputTrace.writeCallPath
-    · exact loadedCode
-    · exact loadedFork
-    · simpa using OutputTrace.run_writeCall loaded i (OutputTrace.hWord q i)
-        [Padding.paddedWord input] hi (by simp) loadedCode loadedRun
-    · exact loadedRun
-    · exact loadedNp
-  have gwrite := gasSteps_writeWord loaded (12 + 4 * i)
-    (OutputTrace.hWord q i) (UInt256.ofNat 0x676)
-    [UInt256.ofNat i, Padding.paddedWord input] (by simp) (by omega)
-    loadedCode loadedFork loadedRun
-    loadedNp (by decide)
-  let written := writeLoopState loaded (12 + 4 * i) (OutputTrace.hWord q i)
-    (UInt256.ofNat 0x676) [UInt256.ofNat i, Padding.paddedWord input] 4
-  have writtenCode : written.executionEnv.code = referenceBytecode := by
-    simpa [written] using loadedCode
-  have writtenFork : written.fork = .Osaka := by
-    simpa [written, State.fork] using loadedFork
-  have writtenRun : written.halt = .Running := by simpa [written] using loadedRun
-  have writtenNp : Precompile.isPrecompileWithConfig written.executionEnv.precompileConfig written.executionEnv.fork
-      written.executionEnv.codeAddr = false := by simpa [written] using loadedNp
-  have gnext : GasSteps
-      { written with
-        pc := UInt256.ofNat 0x676
-        stack := [UInt256.ofNat i, Padding.paddedWord input] }
-      (afterWrittenWord q input i) := by
-    apply Output.gasSteps_block OutputTrace.outerNextPath
-    · exact writtenCode
-    · exact writtenFork
-    · simpa [afterWrittenWord, written, loaded] using
-        OutputTrace.run_outerNext written i [Padding.paddedWord input] hi
-          (by simp) writtenCode writtenRun
-    · exact writtenRun
-    · exact writtenNp
-  exact GasSteps.cast
-    (gcondition.trans (gcall.trans (gh.trans (gwcall.trans (gwrite.trans gnext)))))
-    rfl (by rfl)
+    GasSteps (outputLoopState s input i) (outputLoopState s input (i + 1)) :=
+  (gasSteps_outputCondition s input i hi hcode hfork hrun hnp).trans
+    ((gasSteps_outputCall s input i hcode hfork hrun hnp).trans
+    ((gasSteps_outputH s input i hi hcode hfork hrun hnp).trans
+    ((gasSteps_outputWriteCall s input i hi hcode hfork hrun hnp).trans
+    ((gasSteps_outputWrite s input i hi hcode hfork hrun hnp).trans
+      (gasSteps_outputNext s input i hi hcode hfork hrun hnp)))))
 
 private def gasSteps_outputLoop (s : State) (input : ByteArray)
     (hcode : s.executionEnv.code = referenceBytecode)
@@ -428,6 +525,71 @@ private def gasSteps_output (s : State) (input : ByteArray)
       (gexit.trans gfinish)))
     rfl rfl
 
+private noncomputable def gasSteps_outputRawCost (s : State) (input : ByteArray)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) : Nat := by
+  have gpre := Output.gasSteps_prelude s
+    (DriverTrace.blockOffsetWord (DriverTrace.blockCount input))
+    [Padding.paddedWord input] (by simp) hcode hfork hrun hnp
+  let q := outputLoopState s input 5
+  have qcode : q.executionEnv.code = referenceBytecode := by simpa [q] using hcode
+  have qfork : q.fork = .Osaka := by simpa [q, State.fork] using hfork
+  have qrun : q.halt = .Running := by simpa [q] using hrun
+  have qnp : Precompile.isPrecompileWithConfig q.executionEnv.precompileConfig q.executionEnv.fork
+      q.executionEnv.codeAddr = false := by simpa [q] using hnp
+  have gexitRaw : GasSteps
+      { q with
+        pc := UInt256.ofNat 0x654
+        stack := [UInt256.ofNat 5, Padding.paddedWord input] }
+      { q with
+        pc := UInt256.ofNat 0x681
+        stack := [UInt256.ofNat 5, Padding.paddedWord input] } := by
+    apply Output.gasSteps_block OutputTrace.outerTestPath
+    · exact qcode
+    · exact qfork
+    · simpa [q] using OutputTrace.run_outerTest_exit q
+        [Padding.paddedWord input] (by simp) qcode qrun
+    · exact qrun
+    · exact qnp
+  have gexit : GasSteps q
+      { q with
+        pc := UInt256.ofNat 0x681
+        stack := [UInt256.ofNat 5, Padding.paddedWord input] } :=
+    GasSteps.cast gexitRaw
+      (by simpa [q] using outputLoopState_normalized s input 5) rfl
+  have gfinish := Output.gasSteps_finish q [Padding.paddedWord input]
+    (by simp) qcode qfork qrun qnp
+  exact gpre.cost + ((gasSteps_outputLoop s input hcode hfork hrun hnp).cost +
+    (gexit.cost + gfinish.cost))
+
+@[simp] private theorem gasSteps_output_cost (s : State) (input : ByteArray)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    (gasSteps_output s input hcode hfork hrun hnp).cost =
+      gasSteps_outputRawCost s input hcode hfork hrun hnp := by
+  rfl
+
+@[simp] private theorem gasSteps_outputRawCost_eq (s : State) (input : ByteArray)
+    (hcode : s.executionEnv.code = referenceBytecode)
+    (hfork : s.fork = .Osaka) (hrun : s.halt = .Running)
+    (hnp : Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
+      s.executionEnv.codeAddr = false) :
+    gasSteps_outputRawCost s input hcode hfork hrun hnp =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.preludePath
+          (DriverTrace.afterExit s input) +
+        ((gasSteps_outputLoop s input hcode hfork hrun hnp).cost +
+          (Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.outerTestPath
+              (outputLoopState s input 5) +
+            Challenge.EvmProof.Stepper.runLocatedBlockCost OutputTrace.finishPath
+              { outputLoopState s input 5 with
+                pc := UInt256.ofNat 0x681
+                stack := [UInt256.ofNat 5, Padding.paddedWord input] })) := by
+  rfl
+
 /-- The one remaining end-to-end hypothesis: a certified compression trace
 for each padded block, plus the resulting five mathematical chaining words. -/
 structure CompressionSeam (input : ByteArray) where
@@ -469,6 +631,20 @@ private noncomputable def gasSteps_driver (input : ByteArray)
     (seam.running _ (by omega)) (seam.noPrecompile _ (by omega))
   exact GasSteps.cast (gsetup.trans (gloop.trans gexit)) seam.initial
     (by simp [final, DriverTrace.afterExit])
+
+@[simp] private theorem gasSteps_driver_cost (input : ByteArray)
+    (hfit : CalldataFits input) (seam : CompressionSeam input) :
+    (gasSteps_driver input hfit seam).cost =
+      (DriverTrace.gasSteps_setup (seam.states 0) input
+        (seam.code 0 (by omega)) (seam.fork 0 (by omega))
+        (seam.running 0 (by omega)) (seam.noPrecompile 0 (by omega))).cost +
+      ((DriverTrace.gasSteps_loop_of_compress seam.states input hfit
+        seam.code seam.fork seam.running seam.noPrecompile seam.compress).cost +
+      (DriverTrace.gasSteps_condition_exit
+        (seam.states (DriverTrace.blockCount input)) input hfit
+        (seam.code _ (by omega)) (seam.fork _ (by omega))
+        (seam.running _ (by omega)) (seam.noPrecompile _ (by omega))).cost) := by
+  rfl
 
 noncomputable def fullTrace (input : ByteArray) (hfit : CalldataFits input)
     (seam : CompressionSeam input) :

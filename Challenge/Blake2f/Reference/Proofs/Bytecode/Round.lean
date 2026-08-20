@@ -106,6 +106,7 @@ theorem run_testSetup (s : State) (memory : ByteArray) (round : Nat)
     rw [Challenge.EvmProof.Word.word_toNat_ofNat, Nat.mod_eq_of_lt]
     exact Nat.lt_trans hround rounds.val.isLt
   have hzero : ({ val := 0 } : UInt256) = UInt256.ofNat 0 := by decide
+  simp only [testSetupPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -132,6 +133,7 @@ theorem run_setup2 (s : State) (memory : ByteArray) (round : Nat)
       some (MixG.entryState (baseState s (memory1 memory round))
         800 928 1056 1184 (UInt256.ofNat round) 2 3 934
         (tail round rounds flag)) := by
+  simp only [setup2Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -156,6 +158,7 @@ theorem run_setup3 (s : State) (memory : ByteArray) (round : Nat)
       some (MixG.entryState (baseState s (memory2 memory round))
         832 960 1088 1216 (UInt256.ofNat round) 4 5 959
         (tail round rounds flag)) := by
+  simp only [setup3Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -180,6 +183,7 @@ theorem run_setup4 (s : State) (memory : ByteArray) (round : Nat)
       some (MixG.entryState (baseState s (memory3 memory round))
         864 992 1120 1248 (UInt256.ofNat round) 6 7 984
         (tail round rounds flag)) := by
+  simp only [setup4Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -204,6 +208,7 @@ theorem run_setup5 (s : State) (memory : ByteArray) (round : Nat)
       some (MixG.entryState (baseState s (memory4 memory round))
         768 928 1088 1248 (UInt256.ofNat round) 8 9 1009
         (tail round rounds flag)) := by
+  simp only [setup5Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -228,6 +233,7 @@ theorem run_setup6 (s : State) (memory : ByteArray) (round : Nat)
       some (MixG.entryState (baseState s (memory5 memory round))
         800 960 1120 1152 (UInt256.ofNat round) 10 11 1034
         (tail round rounds flag)) := by
+  simp only [setup6Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -252,6 +258,7 @@ theorem run_setup7 (s : State) (memory : ByteArray) (round : Nat)
       some (MixG.entryState (baseState s (memory6 memory round))
         832 992 1024 1184 (UInt256.ofNat round) 12 13 1059
         (tail round rounds flag)) := by
+  simp only [setup7Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -276,6 +283,7 @@ theorem run_setup8 (s : State) (memory : ByteArray) (round : Nat)
       some (MixG.entryState (baseState s (memory7 memory round))
         864 896 1056 1216 (UInt256.ofNat round) 14 15 1084
         (tail round rounds flag)) := by
+  simp only [setup8Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -307,6 +315,7 @@ theorem run_increment (s : State) (memory : ByteArray) (round : Nat)
       [UInt256.ofNat (round + 1), UInt256.ofNat round, rounds, flag].exchange 0 1 =
         some [UInt256.ofNat round, UInt256.ofNat (round + 1), rounds, flag] := by
     rfl
+  simp only [incrementPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 400000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,

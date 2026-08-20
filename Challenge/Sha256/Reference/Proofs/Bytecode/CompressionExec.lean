@@ -19,7 +19,7 @@ open EvmSemantics.EVM
 @[simp] private theorem wordOfNatZero : UInt256.ofNat 0 = 0 := by decide
 @[simp] private theorem wordStructZero : ({ val := 0 } : UInt256) = 0 := by decide
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :

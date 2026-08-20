@@ -4,6 +4,7 @@ import Challenge.Sha256.Reference.Proofs.Bytecode.ArithmeticGas
 set_option warningAsError true
 set_option maxRecDepth 100000
 set_option maxHeartbeats 0
+set_option linter.unusedSimpArgs false
 
 namespace Challenge.Sha256.Reference.Proofs.Bytecode.CompressionGas
 
@@ -12,6 +13,8 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 theorem t2_cost_potential (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (j : Nat) (hcap : rest.length < 988)
@@ -205,9 +208,8 @@ theorem t2_cost_potential (s : State) (msgOff returnDest : UInt256)
   have hawB0 :
       (Compression.callBigSigma0 s msgOff returnDest rest j).activeWords =
         (Compression.gotMaj s msgOff returnDest rest j).activeWords := by rfl
-  simp only [Compression.gasSteps_t2,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  unfold Compression.gasSteps_t2
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
   rw [hawH2] at hsetupH2
   rw [hawH1] at hsetupH1
   rw [hawMaj] at hsetupMaj
@@ -220,6 +222,13 @@ theorem t2_cost_potential (s : State) (msgOff returnDest : UInt256)
     (Compression.gotMaj s msgOff returnDest rest j).activeWords.toNat at hmaj
   change _ = 256 + MachineState.memCost
     (Compression.gotBigSigma0 s msgOff returnDest rest j).activeWords.toNat at hb0
+  change (potentialCost hsetupH2 + (potentialCost hh2 +
+    (potentialCost hsetupH1 + (potentialCost hh1 +
+    (potentialCost hsetupMaj + (potentialCost hmaj +
+    (potentialCost hsetupB0 + (potentialCost hb0 +
+      potentialCost hfinish)))))))) + MachineState.memCost
+        (Compression.afterT1 s msgOff returnDest rest j).activeWords.toNat = _
+  simp only [potentialCost]
   omega
 
 

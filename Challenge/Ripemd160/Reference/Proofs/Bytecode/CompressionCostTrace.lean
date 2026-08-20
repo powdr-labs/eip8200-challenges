@@ -145,8 +145,11 @@ theorem tableAt_cost_potential (s : State) (base i returnDest : UInt256)
     (TableTrace.run_tableAt s base i returnDest rest hstack hcode hrun hvalid)
     (by simpa [TableTrace.tableAtEntry] using hfork)
     (by simp [TableTrace.tableAtPath, CopyFree])
-  simpa [TableTrace.gasSteps_tableAt, TableTrace.tableAtEntry, tableAtWork]
-    using hraw
+  unfold TableTrace.gasSteps_tableAt
+  change Stepper.runLocatedBlockCost TableTrace.tableAtPath
+      (TableTrace.tableAtEntry s base i returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [TableTrace.tableAtEntry, tableAtWork] using hraw
 
 theorem xAt_cost_potential (s : State) (i returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1018)
@@ -165,7 +168,11 @@ theorem xAt_cost_potential (s : State) (i returnDest : UInt256)
     (TableTrace.run_xAt s i returnDest rest hstack hcode hrun hvalid)
     (by simpa [TableTrace.atEntry] using hfork)
     (by simp [TableTrace.xAtPath, CopyFree])
-  simpa [TableTrace.gasSteps_xAt, TableTrace.atEntry, xAtWork] using hraw
+  unfold TableTrace.gasSteps_xAt
+  change Stepper.runLocatedBlockCost TableTrace.xAtPath
+      (TableTrace.atEntry s (UInt256.ofNat 0x4b) i returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [TableTrace.atEntry, xAtWork] using hraw
 
 theorem wordSet_cost_potential (s : State)
     (base i value returnDest : UInt256) (rest : List UInt256)
@@ -185,7 +192,11 @@ theorem wordSet_cost_potential (s : State)
     (TableTrace.run_wordSet s base i value returnDest rest hstack hcode hrun hvalid)
     (by simpa [TableTrace.setEntry] using hfork)
     (by simp [TableTrace.hSetPath, CopyFree])
-  simpa [TableTrace.gasSteps_wordSet, TableTrace.setEntry, wordSetWork] using hraw
+  unfold TableTrace.gasSteps_wordSet
+  change Stepper.runLocatedBlockCost TableTrace.hSetPath
+      (TableTrace.setEntry s base i value returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [TableTrace.setEntry, wordSetWork] using hraw
 
 def scheduleSetupWork : Nat :=
   Meter.runLocatedBlockStaticCost scheduleSetupLocated
@@ -209,7 +220,11 @@ theorem scheduleSetup_cost_potential (s : State)
     (run_scheduleSetup s messageOffset returnDest rest hstack hcode hrun)
     (by simpa [compressEntry] using hfork)
     (by simp [scheduleSetupLocated, CopyFree])
-  simpa [gasSteps_scheduleSetup, compressEntry, scheduleSetupWork] using hraw
+  unfold gasSteps_scheduleSetup
+  change Stepper.runLocatedBlockCost scheduleSetupLocated
+      (compressEntry s messageOffset returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [compressEntry, scheduleSetupWork] using hraw
 
 def copyStateWork : Nat := 82
 
@@ -234,7 +249,11 @@ theorem copyState_cost_potential (s : State)
       scheduleReturned, copyStateWork, Gas.baseCost, Gas.copyWordCost,
       hrun, hcap, Challenge.EvmProof.Word.word_toNat_ofNat, Nat.add_assoc]
   rw [hwork] at hraw
-  simpa [gasSteps_copyState, scheduleReturned] using hraw
+  unfold gasSteps_copyState
+  change Stepper.runLocatedBlockCost copyStateLocated
+      (scheduleReturned s messageOffset returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [scheduleReturned] using hraw
 
 def scheduleIterationWork : Nat :=
   Meter.runLocatedBlockStaticCost Schedule.conditionPath +
@@ -272,7 +291,11 @@ theorem readLE_cost_potential (s : State) (msgOff returnDest : UInt256)
     (Schedule.run_readLE s msgOff returnDest rest i hstack hcode hrun)
     (by simpa [Schedule.readEntry] using hfork)
     (by simp [Schedule.readLEPath, CopyFree])
-  simpa [Schedule.gasSteps_readLE, Schedule.readEntry] using hraw
+  unfold Schedule.gasSteps_readLE
+  change Stepper.runLocatedBlockCost Schedule.readLEPath
+      (Schedule.readEntry s msgOff returnDest rest i) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [Schedule.readEntry] using hraw
 
 theorem scheduleIteration_cost_potential (s : State)
     (msgOff returnDest : UInt256) (rest : List UInt256)
@@ -321,9 +344,22 @@ theorem scheduleIteration_cost_potential (s : State)
   have h0123 := potential_trans _ _ _ _ _ _ _ h012 h3
   have h01234 := potential_trans _ _ _ _ _ _ _ h0123 h4
   have hall := potential_trans _ _ _ _ _ _ _ h01234 h5
-  simpa [Schedule.gasSteps_iteration_of_readLE, Schedule.gasSteps_readLE,
-    scheduleIterationWork, q0, q1, q2, q3, q4, q5, Schedule.loopAt,
-    GasSteps.trans_cost, Nat.add_assoc] using hall
+  unfold Schedule.gasSteps_iteration_of_readLE
+  change (Stepper.runLocatedBlockCost Schedule.conditionPath
+      (Schedule.loopAt s msgOff returnDest rest i) +
+    (Stepper.runLocatedBlockCost Schedule.setupReadPath
+        (Schedule.afterCondition s msgOff returnDest rest i) +
+      ((Schedule.gasSteps_readLE s msgOff returnDest rest i hstack hcode hfork
+            hrun hnp).cost +
+        (Stepper.runLocatedBlockCost Schedule.setupXSetPath
+            (Schedule.afterRead s msgOff returnDest rest i) +
+          (Stepper.runLocatedBlockCost Schedule.xSetPath
+              (Schedule.xSetEntry s msgOff returnDest rest i) +
+            Stepper.runLocatedBlockCost Schedule.incrementPath
+              (Schedule.afterStore s msgOff returnDest rest i)))))) +
+      MachineState.memCost s.activeWords.toNat = _
+  simpa [scheduleIterationWork, q0, q1, q2, q3, q4, q5,
+    Schedule.loopAt, Nat.add_assoc] using hall
 
 private def concreteScheduleRead (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1012)
@@ -387,7 +423,9 @@ private theorem concreteScheduleIteration_cost_potential (s : State)
           (Schedule.afterIteration
             (Schedule.loopState s msgOff returnDest rest i)
             msgOff returnDest rest i).activeWords.toNat := by
-      simpa [concreteScheduleIteration, concreteScheduleRead] using h
+      unfold concreteScheduleIteration GasSteps.cast
+      dsimp only
+      simpa [concreteScheduleRead] using h
     _ = scheduleIterationWork + MachineState.memCost
           (Schedule.loopState s msgOff returnDest rest (i + 1)).activeWords.toNat := by
       congr 2
@@ -456,7 +494,11 @@ theorem combination_cost_potential (s : State)
       hcode hfork hrun hnp).cost + MachineState.memCost s.activeWords.toNat =
       Meter.runLocatedBlockStaticCost combination0Located +
         MachineState.memCost q0.activeWords.toNat := by
-    simpa [gasSteps_combination0, q0, combinationEntry] using h0raw
+    unfold gasSteps_combination0
+    change Stepper.runLocatedBlockCost combination0Located
+        (combinationEntry s messageOffset returnDest rest) +
+          MachineState.memCost s.activeWords.toNat = _
+    simpa [q0, combinationEntry] using h0raw
   have h1raw := blockCost_potential combination1Located q0 q1
     (run_combination1 s messageOffset returnDest rest hstack hrun)
     (by simpa [q0, State.fork] using hfork)
@@ -465,7 +507,10 @@ theorem combination_cost_potential (s : State)
       hcode hfork hrun hnp).cost + MachineState.memCost q0.activeWords.toNat =
       Meter.runLocatedBlockStaticCost combination1Located +
         MachineState.memCost q1.activeWords.toNat := by
-    simpa [gasSteps_combination1, q0, q1] using h1raw
+    unfold gasSteps_combination1
+    change Stepper.runLocatedBlockCost combination1Located q0 +
+        MachineState.memCost q0.activeWords.toNat = _
+    simpa [q0, q1] using h1raw
   have h2raw := blockCost_potential combination2Located q1 q2
     (run_combination2 s messageOffset returnDest rest hstack hrun)
     (by simpa [q1, State.fork] using hfork)
@@ -474,7 +519,10 @@ theorem combination_cost_potential (s : State)
       hcode hfork hrun hnp).cost + MachineState.memCost q1.activeWords.toNat =
       Meter.runLocatedBlockStaticCost combination2Located +
         MachineState.memCost q2.activeWords.toNat := by
-    simpa [gasSteps_combination2, q1, q2] using h2raw
+    unfold gasSteps_combination2
+    change Stepper.runLocatedBlockCost combination2Located q1 +
+        MachineState.memCost q1.activeWords.toNat = _
+    simpa [q1, q2] using h2raw
   have h3raw := blockCost_potential combination3Located q2 q3
     (run_combination3 s messageOffset returnDest rest hstack hrun)
     (by simpa [q2, State.fork] using hfork)
@@ -483,7 +531,10 @@ theorem combination_cost_potential (s : State)
       hcode hfork hrun hnp).cost + MachineState.memCost q2.activeWords.toNat =
       Meter.runLocatedBlockStaticCost combination3Located +
         MachineState.memCost q3.activeWords.toNat := by
-    simpa [gasSteps_combination3, q2, q3] using h3raw
+    unfold gasSteps_combination3
+    change Stepper.runLocatedBlockCost combination3Located q2 +
+        MachineState.memCost q2.activeWords.toNat = _
+    simpa [q2, q3] using h3raw
   have h4raw := blockCost_potential combination4Located q3 q4
     (run_combination4 s messageOffset returnDest rest hstack hrun)
     (by simpa [q3, State.fork] using hfork)
@@ -492,7 +543,10 @@ theorem combination_cost_potential (s : State)
       hcode hfork hrun hnp).cost + MachineState.memCost q3.activeWords.toNat =
       Meter.runLocatedBlockStaticCost combination4Located +
         MachineState.memCost q4.activeWords.toNat := by
-    simpa [gasSteps_combination4, q3, q4] using h4raw
+    unfold gasSteps_combination4
+    change Stepper.runLocatedBlockCost combination4Located q3 +
+        MachineState.memCost q3.activeWords.toNat = _
+    simpa [q3, q4] using h4raw
   have hpraw := blockCost_potential combinationPopsLocated q4 qp
     (run_combinationPops s messageOffset returnDest rest hstack hrun)
     (by simpa [q4, State.fork] using hfork)
@@ -502,7 +556,10 @@ theorem combination_cost_potential (s : State)
       hcode hfork hrun hnp).cost + MachineState.memCost q4.activeWords.toNat =
       Meter.runLocatedBlockStaticCost combinationPopsLocated +
         MachineState.memCost qp.activeWords.toNat := by
-    simpa [gasSteps_combinationPops, q4, qp] using hpraw
+    unfold gasSteps_combinationPops
+    change Stepper.runLocatedBlockCost combinationPopsLocated q4 +
+        MachineState.memCost q4.activeWords.toNat = _
+    simpa [q4, qp] using hpraw
   have hjraw := blockCost_potential combinationJumpLocated qp qr
     (run_combinationJump s messageOffset returnDest rest hstack hcode hrun hvalid)
     (by simpa [qp, State.fork] using hfork)
@@ -513,7 +570,10 @@ theorem combination_cost_potential (s : State)
         MachineState.memCost qp.activeWords.toNat =
       Meter.runLocatedBlockStaticCost combinationJumpLocated +
         MachineState.memCost qr.activeWords.toNat := by
-    simpa [gasSteps_combinationJump, qp, qr] using hjraw
+    unfold gasSteps_combinationJump
+    change Stepper.runLocatedBlockCost combinationJumpLocated qp +
+        MachineState.memCost qp.activeWords.toNat = _
+    simpa [qp, qr] using hjraw
   have h01 := potential_trans _ _ _ _ _ _ _ h0 h1
   have h012 := potential_trans _ _ _ _ _ _ _ h01 h2
   have h0123 := potential_trans _ _ _ _ _ _ _ h012 h3

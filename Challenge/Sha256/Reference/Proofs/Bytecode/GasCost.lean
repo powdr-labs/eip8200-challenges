@@ -15,6 +15,9 @@ open Challenge.Sha256
 open EvmSemantics
 open EvmSemantics.EVM
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 def referenceGas (input : ByteArray) : Nat :=
   1747 + 155996 * Driver.blockCount input +
     3 * ((input.size + 31) / 32) +
@@ -145,9 +148,10 @@ theorem gasSteps_blockLoop_cost_of_compressions
       q.executionEnv.codeAddr = false := by
     simpa [q, State.fork] using
       PaddingTrace.padReturned_noPrecompile input
-  rw [Driver.gasSteps_blockLoopIteration_cost]
-  apply gasSteps_iteration_cost_of_compress
-  exact hcompress q i qcode qfork qrun qnp
+  unfold Driver.gasSteps_blockLoopIteration
+  dsimp only
+  exact gasSteps_iteration_cost_of_compress q input hfit i hi qcode qfork
+    qrun qnp (hcompress q i qcode qfork qrun qnp)
 
 set_option linter.unusedSimpArgs false in
 @[simp] theorem gasSteps_exit_cost (input : ByteArray)
@@ -168,7 +172,10 @@ set_option linter.unusedSimpArgs false in
           Padding.paddedWord input] := by
     have h := congrArg (fun q : State => q.stack) hfixed
     simpa [Driver.loopAt] using h.symm
-  simp [Driver.gasSteps_exit, Driver.conditionPath,
+  unfold Driver.gasSteps_exit
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost Driver.conditionPath
+    (Driver.blockLoopState input (Driver.blockCount input)) = 26
+  simp [Driver.conditionPath,
     Challenge.EvmProof.Stepper.runLocatedBlockCost,
     Challenge.EvmProof.Stepper.runLocated,
     Challenge.EvmProof.Stepper.runInstr,
@@ -222,7 +229,8 @@ theorem gasSteps_reference_cost (input : ByteArray)
       155921 + MachineState.memCost
         (Driver.afterCompression s input i).activeWords.toNat := by
     intro s i hcode hfork hrun hnp
-    rw [Driver.gasSteps_iterationCompress_cost]
+    unfold Driver.gasSteps_iterationCompress
+    dsimp only
     have h := CompressionGas.gasSteps_compress_cost_potential
       (Driver.loopAt s input i) (Driver.messageOffsetWord i)
       (UInt256.ofNat 1390)
@@ -230,7 +238,10 @@ theorem gasSteps_reference_cost (input : ByteArray)
       (by simp) (by simpa using hcode)
       (by simpa [State.fork] using hfork) (by simpa using hrun)
       (by simpa using hnp) (by decide)
-    simpa [Driver.afterCompression, Compression.compressEntry] using h
+    change potentialCost h + MachineState.memCost
+      (Driver.loopAt s input i).activeWords.toNat = _
+    simpa only [potentialCost, Driver.afterCompression,
+      Compression.compressEntry] using h
   have hloopAdd := gasSteps_blockLoop_cost_of_compressions input hfit hcompress
   rw [DriverMemory.blockLoopState_zero_activeWords input hfit,
     DriverMemory.blockLoopState_final_activeWords input hfit] at hloopAdd

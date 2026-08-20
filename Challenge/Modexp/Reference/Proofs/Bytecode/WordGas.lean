@@ -2,7 +2,8 @@ import Challenge.Modexp.Reference.Proofs.Bytecode.WordCorrect
 import Challenge.EvmProof.Meter
 set_option warningAsError true
 set_option maxRecDepth 100000
-set_option maxHeartbeats 0
+set_option maxHeartbeats 2000000
+set_option linter.unusedSimpArgs false
 /-!
 # Exact gas use of the one-word MODEXP path
 
@@ -20,6 +21,8 @@ open Word
 open WordLoops
 open WordExit
 open WordCorrect
+
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
 
 private theorem blockCost_of_static
     {artifact : Challenge.EvmProof.ProgramArtifact} {fork : Fork}
@@ -53,8 +56,9 @@ theorem gasSteps_start_cost (input : ByteArray) (hvalid : ValidInput input)
     (run_startJump_nonzero input hmodpos hmodlt) (by rfl)
     (by decide) (by rfl) (by rfl)
   unfold gasSteps_start
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hload + exactCost hjump = 41
+  simp only [exactCost]
   omega
 
 @[simp] theorem gasSteps_baseSetup_cost (input : ByteArray) :
@@ -63,7 +67,8 @@ theorem gasSteps_start_cost (input : ByteArray) (hvalid : ValidInput input)
     (run_baseSetup input) (by rfl)
     (by decide) (by rfl) (by rfl)
   unfold gasSteps_baseSetup
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost baseSetupPath
+    (nonzeroState input) = 5
   exact hmeter
 
 theorem gasSteps_baseIteration_cost (input : ByteArray) (i : Nat)
@@ -91,8 +96,10 @@ theorem gasSteps_baseIteration_cost (input : ByteArray) (i : Nat)
     simpa [baseReturnedState, Accessors.calldataByteReturned] using htail
   unfold gasSteps_baseIteration
   simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost,
     Accessors.gasSteps_calldataByte]
+  change exactCost hguard + (exactCost hcall +
+    (exactCost hhelper + exactCost htail')) = 140
+  simp only [exactCost]
   omega
 
 theorem gasSteps_baseLoop_cost (input : ByteArray) (hvalid : ValidInput input) :
@@ -115,8 +122,9 @@ theorem gasSteps_baseFinish_cost (input : ByteArray) (base : UInt256)
     (run_baseFinishTail input base hvalid hword) (by rfl)
     (by decide) (by rfl) (by rfl)
   unfold gasSteps_baseFinish
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hguard + exactCost htail = 42
+  simp only [exactCost]
   omega
 
 theorem gasSteps_expEnter_cost (input : ByteArray) (i : Nat)
@@ -130,8 +138,9 @@ theorem gasSteps_expEnter_cost (input : ByteArray) (i : Nat)
     (run_expLoad input i acc base hvalid hi) (by rfl)
     (by decide) (by rfl) (by rfl)
   unfold gasSteps_expEnter
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hguard + exactCost hload = 48
+  simp only [exactCost]
   omega
 
 theorem gasSteps_bitIteration_cost (input : ByteArray) (outer j : Nat)
@@ -159,8 +168,11 @@ theorem gasSteps_bitIteration_cost (input : ByteArray) (outer j : Nat)
     (run_bitAdvance input outer j byte offset acc base hj) (by rfl)
     (by decide) (by rfl) (by rfl)
   unfold gasSteps_bitIteration
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hguard + (exactCost hdecode + (exactCost hsquare +
+    (exactCost hmask + (exactCost hproduct +
+    (exactCost hchoose + exactCost hadvance))))) = 138
+  simp only [exactCost]
   omega
 
 theorem gasSteps_bitLoop_cost (input : ByteArray) (outer : Nat)
@@ -184,16 +196,26 @@ theorem gasSteps_bitFinish_cost (input : ByteArray) (outer : Nat)
     (run_bitFinishTail input outer byte offset acc base hvalid houter) (by rfl)
     (by decide) (by rfl) (by rfl)
   unfold gasSteps_bitFinish
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hguard + exactCost htail = 58
+  simp only [exactCost]
   omega
 
 theorem gasSteps_expIteration_cost (input : ByteArray) (i : Nat)
     (acc base : UInt256) (hvalid : ValidInput input)
     (hi : i < exponentSize input) :
     (gasSteps_expIteration input i acc base hvalid hi).cost = 1210 := by
-  simp [gasSteps_expIteration, gasSteps_expEnter_cost, gasSteps_bitLoop_cost,
-    gasSteps_bitFinish_cost]
+  let byte := byteWord input (expOffset input + i)
+  let offset := UInt256.ofNat (expOffset input + i)
+  have henter := gasSteps_expEnter_cost input i acc base hvalid hi
+  have hloop := gasSteps_bitLoop_cost input i byte offset acc base
+  have hfinish := gasSteps_bitFinish_cost input i byte offset
+    (bitAfter input byte base 8 acc) base hvalid hi
+  unfold gasSteps_expIteration
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost henter + (exactCost hloop + exactCost hfinish) = 1210
+  simp only [exactCost]
+  omega
 
 theorem gasSteps_expLoop_cost (input : ByteArray) (acc base : UInt256)
     (hvalid : ValidInput input) :
@@ -239,8 +261,9 @@ theorem gasSteps_expFinish_cost (input : ByteArray) (acc base : UInt256)
     hfinal] at htail
   norm_num [MachineState.memCost] at htail
   unfold gasSteps_expFinish
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hguard + exactCost htail = 713
+  simp only [exactCost]
   omega
 
 def wordGas (input : ByteArray) : Nat :=
@@ -279,11 +302,13 @@ theorem gasSteps_zeroModulusTotal_cost (input : ByteArray)
   rw [show (zeroDispatchState input).activeWords.toNat = 0 by rfl,
     hfinal] at htail
   norm_num [MachineState.memCost] at htail
+  have hheader := Main.gasSteps_header_cost input hvalid
+  have hentry := Dispatch.gasSteps_wordEntry_cost input hvalid hmsize hword
   unfold gasSteps_zeroModulus_total gasSteps_zeroModulus
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  rw [Main.gasSteps_header_cost, Dispatch.gasSteps_wordEntry_cost]
-  rw [hload, hjump]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (exactCost hheader + exactCost hentry) +
+    (exactCost hload + (exactCost hjump + exactCost htail)) = 950
+  simp only [exactCost]
   omega
 
 theorem gasSteps_wordNonzeroTotal_cost (input : ByteArray)
@@ -291,11 +316,22 @@ theorem gasSteps_wordNonzeroTotal_cost (input : ByteArray)
     (hword : modulusSize input ≤ 32) (hmodpos : 0 < modulusValue input) :
     (gasSteps_wordNonzeroTotal input hvalid hmsize hword hmodpos).cost =
       wordGas input := by
-  simp [gasSteps_wordNonzeroTotal, wordGas,
-    Main.gasSteps_header_cost, Dispatch.gasSteps_wordEntry_cost,
-    gasSteps_start_cost, gasSteps_baseSetup_cost,
-    gasSteps_baseLoop_cost, gasSteps_baseFinish_cost,
-    gasSteps_expLoop_cost, gasSteps_expFinish_cost]
+  have hheader := Main.gasSteps_header_cost input hvalid
+  have hentry := Dispatch.gasSteps_wordEntry_cost input hvalid hmsize hword
+  have hstart := gasSteps_start_cost input hvalid hmsize hword hmodpos
+  have hsetup := gasSteps_baseSetup_cost input
+  have hbaseLoop := gasSteps_baseLoop_cost input hvalid
+  have hbaseFinish := gasSteps_baseFinish_cost input (wordBase input) hvalid hword
+  have hexpLoop := gasSteps_expLoop_cost input (wordInitialAcc input)
+    (wordBase input) hvalid
+  have hexpFinish := gasSteps_expFinish_cost input (wordResult input)
+    (wordBase input) hvalid hword
+  unfold gasSteps_wordNonzeroTotal
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change ((((((exactCost hheader + exactCost hentry) + exactCost hstart) +
+    exactCost hsetup) + exactCost hbaseLoop) + exactCost hbaseFinish) +
+    exactCost hexpLoop) + exactCost hexpFinish = wordGas input
+  simp only [exactCost, wordGas]
   omega
 
 end Challenge.Modexp.Reference.Proofs.Bytecode.WordGas

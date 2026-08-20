@@ -10,7 +10,10 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
-private def wfOp {op : Operation}
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -844,9 +847,24 @@ theorem gasSteps_innerIteration_cost_potential (s : State)
       (149 + count * 453) + MachineState.memCost
         (bitReturned s accumulator count baseSize i j offset byte rest).activeWords.toNat := by
     simpa [bitReturned] using hbit
+  have hafter' :
+      Challenge.EvmProof.Stepper.runLocatedBlockCost innerAfterBitPath
+          (bitReturned s accumulator count baseSize i j offset byte rest) +
+        MachineState.memCost
+          (bitReturned s accumulator count baseSize i j offset byte rest).activeWords.toNat =
+      26 + MachineState.memCost
+        (innerLoop s accumulator count baseSize i offset byte rest
+          (j + 1)).activeWords.toNat := by
+    simpa [bitReturned, doubledReturned, BigHelpers.addReturned, innerBody,
+      innerLoop] using hafter
   unfold gasSteps_innerIteration
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hguard' + (potentialCost htoDouble' +
+      (potentialCost hdouble' + (potentialCost htoBit' +
+      (potentialCost hbit' + potentialCost hafter'))))) +
+    MachineState.memCost
+      (innerLoop s accumulator count baseSize i offset byte rest j).activeWords.toNat = _
+  simp only [potentialCost]
   omega
 
 def gasSteps_innerLoop (s : State) (accumulator : UInt256)
@@ -1090,11 +1108,16 @@ theorem gasSteps_baseSetup_cost_potential (s : State)
       (by simpa [afterClearDouble, BigHelpers.clearReturned,
         BigModulus.scanNonzero, State.fork] using hfork)
       (by decide) (by decide)
-  unfold gasSteps_baseSetup
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
   simp only [BigModulus.scanNonzero, afterClearDouble, baseLoopEntry,
-    BigHelpers.clearEntry, BigHelpers.clearReturned] at hraw hclear htail ⊢
+    BigHelpers.clearEntry, BigHelpers.clearReturned] at hraw hclear htail
+  unfold gasSteps_baseSetup
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hraw + (potentialCost hclear + potentialCost htail)) +
+    MachineState.memCost
+      (BigModulus.scanNonzero s count rest).activeWords.toNat = _
+  simp only [potentialCost]
+  simp only [BigModulus.scanNonzero, afterClearDouble, baseLoopEntry,
+    BigHelpers.clearReturned] at ⊢
   omega
 
 end Challenge.Modexp.Reference.Proofs.Bytecode.BigBase

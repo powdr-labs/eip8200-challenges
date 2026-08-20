@@ -434,7 +434,6 @@ noncomputable def compressionRun (input : ByteArray) (hfit : CalldataFits input)
 calldata input. -/
 noncomputable def compressionRun_all :
     ∀ input : ByteArray, CalldataFits input →
-      CompressionSeamBridge.CompressionRun input := by
-  exact compressionRun
+      CompressionSeamBridge.CompressionRun input := compressionRun
 
 end Challenge.Ripemd160.Reference.Proofs.Bytecode.CompressionRunTrace

@@ -996,11 +996,7 @@ theorem referenceInstructions_count : referenceInstructions.length = 961 := by
 
 theorem assemble_referenceInstructions :
     assemble referenceInstructions = referenceBytecode := by
-  apply ByteArray.ext
-  simp [assemble, assembleBytes, referenceInstructions, referenceBytecode,
-    referenceBytes, Instr.bytes, natToBE]
-  repeat' apply And.intro
-  all_goals decide
+  rfl
 
 def referenceArtifact : Challenge.EvmProof.ProgramArtifact where
   code := referenceBytecode

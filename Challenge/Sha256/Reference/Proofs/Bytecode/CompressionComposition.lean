@@ -15,6 +15,8 @@ namespace Challenge.Sha256.Reference.Proofs.Bytecode.Compression
 open EvmSemantics
 open EvmSemantics.EVM
 
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
+
 @[simp] theorem shiftReturned_executionEnv (q : State) (src dest loadReturn
     storeReturn : Nat) (context : List UInt256) :
     (shiftReturned q src dest loadReturn storeReturn context).executionEnv =
@@ -95,13 +97,13 @@ def gasSteps_entry (s : State) (msgOff returnDest : UInt256)
   · exact hrun
   · exact hnp
 
-def scheduleCallStackCap (msgOff returnDest : UInt256) (rest : List UInt256)
+theorem scheduleCallStackCap (msgOff returnDest : UInt256) (rest : List UInt256)
     (hcap : rest.length < 988) :
     (msgOff :: returnDest :: rest).length < 990 := by
   simp
   omega
 
-def scheduleCallReturnValid :
+theorem scheduleCallReturnValid :
     Decode.isValidJumpDest referenceBytecode (UInt256.ofNat 621).toNat = true := by
   decide
 
@@ -188,10 +190,30 @@ def gasSteps_toRoundLoop (s : State) (msgOff returnDest : UInt256)
       Challenge.EvmProof.Stepper.runLocatedBlockCost copyAndLoopStartPath
         { q with pc := UInt256.ofNat 621
                  stack := [msgOff, returnDest] ++ rest }) := by
-  simp only [Schedule.gasSteps_scheduleCost, gasSteps_toRoundLoop,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  let q := afterSchedule s msgOff returnDest rest
+  have hentry :
+      (gasSteps_entry s msgOff returnDest rest hcap hcode hfork hrun hnp).cost =
+        (gasSteps_entry s msgOff returnDest rest hcap hcode hfork hrun hnp).cost := rfl
+  have hschedule :
+      (Schedule.gasSteps_schedule s msgOff (UInt256.ofNat 621)
+        (msgOff :: returnDest :: rest)
+        (scheduleCallStackCap msgOff returnDest rest hcap)
+        hcode hfork hrun hnp scheduleCallReturnValid).cost =
+      Schedule.gasSteps_scheduleCost s msgOff (UInt256.ofNat 621)
+        (msgOff :: returnDest :: rest)
+        (scheduleCallStackCap msgOff returnDest rest hcap)
+        hcode hfork hrun hnp scheduleCallReturnValid := rfl
+  have hcopy :
+      Challenge.EvmProof.Stepper.runLocatedBlockCost copyAndLoopStartPath
+        { q with pc := UInt256.ofNat 621
+                 stack := [msgOff, returnDest] ++ rest } =
+      Challenge.EvmProof.Stepper.runLocatedBlockCost copyAndLoopStartPath
+        { q with pc := UInt256.ofNat 621
+                 stack := [msgOff, returnDest] ++ rest } := rfl
+  unfold gasSteps_toRoundLoop
+  change exactCost hentry + (exactCost hschedule + exactCost hcopy) = _
+  simp only [exactCost]
+  rw [hschedule]
 
 def gasSteps_condition (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (j : Nat) (hj : j < 64)
@@ -1394,7 +1416,65 @@ def gasSteps_compress (s : State) (msgOff returnDest : UInt256)
         roundsFork roundsRun roundsNp).cost) +
       (gasSteps_foldExit afterFold msgOff returnDest rest (by omega) foldCode
         foldFork foldRun foldNp hreturn).cost := by
-  simp only [gasSteps_compress, Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
+  let prepared := copyHashState (afterSchedule s msgOff returnDest rest)
+  let preparedCode : prepared.executionEnv.code = referenceBytecode := by
+    simpa [prepared] using hcode
+  let preparedFork : prepared.fork = .Osaka := by
+    simpa [prepared, State.fork] using hfork
+  let preparedRun : prepared.halt = .Running := by
+    simpa [prepared] using hrun
+  let preparedNp : Precompile.isPrecompileWithConfig prepared.executionEnv.precompileConfig prepared.executionEnv.fork
+      prepared.executionEnv.codeAddr = false := by
+    simpa [prepared] using hnp
+  let afterRounds := roundLoopState prepared msgOff returnDest rest 64
+  let roundsCode : afterRounds.executionEnv.code = referenceBytecode := by
+    simpa [afterRounds] using preparedCode
+  let roundsFork : afterRounds.fork = .Osaka := by
+    simpa [afterRounds, State.fork] using preparedFork
+  let roundsRun : afterRounds.halt = .Running := by
+    simpa [afterRounds] using preparedRun
+  let roundsNp : Precompile.isPrecompileWithConfig afterRounds.executionEnv.precompileConfig afterRounds.executionEnv.fork
+      afterRounds.executionEnv.codeAddr = false := by
+    simpa [afterRounds] using preparedNp
+  let afterFold := foldLoopState afterRounds msgOff returnDest rest 8
+  let foldCode : afterFold.executionEnv.code = referenceBytecode := by
+    simpa [afterFold] using roundsCode
+  let foldFork : afterFold.fork = .Osaka := by
+    simpa [afterFold, State.fork] using roundsFork
+  let foldRun : afterFold.halt = .Running := by
+    simpa [afterFold] using roundsRun
+  let foldNp : Precompile.isPrecompileWithConfig afterFold.executionEnv.precompileConfig afterFold.executionEnv.fork
+      afterFold.executionEnv.codeAddr = false := by
+    simpa [afterFold] using roundsNp
+  have hstart :
+      (gasSteps_toRoundLoop s msgOff returnDest rest hcap hcode hfork hrun
+        hnp).cost =
+      (gasSteps_toRoundLoop s msgOff returnDest rest hcap hcode hfork hrun
+        hnp).cost := rfl
+  have hrounds :
+      (gasSteps_roundLoop prepared msgOff returnDest rest hcap preparedCode
+        preparedFork preparedRun preparedNp).cost =
+      (gasSteps_roundLoop prepared msgOff returnDest rest hcap preparedCode
+        preparedFork preparedRun preparedNp).cost := rfl
+  have hroundsExit :
+      (gasSteps_roundsExit afterRounds msgOff returnDest rest (by omega)
+        roundsCode roundsFork roundsRun roundsNp).cost =
+      (gasSteps_roundsExit afterRounds msgOff returnDest rest (by omega)
+        roundsCode roundsFork roundsRun roundsNp).cost := rfl
+  have hfold :
+      (gasSteps_foldLoop afterRounds msgOff returnDest rest hcap roundsCode
+        roundsFork roundsRun roundsNp).cost =
+      (gasSteps_foldLoop afterRounds msgOff returnDest rest hcap roundsCode
+        roundsFork roundsRun roundsNp).cost := rfl
+  have hfoldExit :
+      (gasSteps_foldExit afterFold msgOff returnDest rest (by omega) foldCode
+        foldFork foldRun foldNp hreturn).cost =
+      (gasSteps_foldExit afterFold msgOff returnDest rest (by omega) foldCode
+        foldFork foldRun foldNp hreturn).cost := rfl
+  unfold gasSteps_compress
+  change ((((exactCost hstart + exactCost hrounds) + exactCost hroundsExit) +
+    exactCost hfold) + exactCost hfoldExit) = _
+  simp only [exactCost]
+  simp only [prepared, afterRounds, afterFold]
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.Compression

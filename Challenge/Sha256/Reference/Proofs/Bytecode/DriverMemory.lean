@@ -34,8 +34,7 @@ private theorem activeWordsAfter_eq_of_end_le (curr offset size : Nat)
     omega
 
 private theorem ofNat_toNat (w : UInt256) : UInt256.ofNat w.toNat = w := by
-  cases w with
-  | mk val => simp [UInt256.ofNat, UInt256.toNat, UInt256.size]
+  exact (Challenge.EvmProof.Word.word_eq_ofNat_toNat w).symm
 
 private theorem activeWordsAfterUInt256_eq (s : State) (offset size : Nat)
     (hend : offset + size ≤ s.activeWords.toNat * 32) :

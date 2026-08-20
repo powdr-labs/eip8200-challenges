@@ -71,7 +71,11 @@ private theorem activeWordsAfter_eq_of_end_le (curr offset size : Nat)
 
 private theorem ofNat_toNat (w : UInt256) : UInt256.ofNat w.toNat = w := by
   cases w with
-  | mk val => simp [UInt256.ofNat, UInt256.toNat, UInt256.size]
+  | mk val =>
+      unfold UInt256.ofNat UInt256.toNat
+      congr 1
+      apply Fin.ext
+      simp [Fin.ofNat, Nat.mod_eq_of_lt val.isLt]
 
 private theorem activeWordsAfterUInt256_eq (s : State) (offset size : Nat)
     (hend : offset + size ≤ s.activeWords.toNat * 32) :
@@ -94,6 +98,7 @@ theorem run_init (s : State) (address value returnDest : UInt256)
   have hcap3 : tail.length + 1 + 1 + 1 < 1024 := by omega
   have hcap4 : tail.length + 1 + 1 + 1 + 1 < 1024 := by omega
   have hzeroStruct : (⟨0⟩ : UInt256) = UInt256.ofNat 0 := by decide
+  simp only [initPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -123,6 +128,7 @@ theorem run_test_continue (s : State) (address value returnDest : UInt256)
     ofNatAdd 54 2 (by omega)
   have hpc62 : UInt256.ofNat 59 + UInt256.ofNat 3 = UInt256.ofNat 62 :=
     ofNatAdd 59 3 (by omega)
+  simp only [testPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -157,6 +163,7 @@ theorem run_test_exit (s : State) (address value returnDest : UInt256)
   have h86' : Decode.isValidJumpDest referenceBytecode 86 = true := by
     simpa [Artifact.referenceArtifact, Challenge.EvmProof.ProgramArtifact.instructionPC,
       Artifact.referenceInstructions] using h86
+  simp only [testPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -214,6 +221,7 @@ theorem run_body (s : State) (address value returnDest : UInt256)
   have hcap6 : tail.length + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
   have hcap7 : tail.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
   have hcap8 : tail.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
+  simp only [bodyPath, Artifact.locatedPath, List.map]
   simp_all (config := { maxSteps := 400000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -246,6 +254,7 @@ theorem run_exit (s : State) (address value returnDest : UInt256)
   have hcap2 : tail.length + 1 + 1 < 1024 := by omega
   have hcap3 : tail.length + 1 + 1 + 1 < 1024 := by omega
   have hcap4 : tail.length + 1 + 1 + 1 + 1 < 1024 := by omega
+  simp only [exitPath, Artifact.locatedPath, List.map]
   simp_all (config := { maxSteps := 200000 })
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,

@@ -17,7 +17,7 @@ open EvmSemantics.EVM
 open YulEvmCompiler
 open Challenge.Modexp.Reference.Proofs.Bytecode
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -39,6 +39,9 @@ private def pushAt (index : Nat) (width : Fin 33) (value : UInt256)
       (.push width value) := by decide) :
     Challenge.EvmProof.Stepper.Located Artifact.referenceArtifact .Osaka :=
   ⟨index, .push width value, hget, hwf⟩
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_ : cost + p₀ = work + p₁) : Nat := cost
 
 def mulToClearPath :
     List (Challenge.EvmProof.Stepper.Located
@@ -1990,10 +1993,13 @@ theorem gasSteps_mulBitIteration_cost_potential (current : State)
         mulInnerLoop, BigHelpers.addReturned, State.fork] using hfork)
       (by decide) (by decide)
   unfold gasSteps_mulBitIteration
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
-  dsimp only [inner, bit, saved, afterAdd, afterDouble] at hguard htoAdd hadd htoDouble hdouble hnext
+  change (potentialCost hguard + (potentialCost htoAdd +
+      (potentialCost hadd + (potentialCost htoDouble +
+        (potentialCost hdouble + potentialCost hnext))))) +
+      MachineState.memCost
+        (mulInnerLoop current a b out modulus count i j returnDest rest).activeWords.toNat = _
+  simp only [potentialCost]
+  dsimp only [inner, bit, saved, afterAdd, afterDouble] at hguard htoAdd hadd htoDouble hdouble hnext ⊢
   simp only [mulAfterBitAdd, mulAfterBitDouble, mulInnerNext,
     BigHelpers.addEntry] at hguard htoAdd hadd htoDouble hdouble hnext ⊢
   omega
@@ -2081,10 +2087,14 @@ theorem gasSteps_mulWordBitIteration_cost_potential (current : State)
         mulInnerState, BigHelpers.addReturned, State.fork] using hfork)
       (by decide) (by decide)
   unfold gasSteps_mulWordBitIteration
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
-  dsimp only [inner, bit, saved, afterAdd, afterDouble] at hguard htoAdd hadd htoDouble hdouble hnext
+  change (potentialCost hguard + (potentialCost htoAdd +
+      (potentialCost hadd + (potentialCost htoDouble +
+        (potentialCost hdouble + potentialCost hnext))))) +
+      MachineState.memCost
+        (mulInnerState current word a b out modulus count i j
+          returnDest rest).activeWords.toNat = _
+  simp only [potentialCost]
+  dsimp only [inner, bit, saved, afterAdd, afterDouble] at hguard htoAdd hadd htoDouble hdouble hnext ⊢
   simp only [mulWordAfterAdd, mulWordAfterDouble, mulWordInnerNext,
     BigHelpers.addEntry] at hguard htoAdd hadd htoDouble hdouble hnext ⊢
   omega
@@ -2504,10 +2514,11 @@ theorem gasSteps_mulInitialize_cost_potential (s : State)
       (by simpa [copied, mulAfterCopy, mulAfterClear, State.fork] using hfork)
       (by decide) (by decide)
   unfold gasSteps_mulInitialize
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
-  dsimp only [saved, cleared, copied] at htoClear hclear htoCopy hcopy hsetup
+  change (potentialCost htoClear + (potentialCost hclear +
+      (potentialCost htoCopy + (potentialCost hcopy + potentialCost hsetup)))) +
+      MachineState.memCost s.activeWords.toNat = _
+  simp only [potentialCost]
+  dsimp only [saved, cleared, copied] at htoClear hclear htoCopy hcopy hsetup ⊢
   simp only [mulEntry, BigHelpers.clearEntry, mulAfterClear,
     BigHelpers.clearReturned, BigHelpers.copyEntry, BigHelpers.copyReturned,
     mulAfterCopy, mulOuterLoop] at htoClear hclear htoCopy hcopy hsetup ⊢

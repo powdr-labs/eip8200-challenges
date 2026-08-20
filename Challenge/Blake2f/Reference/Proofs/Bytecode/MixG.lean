@@ -449,6 +449,7 @@ theorem run_prep (s : State)
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 129) (b := 2) (by norm_num)
   have hpc135 : UInt256.ofNat 132 + UInt256.ofNat 3 = UInt256.ofNat 135 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 132) (b := 3) (by norm_num)
+  simp only [prepPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 1000000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -486,6 +487,7 @@ theorem run_a (s : State)
   have hcap17 : tail.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
   have hpc146 : UInt256.ofNat 137 + UInt256.ofNat 9 = UInt256.ofNat 146 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 137) (b := 9) (by norm_num)
+  simp only [aPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -524,6 +526,7 @@ theorem run_d (s : State)
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 171) (b := 2) (by norm_num)
   have hpc177 : UInt256.ofNat 175 + UInt256.ofNat 2 = UInt256.ofNat 177 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 175) (b := 2) (by norm_num)
+  simp only [dPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -556,6 +559,7 @@ theorem run_c (s : State)
   have hcap17 : tail.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
   have hpc192 : UInt256.ofNat 183 + UInt256.ofNat 9 = UInt256.ofNat 192 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 183) (b := 9) (by norm_num)
+  simp only [cPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -595,6 +599,7 @@ theorem run_b (s : State)
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 214) (b := 2) (by norm_num)
   have hpc220 : UInt256.ofNat 218 + UInt256.ofNat 2 = UInt256.ofNat 220 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 218) (b := 2) (by norm_num)
+  simp only [bPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -645,6 +650,7 @@ theorem run_a2 (s : State)
   generalize hmemB : firstMemory memC b vb = memB at *
   generalize hva2Value : va2Value va vb y = va2 at *
   simp only [va2Value] at hva2Value
+  simp only [a2Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -704,6 +710,7 @@ theorem run_d2 (s : State)
   simp only [xd2Value] at hxd2Value
   simp only [vd2Value, rotate, xd2Value] at hvd2Value
   rw [hxd2Value] at hvd2Value
+  simp only [d2Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -737,6 +744,7 @@ theorem run_c2 (s : State)
   have hcap21 : tail.length + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 < 1024 := by omega
   have hpc282 : UInt256.ofNat 273 + UInt256.ofNat 9 = UInt256.ofNat 282 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 273) (b := 9) (by norm_num)
+  simp only [c2Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -776,6 +784,7 @@ theorem run_b2 (s : State)
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 304) (b := 2) (by norm_num)
   have hpc310 : UInt256.ofNat 308 + UInt256.ofNat 2 = UInt256.ofNat 310 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat (a := 308) (b := 2) (by norm_num)
+  simp only [b2Path, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -825,6 +834,7 @@ theorem run_cleanup (s : State)
   have hc17 : tail.length + 17 < 1024 := by omega
   have hc18 : tail.length + 18 < 1024 := by omega
   have hc19 : tail.length + 19 < 1024 := by omega
+  simp only [cleanupPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 1000000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,

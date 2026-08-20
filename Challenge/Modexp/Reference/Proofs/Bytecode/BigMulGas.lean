@@ -2,6 +2,7 @@ import Challenge.Modexp.Reference.Proofs.Bytecode.BigMul
 set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 3000000
+set_option linter.unusedSimpArgs false
 /-! # Aggregate gas theorem for `mulModBig`
 
 Kept separate so the large execution certificate is opaque while its nested
@@ -12,6 +13,9 @@ namespace Challenge.Modexp.Reference.Proofs.Bytecode.BigMul
 
 open EvmSemantics
 open EvmSemantics.EVM
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 private theorem telescope_outer_costs
     (guard load word finish exit p₀ p₁ p₂ p₃ p₄ p₅ work : Nat)
@@ -386,11 +390,13 @@ theorem gasSteps_mulModBig_cost_potential (s : State)
     (by simpa [progress, copied, mulAfterCopy, mulAfterClear] using hrun)
     (by simpa [progress, copied, mulAfterCopy, mulAfterClear, State.fork] using hnp)
     hvalid
-  unfold gasSteps_mulModBig
-  simp only [id_eq, Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
-  dsimp only [copied, progress] at hinit hloop hfinish
+  dsimp only [copied, progress] at hinit hloop hfinish ⊢
   simp only [mulOuterLoop, mulOuterState] at hinit hloop hfinish ⊢
+  unfold gasSteps_mulModBig
+  simp only [id_eq, Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hinit + (potentialCost hloop + potentialCost hfinish)) +
+    MachineState.memCost s.activeWords.toNat = _
+  simp only [potentialCost]
   omega
 
 end Challenge.Modexp.Reference.Proofs.Bytecode.BigMul

@@ -13,6 +13,9 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 theorem entry_cost_potential (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 988)
     (hcode : s.executionEnv.code = referenceBytecode)
@@ -35,8 +38,9 @@ theorem entry_cost_potential (s : State) (msgOff returnDest : UInt256)
         simp [Challenge.EvmProof.Meter.instrCostWithoutMemory,
           Challenge.EvmProof.Meter.instrStaticCost, hq])
   unfold Compression.gasSteps_entry
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Compression.compressEntry, Compression.callSchedule,
+  change potentialCost hmeter + MachineState.memCost
+    (Compression.compressEntry s msgOff returnDest rest).activeWords.toNat = _
+  simpa [potentialCost, Compression.compressEntry, Compression.callSchedule,
     Schedule.scheduleEntry, Compression.entryPath,
     Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
     Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter

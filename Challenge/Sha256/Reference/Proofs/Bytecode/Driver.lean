@@ -19,7 +19,7 @@ namespace Challenge.Sha256.Reference.Proofs.Bytecode.Driver
 open EvmSemantics
 open EvmSemantics.EVM
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -366,7 +366,7 @@ def gasSteps_iterationCondition (s : State) (input : ByteArray)
       Challenge.EvmProof.Stepper.runLocatedBlockCost conditionPath
         (loopAt s input i) := by
   unfold gasSteps_iterationCondition
-  rw [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 def gasSteps_iterationCall (s : State) (input : ByteArray)
     (hfit : CalldataFits input) (i : Nat) (hi : i < blockCount input)
@@ -395,7 +395,7 @@ def gasSteps_iterationCall (s : State) (input : ByteArray)
       Challenge.EvmProof.Stepper.runLocatedBlockCost callPath
         (afterCondition s input i) := by
   unfold gasSteps_iterationCall
-  rw [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 def gasSteps_iterationCompress (s : State) (input : ByteArray) (i : Nat)
     (hcode : s.executionEnv.code = referenceBytecode)
@@ -425,7 +425,7 @@ def gasSteps_iterationCompress (s : State) (input : ByteArray) (i : Nat)
         [blockOffsetWord i, Padding.paddedWord input] (by simp)
         hcode hfork hrun hnp (by decide)).cost := by
   unfold gasSteps_iterationCompress
-  rw [Challenge.EvmProof.GasSteps.cast_cost]
+  rfl
 
 def gasSteps_iterationIncrement (s : State) (input : ByteArray)
     (hfit : CalldataFits input) (i : Nat) (hi : i < blockCount input)
@@ -463,7 +463,7 @@ def gasSteps_iterationIncrement (s : State) (input : ByteArray)
       Challenge.EvmProof.Stepper.runLocatedBlockCost incrementPath
         (afterCompression s input i) := by
   unfold gasSteps_iterationIncrement
-  rw [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  rfl
 
 def gasSteps_iteration (s : State) (input : ByteArray)
     (hfit : CalldataFits input) (i : Nat) (hi : i < blockCount input)
@@ -502,7 +502,7 @@ def gasSteps_blockLoopIteration (input : ByteArray) (hfit : CalldataFits input)
         (by simpa [State.fork] using
           PaddingTrace.padReturned_noPrecompile input)).cost := by
   unfold gasSteps_blockLoopIteration
-  rw [Challenge.EvmProof.GasSteps.cast_cost]
+  rfl
 
 def gasSteps_blockLoop (input : ByteArray) (hfit : CalldataFits input) :
     Challenge.EvmProof.GasSteps (blockLoopState input 0)

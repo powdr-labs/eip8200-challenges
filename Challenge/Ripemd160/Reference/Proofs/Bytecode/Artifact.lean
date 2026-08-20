@@ -862,12 +862,7 @@ theorem referenceInstructions_count : referenceInstructions.length = 831 := by
 
 theorem assemble_referenceInstructions :
     assemble referenceInstructions = referenceBytecode := by
-  apply ByteArray.ext
-  simp (config := { maxSteps := 1000000 })
-    [assemble, assembleBytes, referenceInstructions, op, referenceBytecode,
-    referenceBytes, Instr.bytes, natToBE]
-  repeat' apply And.intro
-  all_goals decide
+  rfl
 
 def referenceArtifact : Challenge.EvmProof.ProgramArtifact where
   code := referenceBytecode
@@ -1698,7 +1693,7 @@ theorem initStore_valid (w : InitStore) (hw : w ∈ initStores) :
 @[simp] theorem pc409 :
     instructionPC 409 = 0x230 := by rfl
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :

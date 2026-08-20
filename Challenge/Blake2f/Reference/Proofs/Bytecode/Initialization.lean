@@ -24,6 +24,11 @@ open Challenge.Blake2f
 open EvmSemantics
 open EvmSemantics.EVM
 
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 def storeWord (memory : ByteArray) (offset : Nat) (value : UInt256) : ByteArray :=
   MachineState.writeBytes memory
     (Data.Bytes.natToBytesPadded value.toNat 32) offset
@@ -232,6 +237,7 @@ theorem run_hContinue (input : ByteArray) (count : Nat) (hcount : count < 8) :
   have hpc394 : UInt256.ofNat 391 + UInt256.ofNat 3 = UInt256.ofNat 394 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 391) (b := 3) (by norm_num)
+  simp only [hContinuePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -294,6 +300,7 @@ theorem run_hStore (input : ByteArray) (count : Nat) (hcount : count < 8) :
   have hpc410 : UInt256.ofNat 407 + UInt256.ofNat 3 = UInt256.ofNat 410 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 407) (b := 3) (by norm_num)
+  simp only [hStorePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -328,6 +335,7 @@ theorem run_hExit (input : ByteArray) :
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 376) (b := 3) (by norm_num)
   have hzero : (⟨0⟩ : UInt256) = UInt256.ofNat 0 := by decide
+  simp only [hExitPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -378,6 +386,7 @@ theorem run_mContinue (input : ByteArray) (count : Nat) (hcount : count < 16) :
   have hpc438 : UInt256.ofNat 435 + UInt256.ofNat 3 = UInt256.ofNat 438 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 435) (b := 3) (by norm_num)
+  simp only [mContinuePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -453,6 +462,7 @@ theorem run_mStore (input : ByteArray) (count : Nat) (hcount : count < 16) :
   have hpc458 : UInt256.ofNat 455 + UInt256.ofNat 3 = UInt256.ofNat 458 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 455) (b := 3) (by norm_num)
+  simp only [mStorePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -487,6 +497,7 @@ theorem run_mExit (input : ByteArray) :
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 420) (b := 3) (by norm_num)
   have hzero : (⟨0⟩ : UInt256) = UInt256.ofNat 0 := by decide
+  simp only [mExitPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 500000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -514,6 +525,7 @@ theorem run_vContinue (input : ByteArray) (count : Nat) (hcount : count < 8) :
   have hpc471 : UInt256.ofNat 468 + UInt256.ofNat 3 = UInt256.ofNat 471 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 468) (b := 3) (by norm_num)
+  simp only [vContinuePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -581,6 +593,7 @@ theorem run_vBody (input : ByteArray) (count : Nat) (hcount : count < 8) :
   have hpc495 : UInt256.ofNat 492 + UInt256.ofNat 3 = UInt256.ofNat 495 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 492) (b := 3) (by norm_num)
+  simp only [vBodyPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 700000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -613,6 +626,7 @@ theorem run_vExit (input : ByteArray) :
   have hpc471 : UInt256.ofNat 468 + UInt256.ofNat 3 = UInt256.ofNat 471 := by
     simpa using Challenge.EvmProof.Word.ofNat_add_ofNat
       (a := 468) (b := 3) (by norm_num)
+  simp only [vExitPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -634,6 +648,7 @@ theorem run_constants (input : ByteArray) :
   have ofNatAdd (a b : Nat) (h : a + b < 2 ^ 256) :
       UInt256.ofNat a + UInt256.ofNat b = UInt256.ofNat (a + b) :=
     Challenge.EvmProof.Word.ofNat_add_ofNat h
+  simp only [constantsPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 2000000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlock,
       Challenge.EvmProof.Stepper.runLocated,
@@ -773,12 +788,20 @@ theorem hStore_cost (input : ByteArray) (count : Nat) (hcount : count < 8) :
 @[simp] theorem hIterationGasSteps_cost (input : ByteArray) (count : Nat)
     (hcount : count < 8) :
     (hIterationGasSteps input count hcount).cost = 815 := by
+  have hc := hContinue_cost input count hcount
+  have hl := LoadLE64.gasSteps_cost (hLoopState input count)
+    (UInt256.ofNat (4 + 8 * count)) (UInt256.ofNat 395)
+    [UInt256.ofNat count, Prelude.roundsWord input, Prelude.finalFlagWord input]
+    (by simp) (hState_code input count) (hState_fork input count)
+    (hState_running input count) (hState_notPrecompile input count)
+    return395_valid
+  have hs := hStore_cost input count hcount
   unfold hIterationGasSteps
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost]
-  rw [hContinue_cost input count hcount]
-  rw [LoadLE64.gasSteps_cost]
-  rw [hStore_cost input count hcount]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hc + (exactCost hl + exactCost hs) = 815
+  simp only [exactCost]
+  omega
 
 def hLoopGasSteps (input : ByteArray) :
     Challenge.EvmProof.GasSteps (Prelude.finalState input) (mLoopState input 0) := by
@@ -912,12 +935,20 @@ theorem mIterationGasSteps_cost_potential (input : ByteArray) (count : Nat)
     (hcount : count < 16) :
     (mIterationGasSteps input count hcount).cost + MachineState.memCost (8 + count) =
       818 + MachineState.memCost (8 + (count + 1)) := by
+  have hc := mContinue_cost input count hcount
+  have hl := LoadLE64.gasSteps_cost (mLoopState input count)
+    (UInt256.ofNat (68 + 8 * count)) (UInt256.ofNat 439)
+    [UInt256.ofNat count, Prelude.roundsWord input, Prelude.finalFlagWord input]
+    (by simp) (mState_code input count) (mState_fork input count)
+    (mState_running input count) (mState_notPrecompile input count)
+    return439_valid
+  have hs := mStore_cost_potential input count hcount
   unfold mIterationGasSteps
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost]
-  rw [mContinue_cost input count hcount]
-  rw [LoadLE64.gasSteps_cost]
-  have hstore := mStore_cost_potential input count hcount
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hc + (exactCost hl + potentialCost hs) +
+    MachineState.memCost (8 + count) = _
+  simp only [exactCost, potentialCost]
   omega
 
 def mLoopGasSteps (input : ByteArray) :

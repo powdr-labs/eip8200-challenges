@@ -18,7 +18,9 @@ check_axiom_output() {
   local theorem_name="$1"
   local raw_output="$2"
   local normalized
-  normalized="$(printf '%s' "$raw_output" | tr '\n' ' ' | tr -s ' ' | trim_whitespace)"
+  normalized="$(printf '%s' "$raw_output" \
+    | sed -E "/^warning: [^:]+: repository '.*' has local changes$/d" \
+    | tr '\n' ' ' | tr -s ' ' | trim_whitespace)"
 
   if [[ "$normalized" == "'$theorem_name' does not depend on any axioms" ]]; then
     return 0

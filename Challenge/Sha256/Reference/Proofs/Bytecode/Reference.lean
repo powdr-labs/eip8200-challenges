@@ -3,6 +3,7 @@ import Challenge.Sha256.Reference.Proofs.Bytecode.Artifact
 import Challenge.Sha256.ProofSupport.InitialState
 import EvmSemantics.EVM.StepDeterminism
 set_option warningAsError true
+set_option linter.dupNamespace false
 set_option maxRecDepth 10000
 set_option maxHeartbeats 1000000
 /-!

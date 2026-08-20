@@ -12,6 +12,9 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 def CopyFree : Instr → Prop
   | .op .CALLDATACOPY => False
   | .op .MCOPY => False
@@ -102,11 +105,16 @@ theorem wAt_cost_potential (s : State) (index output returnDest : UInt256)
     index output returnDest rest (Or.inl ⟨rfl, rfl, rfl⟩) hcap hcode hrun hvalid
   have hmeter := blockCost_potential_static Accessors.wAtPath hresult hfork
     (by simp [Accessors.wAtPath, CopyFree])
+  have hmeter' : Challenge.EvmProof.Stepper.runLocatedBlockCost
+      Accessors.wAtPath (Accessors.loadEntry s 279 index output returnDest rest) +
+      MachineState.memCost s.activeWords.toNat = 37 + MachineState.memCost
+        (Accessors.loadReturned s 800 index returnDest rest).activeWords.toNat := by
+    simpa [Accessors.loadEntry, Accessors.wAtPath,
+      Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
+      Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
   unfold Accessors.gasSteps_wAt
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Accessors.loadEntry, Accessors.wAtPath,
-    Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
-    Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
+  change potentialCost hmeter' + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost] using hmeter'
 
 theorem hAt_cost_potential (s : State) (index output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1018)
@@ -123,11 +131,16 @@ theorem hAt_cost_potential (s : State) (index output returnDest : UInt256)
     index output returnDest rest (Or.inr ⟨rfl, rfl, rfl⟩) hcap hcode hrun hvalid
   have hmeter := blockCost_potential_static Accessors.hAtPath hresult hfork
     (by simp [Accessors.hAtPath, CopyFree])
+  have hmeter' : Challenge.EvmProof.Stepper.runLocatedBlockCost
+      Accessors.hAtPath (Accessors.loadEntry s 318 index output returnDest rest) +
+      MachineState.memCost s.activeWords.toNat = 37 + MachineState.memCost
+        (Accessors.loadReturned s 288 index returnDest rest).activeWords.toNat := by
+    simpa [Accessors.loadEntry, Accessors.hAtPath,
+      Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
+      Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
   unfold Accessors.gasSteps_hAt
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Accessors.loadEntry, Accessors.hAtPath,
-    Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
-    Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
+  change potentialCost hmeter' + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost] using hmeter'
 
 theorem wSet_cost_potential (s : State) (index value returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1017)
@@ -144,11 +157,16 @@ theorem wSet_cost_potential (s : State) (index value returnDest : UInt256)
     index value returnDest rest (Or.inl ⟨rfl, rfl, rfl⟩) hcap hcode hrun hvalid
   have hmeter := blockCost_potential_static Accessors.wSetPath hresult hfork
     (by simp [Accessors.wSetPath, CopyFree])
+  have hmeter' : Challenge.EvmProof.Stepper.runLocatedBlockCost
+      Accessors.wSetPath (Accessors.storeEntry s 299 index value returnDest rest) +
+      MachineState.memCost s.activeWords.toNat = 34 + MachineState.memCost
+        (Accessors.storeReturned s 800 index value returnDest rest).activeWords.toNat := by
+    simpa [Accessors.storeEntry, Accessors.wSetPath,
+      Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
+      Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
   unfold Accessors.gasSteps_wSet
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Accessors.storeEntry, Accessors.wSetPath,
-    Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
-    Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
+  change potentialCost hmeter' + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost] using hmeter'
 
 theorem hSet_cost_potential (s : State) (index value returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1017)
@@ -165,11 +183,16 @@ theorem hSet_cost_potential (s : State) (index value returnDest : UInt256)
     index value returnDest rest (Or.inr ⟨rfl, rfl, rfl⟩) hcap hcode hrun hvalid
   have hmeter := blockCost_potential_static Accessors.hSetPath hresult hfork
     (by simp [Accessors.hSetPath, CopyFree])
+  have hmeter' : Challenge.EvmProof.Stepper.runLocatedBlockCost
+      Accessors.hSetPath (Accessors.storeEntry s 338 index value returnDest rest) +
+      MachineState.memCost s.activeWords.toNat = 34 + MachineState.memCost
+        (Accessors.storeReturned s 288 index value returnDest rest).activeWords.toNat := by
+    simpa [Accessors.storeEntry, Accessors.hSetPath,
+      Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
+      Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
   unfold Accessors.gasSteps_hSet
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Accessors.storeEntry, Accessors.hSetPath,
-    Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
-    Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
+  change potentialCost hmeter' + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost] using hmeter'
 
 theorem kAt_cost_potential (s : State) (index output returnDest : UInt256)
     (rest : List UInt256) (hcap : rest.length < 1018)
@@ -186,10 +209,15 @@ theorem kAt_cost_potential (s : State) (index output returnDest : UInt256)
     hcode hrun hvalid
   have hmeter := blockCost_potential_static Accessors.kAtPath hresult hfork
     (by simp [Accessors.kAtPath, CopyFree])
+  have hmeter' : Challenge.EvmProof.Stepper.runLocatedBlockCost
+      Accessors.kAtPath (Accessors.loadEntry s 257 index output returnDest rest) +
+      MachineState.memCost s.activeWords.toNat = 43 + MachineState.memCost
+        (Accessors.kAtReturned s index returnDest rest).activeWords.toNat := by
+    simpa [Accessors.loadEntry, Accessors.kAtPath,
+      Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
+      Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
   unfold Accessors.gasSteps_kAt
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  simpa [Accessors.loadEntry, Accessors.kAtPath,
-    Challenge.EvmProof.Meter.runLocatedBlockStaticCost,
-    Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost] using hmeter
+  change potentialCost hmeter' + MachineState.memCost s.activeWords.toNat = _
+  simpa only [potentialCost] using hmeter'
 
 end Challenge.Sha256.Reference.Proofs.Bytecode.CompressionGas

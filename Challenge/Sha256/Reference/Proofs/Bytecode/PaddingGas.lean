@@ -7,8 +7,14 @@ open Challenge.Sha256.Reference.Proofs.Bytecode
 set_option warningAsError true
 set_option maxRecDepth 100000
 set_option maxHeartbeats 2000000
+set_option linter.unusedSimpArgs false
 
 namespace Challenge.Sha256.Reference.Proofs.Bytecode.PaddingGas
+
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
 
 private theorem padLengthReady_activeWords (input : ByteArray) :
     (PaddingTrace.padLengthReady input).activeWords.toNat = 17 := by
@@ -31,8 +37,9 @@ private theorem lengthSetup_cost_run (input : ByteArray) (hfit : CalldataFits in
     (PaddingTrace.gasSteps_lengthSetup input hfit).cost =
       Challenge.EvmProof.Stepper.runLocatedBlockCost
         PaddingTrace.lengthSetupPath (PaddingTrace.padLengthReady input) := by
-  simp only [PaddingTrace.gasSteps_lengthSetup,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost
+    PaddingTrace.lengthSetupPath (PaddingTrace.padLengthReady input) = _
+  rfl
 
 theorem lengthSetup_cost (input : ByteArray) (hfit : CalldataFits input) :
     (PaddingTrace.gasSteps_lengthSetup input hfit).cost =
@@ -94,8 +101,7 @@ theorem lengthSetup_cost (input : ByteArray) (hfit : CalldataFits input) :
     exact activeWordsAfter_ge _ _ _
   have hmem₂ : MachineState.memCost aw₁ ≤ MachineState.memCost aw₂ :=
     memCost_monotone haw₁_le
-  simp only [PaddingTrace.gasSteps_lengthSetup,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  rw [lengthSetup_cost_run]
   simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
     PaddingTrace.lengthSetupPath,
     Challenge.EvmProof.Stepper.instrCost,
@@ -225,12 +231,16 @@ theorem lengthIteration_cost (input : ByteArray) (hfit : CalldataFits input)
           (PaddingTrace.lengthLoopActiveWords input (i + 1)).toNat -
         MachineState.memCost
           (PaddingTrace.lengthLoopActiveWords input i).toNat) := by
-  simp only [PaddingTrace.gasSteps_lengthIteration,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  rw [lengthCondition_cost input i hi, lengthByte_cost input i,
-    lengthStore_cost input hfit i hi, lengthIncrement_cost input i hi,
-    lengthBack_cost input i]
+  have hc := lengthCondition_cost input i hi
+  have hb := lengthByte_cost input i
+  have hs := lengthStore_cost input hfit i hi
+  have hi' := lengthIncrement_cost input i hi
+  have hback := lengthBack_cost input i
+  unfold PaddingTrace.gasSteps_lengthIteration
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hc + (exactCost hb + (exactCost hs +
+    (exactCost hi' + exactCost hback))) = _
+  simp only [exactCost]
   omega
 
 private theorem lengthActiveWordsAfter_lt (input : ByteArray)
@@ -421,17 +431,10 @@ private theorem padReadSize_cost (input : ByteArray) :
 
 private theorem enterPad_cost (input : ByteArray) :
     (PaddingTrace.gasSteps_enterPad input).cost = 16 := by
-  simp only [PaddingTrace.gasSteps_enterPad,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasStep.pushN,
-    Challenge.EvmProof.GasStep.push0,
-    Challenge.EvmProof.GasStep.jump,
-    Challenge.EvmProof.GasStep.of_running,
-    id_eq,
-    Challenge.EvmProof.GasSteps.one_cost]
-  norm_num [PaddingTrace.pushedPad, PaddingTrace.pushedOutput,
-    PaddingTrace.pushedReturn, Main.initializedState, Main.initStart,
-    Main.applyInitStore, initialState, State.fork, Gas.baseCost]
+  unfold PaddingTrace.gasSteps_enterPad
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change 3 + (2 + (3 + 8)) = 16
+  norm_num
 
 private theorem lengthExitCompare_cost (input : ByteArray) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost
@@ -482,11 +485,15 @@ private theorem lengthExitReturn_cost (input : ByteArray) :
 
 private theorem lengthExit_cost (input : ByteArray) :
     (PaddingTrace.gasSteps_lengthExit input).cost = 45 := by
-  simp only [PaddingTrace.gasSteps_lengthExit,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
-  rw [lengthExitCompare_cost input, lengthExitBranch_cost input,
-    lengthExitPop_cost input, lengthExitReturn_cost input]
+  have hc := lengthExitCompare_cost input
+  have hb := lengthExitBranch_cost input
+  have hp := lengthExitPop_cost input
+  have hr := lengthExitReturn_cost input
+  unfold PaddingTrace.gasSteps_lengthExit
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hc + (exactCost hb + (exactCost hp + exactCost hr)) = 45
+  simp only [exactCost]
+  omega
 
 theorem lengthSetupLoop_cost (input : ByteArray) (hfit : CalldataFits input) :
     (PaddingTrace.gasSteps_lengthSetup input hfit).cost +
@@ -550,7 +557,8 @@ private theorem mainJumpdest_cost (input : ByteArray) :
     or_false] at hw
   rcases hw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl |
     rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
-    norm_num [Gas.baseCost, State.fork] <;> omega
+    change 3 + (3 + Gas.mstoreTotal _ _) = _ <;>
+    omega
 theorem initStore_cost_add (s : State) (w : Artifact.InitStore)
     (hw : w ∈ Artifact.initStores)
     (hpc : s.pc = UInt256.ofNat (Artifact.instructionPC w.index))
@@ -645,6 +653,9 @@ theorem initStores_cost_add (s : State) :
         Challenge.EvmProof.GasSteps.cast_cost,
         Challenge.EvmProof.GasSteps.trans_cost, List.length_cons,
         List.foldl_cons]
+      change (potentialCost hhead + potentialCost hrest) +
+        MachineState.memCost s.activeWords.toNat = _
+      simp only [potentialCost]
       omega
 theorem initStores_full_cost (input : ByteArray)
     (hmem : ∀ w, w ∈ Artifact.initStores → w ∈ Artifact.initStores)
@@ -667,12 +678,17 @@ theorem initStores_full_cost (input : ByteArray)
   norm_num [Artifact.initStores, MachineState.memCost] at h ⊢
   omega
 
+private theorem initialStores_cost (input : ByteArray) :
+    (Main.gasSteps_initialStores input).cost = 195 := by
+  rw [Main.gasSteps_initialStores_cost]
+  unfold Main.initialStoresBody
+  apply initStores_full_cost
+
 theorem initialize_cost (input : ByteArray) :
     (Main.gasSteps_initialize input).cost = 375 := by
-  simp only [Main.gasSteps_initialize,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
-  rw [toMain_cost, mainJumpdest_cost, initStores_full_cost]
+  unfold Main.gasSteps_initialize
+  simp only [Challenge.EvmProof.GasSteps.trans_cost]
+  rw [toMain_cost, mainJumpdest_cost, initialStores_cost]
 
 
 theorem gasSteps_pad_cost (input : ByteArray) (hfit : CalldataFits input) :

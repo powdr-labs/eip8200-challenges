@@ -918,6 +918,20 @@ private theorem expandW_get (padded : ByteArray) (blockOff count k : Nat)
 abbrev RoundTuple := MProd UInt32 (MProd UInt32 (MProd UInt32
   (MProd UInt32 (MProd UInt32 (MProd UInt32 (MProd UInt32 UInt32))))))
 
+private abbrev ProdRoundTuple := UInt32 × UInt32 × UInt32 × UInt32 ×
+  UInt32 × UInt32 × UInt32 × UInt32
+
+private def ProdRoundTuple.toRoundTuple (x : ProdRoundTuple) : RoundTuple :=
+  ⟨x.1, x.2.1, x.2.2.1, x.2.2.2.1, x.2.2.2.2.1,
+    x.2.2.2.2.2.1, x.2.2.2.2.2.2.1, x.2.2.2.2.2.2.2⟩
+
+private def prodRound (x : ProdRoundTuple) (k w : UInt32) : ProdRoundTuple :=
+  let t1 := x.2.2.2.2.2.2.2 + Sha256.bigSigma1 x.2.2.2.2.1 +
+    Sha256.Ch x.2.2.2.2.1 x.2.2.2.2.2.1 x.2.2.2.2.2.2.1 + k + w
+  let t2 := Sha256.bigSigma0 x.1 + Sha256.Maj x.1 x.2.1 x.2.2.1
+  (t1 + t2, x.1, x.2.1, x.2.2.1, x.2.2.2.1 + t1,
+    x.2.2.2.2.1, x.2.2.2.2.2.1, x.2.2.2.2.2.2.1)
+
 def Working.toTuple (x : Working) : RoundTuple :=
   ⟨x.a, x.b, x.c, x.d, x.e, x.f, x.g, x.h⟩
 
@@ -926,6 +940,23 @@ def tupleRound (x : RoundTuple) (k w : UInt32) : RoundTuple :=
   let t1 := h + Sha256.bigSigma1 e + Sha256.Ch e f g + k + w
   let t2 := Sha256.bigSigma0 a + Sha256.Maj a b c
   ⟨t1 + t2, a, b, c, d + t1, e, f, g⟩
+
+@[simp] private theorem prodRound_toRoundTuple (x : ProdRoundTuple)
+    (k w : UInt32) :
+    (prodRound x k w).toRoundTuple = tupleRound x.toRoundTuple k w := by
+  rfl
+
+private theorem fold_prodRound_toRoundTuple (W : Array UInt32)
+    (xs : List Nat) (initial : ProdRoundTuple) :
+    (xs.foldl (fun x n => prodRound x Sha256.K[n]! W[n]!) initial).toRoundTuple =
+      xs.foldl (fun x n => tupleRound x Sha256.K[n]! W[n]!)
+        initial.toRoundTuple := by
+  induction xs generalizing initial with
+  | nil => rfl
+  | cons n ns ih =>
+      simp only [List.foldl_cons]
+      rw [ih]
+      rfl
 
 @[simp] theorem tupleRound_toTuple (x : Working) (k w : UInt32) :
     tupleRound x.toTuple k w = (round x k w).toTuple := by
@@ -1007,6 +1038,14 @@ private theorem tupleFeedForward_eq_projections (H : Array UInt32)
   rcases x with ⟨a, b, c, d, e, f, g, h⟩
   rfl
 
+private theorem prodFeedForward_eq (H : Array UInt32) (x : ProdRoundTuple) :
+    #[H[0]! + x.1, H[1]! + x.2.1, H[2]! + x.2.2.1,
+      H[3]! + x.2.2.2.1, H[4]! + x.2.2.2.2.1,
+      H[5]! + x.2.2.2.2.2.1, H[6]! + x.2.2.2.2.2.2.1,
+      H[7]! + x.2.2.2.2.2.2.2] =
+      tupleFeedForward H x.toRoundTuple := by
+  rfl
+
 /-- Pure normalization of the pinned SHA-256 compression specification into
 the reusable schedule/round/feed-forward model used above. -/
 theorem compressBlock_eq_feedForward (H : Array UInt32) (padded : ByteArray)
@@ -1015,13 +1054,42 @@ theorem compressBlock_eq_feedForward (H : Array UInt32) (padded : ByteArray)
       feedForward H (rounds (workingOfArray H) padded blockOff 64) := by
   rw [feedForward_eq_tuple]
   rw [← tupleRounds_eq padded blockOff 64 (workingOfArray H) (by omega)]
-  rw [← rawRounds_eq (expandW padded blockOff 48) H]
+  have hprod := fold_prodRound_toRoundTuple (expandW padded blockOff 48)
+    (List.range' 0 64)
+    (H[0]!, H[1]!, H[2]!, H[3]!, H[4]!, H[5]!, H[6]!, H[7]!)
+  change ProdRoundTuple.toRoundTuple
+      ((List.range' 0 64).foldl
+        (fun x n => prodRound x Sha256.K[n]! (expandW padded blockOff 48)[n]!)
+        (H[0]!, H[1]!, H[2]!, H[3]!, H[4]!, H[5]!, H[6]!, H[7]!)) =
+    tupleRounds (expandW padded blockOff 48) (workingOfArray H) 64 at hprod
   unfold Sha256.compressBlock
   simp only [Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size,
     Nat.sub_zero, Nat.add_sub_cancel, Nat.div_one, pure_bind,
     List.forIn_pure_yield_eq_foldl, Id.run_pure]
   rw [rawSchedule_eq padded blockOff]
-  rw [tupleFeedForward_eq_projections]
+  generalize hfold : (List.range' 0 64).foldl
+    (fun b a =>
+      (b.2.2.2.2.2.2.2 + Sha256.bigSigma1 b.2.2.2.2.1 +
+              Sha256.Ch b.2.2.2.2.1 b.2.2.2.2.2.1 b.2.2.2.2.2.2.1 +
+            Sha256.K[a]! + (expandW padded blockOff 48)[a]! +
+          (Sha256.bigSigma0 b.1 + Sha256.Maj b.1 b.2.1 b.2.2.1),
+        b.1, b.2.1, b.2.2.1,
+        b.2.2.2.1 +
+          (b.2.2.2.2.2.2.2 + Sha256.bigSigma1 b.2.2.2.2.1 +
+              Sha256.Ch b.2.2.2.2.1 b.2.2.2.2.2.1 b.2.2.2.2.2.2.1 +
+            Sha256.K[a]! + (expandW padded blockOff 48)[a]!),
+        b.2.2.2.2.1, b.2.2.2.2.2.1, b.2.2.2.2.2.2.1))
+    (H[0]!, H[1]!, H[2]!, H[3]!, H[4]!, H[5]!, H[6]!, H[7]!) = x
+  have hx : ProdRoundTuple.toRoundTuple x =
+      tupleRounds (expandW padded blockOff 48)
+      (workingOfArray H) 64 := by
+    rw [← hfold]
+    simpa only [prodRound] using hprod
+  calc
+    _ = tupleFeedForward H (ProdRoundTuple.toRoundTuple x) :=
+      prodFeedForward_eq H x
+    _ = tupleFeedForward H (tupleRounds (expandW padded blockOff 48)
+        (workingOfArray H) 64) := congrArg (tupleFeedForward H) hx
 
 private theorem hValue_after_first (s : State) (msgOff returnDest : UInt256)
     (rest : List UInt256) (j i : Nat) (hj : j < 16) (hi : i < 8) :

@@ -18,6 +18,9 @@ open CompressionRoundCostTrace
 open private concreteScheduleLoop from
   Challenge.Ripemd160.Reference.Proofs.Bytecode.CompressionCostTrace
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 private theorem potential_trans
     (cost₁ work₁ cost₂ work₂ p₀ p₁ p₂ : Nat)
     (h₁ : cost₁ + p₀ = work₁ + p₁)
@@ -102,9 +105,12 @@ theorem schedule_cost_potential (s : State) (msgOff returnDest : UInt256)
   have h01 := potential_trans _ _ _ _ _ _ _ h0 h1
   have h012 := potential_trans _ _ _ _ _ _ _ h01 h2
   have hall := potential_trans _ _ _ _ _ _ _ h012 h3
-  simpa [Schedule.gasSteps_schedule_of_readLE,
-    Schedule.gasSteps_scheduleStart, scheduleWork, q, GasSteps.cast_cost,
-    GasSteps.trans_cost, Schedule.scheduleEntry, Schedule.scheduleReturned,
+  unfold Schedule.gasSteps_schedule_of_readLE
+  change (potentialCost h0 + (potentialCost h1 +
+      (potentialCost h2 + potentialCost h3))) +
+      MachineState.memCost s.activeWords.toNat = _
+  simpa [Schedule.gasSteps_scheduleStart, scheduleWork, q, potentialCost,
+    Schedule.scheduleEntry, Schedule.scheduleReturned,
     Nat.add_assoc] using hall
 
 def leftRoundSetupWork (i : Nat) : Nat :=
@@ -210,9 +216,13 @@ theorem leftRoundSetup_cost_potential (s : State)
   have h0123 := potential_trans _ _ _ _ _ _ _ h012 h3
   have h01234 := potential_trans _ _ _ _ _ _ _ h0123 h4
   have hall := potential_trans _ _ _ _ _ _ _ h01234 h5
-  simpa [gasSteps_leftRoundSetup, leftRoundSetupWork, leftRoundState,
-    leftBodyAt, q0, q1, q2, tail1, tail2, roundTail, GasSteps.trans_cost,
-    GasSteps.cast_cost, Nat.add_assoc] using hall
+  unfold gasSteps_leftRoundSetup
+  change (potentialCost h0 + (potentialCost h1 + (potentialCost h2 +
+      (potentialCost h3 + (potentialCost h4 + potentialCost h5))))) +
+      MachineState.memCost s.activeWords.toNat = _
+  simpa [leftRoundSetupWork, leftRoundState,
+    leftBodyAt, q0, q1, q2, tail1, tail2, roundTail, potentialCost,
+    Nat.add_assoc] using hall
 
 theorem leftIteration_cost_potential (s : State)
     (messageOffset returnDest : UInt256) (rest : List UInt256)
@@ -249,9 +259,12 @@ theorem leftIteration_cost_potential (s : State)
     (by simp [leftIncrementLocated, CopyFree])
   have h01 := potential_trans _ _ _ _ _ _ _ h0 h1
   have hall := potential_trans _ _ _ _ _ _ _ h01 h2
-  simpa [gasSteps_leftIterationConcrete, gasSteps_leftIteration,
+  unfold gasSteps_leftIterationConcrete
+  change (potentialCost h0 + (potentialCost h1 + potentialCost h2)) +
+      MachineState.memCost s.activeWords.toNat = _
+  simpa [gasSteps_leftIteration,
     gasSteps_leftTest_continue, gasSteps_leftIncrement,
-    leftIterationWork, q, GasSteps.cast_cost, GasSteps.trans_cost,
+    leftIterationWork, q, potentialCost,
     leftLoopAt, leftBodyAt, leftRoundState, Nat.add_assoc] using hall
 
 theorem iterateBounded_cost_potential_sum {I : Nat → State}
@@ -385,9 +398,13 @@ theorem rightRoundSetup_cost_potential (s : State)
   have h0123 := potential_trans _ _ _ _ _ _ _ h012 h3
   have h01234 := potential_trans _ _ _ _ _ _ _ h0123 h4
   have hall := potential_trans _ _ _ _ _ _ _ h01234 h5
-  simpa [gasSteps_rightRoundSetup, rightRoundSetupWork, rightRoundState,
-    rightBodyAt, q0, q1, q2, tail1, tail2, roundTail, GasSteps.trans_cost,
-    GasSteps.cast_cost, Nat.add_assoc] using hall
+  unfold gasSteps_rightRoundSetup
+  change (potentialCost h0 + (potentialCost h1 + (potentialCost h2 +
+      (potentialCost h3 + (potentialCost h4 + potentialCost h5))))) +
+      MachineState.memCost s.activeWords.toNat = _
+  simpa [rightRoundSetupWork, rightRoundState,
+    rightBodyAt, q0, q1, q2, tail1, tail2, roundTail, potentialCost,
+    Nat.add_assoc] using hall
 
 theorem rightIteration_cost_potential (s : State)
     (messageOffset returnDest : UInt256) (rest : List UInt256)
@@ -424,9 +441,13 @@ theorem rightIteration_cost_potential (s : State)
     (by simp [rightIncrementLocated, CopyFree])
   have h01 := potential_trans _ _ _ _ _ _ _ h0 h1
   have hall := potential_trans _ _ _ _ _ _ _ h01 h2
-  simpa [gasSteps_rightIterationConcrete, rightIterationWork, q,
+  unfold gasSteps_rightIterationConcrete
+  change (potentialCost h0 + (potentialCost h1 + potentialCost h2)) +
+      MachineState.memCost s.activeWords.toNat = _
+  simpa [rightIterationWork, q,
     gasSteps_rightTest_continue, gasSteps_rightIncrement,
-    GasSteps.cast_cost, GasSteps.trans_cost, rightLoopAt, rightBodyAt,
+    potentialCost, rightLoopAt,
+    rightBodyAt,
     rightRoundState,
     Nat.add_assoc] using hall
 

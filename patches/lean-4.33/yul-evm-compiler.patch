@@ -1,0 +1,52 @@
+diff --git a/YulParser/Compile.lean b/YulParser/Compile.lean
+index 6d7358e..e4fb09d 100644
+--- a/YulParser/Compile.lean
++++ b/YulParser/Compile.lean
+@@ -463,7 +463,7 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+       let pipelined := (YulEvmCompiler.Optimizer.optimizerPipeline
+           (calls := YulSemantics.EVM.ExternalCalls.none)
+           (creates := YulSemantics.EVM.ExternalCreates.none) (gasOracle := YulSemantics.EVM.ExternalGas.any)).run b
+-      let ssa := YulEvmCompiler.SsaCfg.compileViaSsa pipelined
++      let _ssa := YulEvmCompiler.SsaCfg.compileViaSsa pipelined
+       let classic := tryLayouts pipelined
+         <|> tryLayouts ((YulEvmCompiler.Optimizer.optimizerPipelineNoRejoin
+           (calls := YulSemantics.EVM.ExternalCalls.none)
+@@ -487,13 +487,7 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+               YulEvmCompiler.compile spilledOpt
+                 <|> YulEvmCompiler.compile spilled.block
+           | none => none)
+-      let asm :=
+-        match ssa, classic with
+-        | some a, some b =>
+-            if YulEvmCompiler.SsaCfg.instrCost a ≤ YulEvmCompiler.SsaCfg.instrCost b
+-            then some a else some b
+-        | some a, none => some a
+-        | none, cb => cb
++      let asm := classic
+       return YulEvmCompiler.assemble (← asm)
+   | some (.object o) =>
+       -- The root has no parent to copy and patch its code, so a `loadimmutable`
+@@ -535,7 +529,7 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+       -- independently and records no offsets, so a winning SSA artifact could
+       -- be patched at the wrong positions. Withhold that candidate whenever the
+       -- tree touches an immutable.
+-      let ssaLayout :=
++      let _ssaLayout :=
+         if usesImmutablesObject optimized then none
+         else (expandSetImmutablesObject optimized).bind YulEvmCompiler.SsaCfg.compileObjectViaSsa
+       let classicLayout := tryLayouts optimized
+@@ -581,13 +575,6 @@ def compileSource (source : String) (libraries : LinkEnv := []) :
+                           YulEvmCompiler.compileObject
+                       <|> some plainLayout
+           | none => none)
+-      let layout ←
+-        match ssaLayout, classicLayout with
+-        | some a, some b =>
+-            if YulEvmCompiler.SsaCfg.byteCodeCost a.code
+-                ≤ YulEvmCompiler.SsaCfg.byteCodeCost b.code
+-            then some a else some b
+-        | some a, none => some a
+-        | none, cb => cb
++      let layout ← classicLayout
+       return ByteArray.mk layout.code.toArray
+   | none => none

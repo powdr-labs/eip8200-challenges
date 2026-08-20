@@ -2,6 +2,7 @@ import Challenge.Modexp.Reference.Proofs.Bytecode.BigExponentGas
 set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 3000000
+set_option linter.unusedSimpArgs false
 /-! # Certified multi-limb result serialization and return -/
 
 namespace Challenge.Modexp.Reference.Proofs.Bytecode.BigSerialize
@@ -11,7 +12,10 @@ open EvmSemantics.EVM
 open YulEvmCompiler
 open BigExponent
 
-private def wfOp {op : Operation}
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -588,12 +592,19 @@ theorem gasSteps_serializeResult_cost_potential (s : State)
     e m baseOff expOff rest hcap hm hcode hfork hrun hnp
   have hfinish := gasSteps_serializerFinish_cost_potential s accumulatorWord
     count b e m baseOff expOff rest hcap hm hcode hfork hrun hnp
+  simp only [outerLoop, exponentOuterExit, serializerEntry, serializerLoop,
+    bigReturned] at hguard hentry hloop hfinish
   unfold gasSteps_serializeResult
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hguard + (potentialCost hentry +
+      (potentialCost hloop + potentialCost hfinish))) +
+    MachineState.memCost
+      (outerLoop s accumulatorWord count b e m baseOff expOff rest
+        e).activeWords.toNat = _
+  simp only [potentialCost]
   simp only [outerLoop, exponentOuterExit, serializerEntry, serializerLoop,
-    bigReturned] at hguard hentry hloop hfinish ⊢
+    bigReturned] at ⊢
   omega
 
 end Challenge.Modexp.Reference.Proofs.Bytecode.BigSerialize

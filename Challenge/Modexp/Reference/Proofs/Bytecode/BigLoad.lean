@@ -18,7 +18,10 @@ open EvmSemantics.EVM
 open YulEvmCompiler
 open Challenge.Modexp.Reference.Proofs.Bytecode
 
-private def wfOp {op : Operation}
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -544,13 +547,31 @@ theorem gasSteps_loadIteration_cost_potential (s : State)
       (by simpa [afterByte, loadAfterByte, body, loadBody, loadLoop,
         Accessors.calldataByteReturned, State.fork] using hfork)
       (by decide) (by decide)
+  have hbyteRun := hbyte
+  unfold Accessors.gasSteps_calldataByte at hbyteRun
+  let byteCost := Challenge.EvmProof.Stepper.runLocatedBlockCost
+      Accessors.calldataBytePath
+        (Accessors.calldataByteEntry body
+          (UInt256.ofNat offset + UInt256.ofNat i) (UInt256.ofNat 0)
+          (UInt256.ofNat 484) (loadSaved (UInt256.ofNat offset)
+            (UInt256.ofNat length) dst i returnDest rest))
+  change byteCost +
+      MachineState.memCost body.activeWords.toNat = _ at hbyteRun
+  have hbyteExact : byteCost = 30 := by
+    simp only [Accessors.calldataByteReturned] at hbyteRun
+    omega
+  have hbytePotential : byteCost + MachineState.memCost body.activeWords.toNat =
+      30 + MachineState.memCost body.activeWords.toNat := by omega
   unfold gasSteps_loadIteration
-  simp only [Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost,
-    Challenge.EvmProof.GasSteps.cast_cost]
-  dsimp only [loop, body, byteEntry, afterByte] at hguard htoByte hbyte hafter
+  change (potentialCost hguard + (potentialCost htoByte +
+      (potentialCost hbytePotential + potentialCost hafter))) +
+      MachineState.memCost
+        (loadLoop s (UInt256.ofNat offset) (UInt256.ofNat length) dst i
+          returnDest rest).activeWords.toNat = _
+  simp only [potentialCost]
+  dsimp only [loop, body, byteEntry, afterByte] at hguard htoByte hbytePotential hafter
   simp only [loadBody, loadByteEntry, loadAfterByte,
-    Accessors.calldataByteEntry, Accessors.calldataByteReturned] at hguard htoByte hbyte hafter ⊢
+    Accessors.calldataByteEntry, Accessors.calldataByteReturned] at hguard htoByte hbytePotential hafter ⊢
   omega
 
 def gasSteps_loadLoop (s : State) (offset length : Nat)

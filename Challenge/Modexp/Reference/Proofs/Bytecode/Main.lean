@@ -19,7 +19,7 @@ namespace Challenge.Modexp.Reference.Proofs.Bytecode.Main
 open EvmSemantics
 open EvmSemantics.EVM
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :

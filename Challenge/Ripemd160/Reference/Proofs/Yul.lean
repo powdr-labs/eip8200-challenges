@@ -24,7 +24,7 @@ is discharged by native evaluation.
 namespace Challenge.Ripemd160.Reference.Proofs.Yul
 
 open YulSemantics (Block)
-open YulSemantics.EVM (Op ExternalCalls ExternalCreates)
+open YulSemantics.EVM (Op ExternalCalls ExternalCreates ExternalGas)
 open YulEvmCompiler
 
 /-- Concrete evidence that parsing the fixed source succeeds. -/
@@ -43,7 +43,8 @@ def referenceNormalizedBlock : Block Op :=
 `YulParser.compileSource` for this source. -/
 def referenceOptimizedBlock : Block Op :=
   (Optimizer.optimizerPipeline
-    (calls := ExternalCalls.none) (creates := ExternalCreates.none)).run
+    (calls := ExternalCalls.none) (creates := ExternalCreates.none)
+    (gasOracle := ExternalGas.any)).run
       referenceNormalizedBlock
 
 /-- The concrete instruction list accepted by the verified backend. -/
@@ -97,6 +98,7 @@ theorem reference_runEquiv :
     Optimizer.optimizerPipeline] using
     (Optimizer.normalize_optimizerPipelineRounds_runEquiv
       (calls := ExternalCalls.none) (creates := ExternalCreates.none)
+      (gasOracle := ExternalGas.any)
       Optimizer.pipelineRounds referenceParsedBlock)
 
 /-- Hence the functional digest obligation can be proved against either the

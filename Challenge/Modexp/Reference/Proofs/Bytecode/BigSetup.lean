@@ -18,7 +18,12 @@ open EvmSemantics
 open EvmSemantics.EVM
 open YulEvmCompiler
 
-private def wfOp {op : Operation}
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -801,15 +806,19 @@ theorem gasSteps_setup_cost_potential (s : State)
     hframeClear hn hcode2 hfork2 hrun2 hnp2 jump757
   have hl := BigLoad.gasSteps_loadBigEndian_cost_potential s3 modOff m 0 768
     frame hframeLoad hmodOff hinputFit hm hcode3 hfork3 hrun3 hnp3 jump768
+  simp only [n, frame, s0, s1, s2, s3, afterClear0, afterClear1024,
+    afterClear2048, afterClear6144] at hc0 hc1 hc2 hc3 hl
   unfold gasSteps_setup
   simp only [Challenge.EvmProof.GasSteps.trans_cost]
-  rw [hr0, hr1, hr2, hr3, hr4]
-  change _ + MachineState.memCost s.activeWords.toNat =
+  change exactCost hr0 + (potentialCost hc0 + (exactCost hr1 +
+      (potentialCost hc1 + (exactCost hr2 + (potentialCost hc2 +
+      (exactCost hr3 + (potentialCost hc3 + (exactCost hr4 +
+      potentialCost hl)))))))) +
+    MachineState.memCost s.activeWords.toNat =
     _ + MachineState.memCost
       (BigLoad.loadReturned s3 (UInt256.ofNat modOff) (UInt256.ofNat m) 0
         768 frame).activeWords.toNat
-  simp only [n, frame, s0, s1, s2, s3, afterClear0, afterClear1024,
-    afterClear2048, afterClear6144] at hc0 hc1 hc2 hc3 hl
+  simp only [exactCost, potentialCost]
   simp only [frame, s3, afterClear0, afterClear1024, afterClear2048,
     afterClear6144]
   omega

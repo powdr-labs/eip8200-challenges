@@ -15,13 +15,15 @@ namespace Challenge.Blake2f.ProofSupport.Yul
 open EvmSemantics
 open EvmSemantics.EVM
 open YulSemantics (Block Run VEnv)
-open YulSemantics.EVM (EvmState Op evmWithExternal ExternalCalls ExternalCreates)
+open YulSemantics.EVM
+  (EvmState Op evmWithExternal ExternalCalls ExternalCreates ExternalGas)
 open YulEvmCompiler
 
 @[reducible] def localModel : ExternalModel :=
-  { calls := ExternalCalls.none, creates := ExternalCreates.none }
+  { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.any }
 
-abbrev localDialect := evmWithExternal ExternalCalls.none ExternalCreates.none
+abbrev localDialect :=
+  evmWithExternal ExternalCalls.none ExternalCreates.none ExternalGas.any
 
 @[simp] theorem mkCode_dataToList (bytes : ByteArray) :
     mkCode bytes.data.toList = bytes := by
@@ -40,6 +42,7 @@ def AbstractsInitialState (code : ByteArray) : Prop :=
     (∀ gas : Nat, StateMatch yst (initialState code calldata gas)) ∧
     yst.memory = (fun _ => 0) ∧
     mkCode yst.env.calldata = calldata ∧
+    (∀ key, yst.env.immutable key = 0) ∧
     yst.halted = none
 
 /-- Complete source-level obligation, including malformed-input `invalid()`. -/
@@ -68,10 +71,11 @@ theorem correct_of_computesBehavior {program : Block Op} {instructions : List In
     (hbehavior : ComputesBehavior program) :
     Correct (assemble instructions) := by
   intro calldata _hfit
-  obtain ⟨yst, hmatch, hmemory, hcalldata, hhalted⟩ := habstract calldata
+  obtain ⟨yst, hmatch, hmemory, hcalldata, himmutable, hhalted⟩ := habstract calldata
   obtain ⟨V, yst', hrun, hresult⟩ := hbehavior yst hmemory hhalted
   obtain ⟨cost, compiled⟩ :=
-    compile_correct_eval (model := localModel) ExternalsRealized.none hcompile hrun
+    compile_correct_eval (model := localModel) ExternalsRealized.none hcompile
+      (fun key => (himmutable _).symm) hrun
   refine ⟨cost, fun gas hgas => ?_⟩
   obtain ⟨-, hhalt⟩ := compiled
     (initialState (assemble instructions) calldata gas)

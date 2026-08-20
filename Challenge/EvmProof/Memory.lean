@@ -58,15 +58,15 @@ private def lowBytes (n : Nat) : Nat → List UInt8
   | zero => rfl
   | succ width ih => simp [lowBytes, ih]
 
-private def pullBytes : Nat → Array UInt8 → Nat → MProd Nat (Array UInt8)
-  | n, acc, 0 => ⟨n, acc⟩
+private def pullBytes : Nat → Array UInt8 → Nat → Nat × Array UInt8
+  | n, acc, 0 => (n, acc)
   | n, acc, w + 1 => pullBytes (n / 256) (acc.push (UInt8.ofNat (n % 256))) w
 
 private theorem foldl_pullBytes (xs : List Nat) (n : Nat) (acc : Array UInt8) :
     xs.foldl
-        (fun (b : MProd Nat (Array UInt8)) _ =>
-          ⟨b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))⟩)
-        ⟨n, acc⟩ =
+        (fun b _ =>
+          (b.fst / 256, b.snd.push (UInt8.ofNat (b.fst % 256))))
+        (n, acc) =
       pullBytes n acc xs.length := by
   induction xs generalizing n acc with
   | nil => rfl
@@ -104,7 +104,7 @@ theorem natToBytesPadded_eq_natToBE (n width : Nat) :
     Data.Bytes.natToBytesPadded n width =
       ByteArray.mk (YulEvmCompiler.natToBE n width).toArray := by
   have hpull := foldl_pullBytes (List.range' 0 width) n #[]
-  have hsnd := congrArg MProd.snd hpull
+  have hsnd := congrArg Prod.snd hpull
   rw [pullBytes_eq] at hsnd
   simp at hsnd
   apply ByteArray.ext
@@ -179,12 +179,15 @@ theorem readPadded_getElem?_getD (bs : ByteArray) (start n i : Nat) :
   let take := min (bs.size - start') n
   change ((bs.extract start' (start' + take) ++
     ByteArray.mk (Array.replicate (n - take) 0))[i]?.getD 0) = _
-  have hstartLe : start' ≤ bs.size := by simp [start']
-  have htakeLe : take ≤ bs.size - start' := by simp [take]
-  have htakeN : take ≤ n := by simp [take]
+  have hstartLe : start' ≤ bs.size := by
+    exact Nat.min_le_right _ _
+  have htakeLe : take ≤ bs.size - start' := by
+    exact Nat.min_le_left _ _
+  have htakeN : take ≤ n := by
+    exact Nat.min_le_right _ _
   have hstop : start' + take ≤ bs.size := by omega
   have hextractSize : (bs.extract start' (start' + take)).size = take := by
-    rw [ByteArray.size_extract, min_eq_left hstop]
+    rw [ByteArray.size_extract, Nat.min_eq_left hstop]
     omega
   rw [getElem?_getD_append, hextractSize]
   by_cases hi : i < n
@@ -192,12 +195,13 @@ theorem readPadded_getElem?_getD (bs : ByteArray) (start n i : Nat) :
     by_cases hitake : i < take
     · rw [if_pos hitake]
       have hsle : start ≤ bs.size := by
-        by_contra h
-        have hge : bs.size ≤ start := by omega
-        have hstartEq : start' = bs.size := by simp [start', hge]
-        rw [hstartEq] at htakeLe
-        simp at htakeLe
-        omega
+        by_cases hsle : start ≤ bs.size
+        · exact hsle
+        · have hge : bs.size ≤ start := by omega
+          have hstartEq : start' = bs.size := by simp [start', hge]
+          rw [hstartEq] at htakeLe
+          simp at htakeLe
+          omega
       have hstartEq : start' = start := by simp [start', hsle]
       simp only [hstartEq] at hstop hextractSize ⊢
       have hextract : i < (bs.extract start (start + take)).size := by
@@ -240,7 +244,7 @@ theorem readPadded_getElem?_getD (bs : ByteArray) (start n i : Nat) :
   unfold MachineState.readPadded
   change (bs.extract start' (start' + take) ++
     ByteArray.mk (Array.replicate (n - take) 0)).size = n
-  rw [ByteArray.size_append, ByteArray.size_extract, min_eq_left hstop]
+  rw [ByteArray.size_append, ByteArray.size_extract, Nat.min_eq_left hstop]
   change start' + take - start' + (Array.replicate (n - take) 0).size = n
   rw [Array.size_replicate]
   omega

@@ -66,7 +66,11 @@ theorem rotl_cost_potential (s : State) (x n returnDest : UInt256)
     (RoundTrace.run_rotl s x n returnDest rest hstack hcode hrun hvalid)
     (by simpa [RoundTrace.rotlEntry] using hfork)
     (by simp [RoundTrace.rotlPath, CopyFree])
-  simpa [RoundTrace.gasSteps_rotl, RoundTrace.rotlEntry, rotlWork] using hraw
+  unfold RoundTrace.gasSteps_rotl
+  change Stepper.runLocatedBlockCost RoundTrace.rotlPath
+      (RoundTrace.rotlEntry s x n returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [RoundTrace.rotlEntry, rotlWork] using hraw
 
 theorem hAt_cost_potential (s : State) (i returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1018)
@@ -85,7 +89,11 @@ theorem hAt_cost_potential (s : State) (i returnDest : UInt256)
     (TableTrace.run_hAt s i returnDest rest hstack hcode hrun hvalid)
     (by simpa [TableTrace.atEntry] using hfork)
     (by simp [TableTrace.hAtPath, CopyFree])
-  simpa [TableTrace.gasSteps_hAt, TableTrace.atEntry, hAtWork] using hraw
+  unfold TableTrace.gasSteps_hAt
+  change Stepper.runLocatedBlockCost TableTrace.hAtPath
+      (TableTrace.atEntry s (UInt256.ofNat 0x20) i returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [TableTrace.atEntry, hAtWork] using hraw
 
 theorem hSet_cost_potential (s : State) (i value returnDest : UInt256)
     (rest : List UInt256) (hstack : rest.length < 1016)
@@ -120,7 +128,11 @@ theorem xSet_cost_potential (s : State) (i value returnDest : UInt256)
     (TableTrace.run_xSet s i value returnDest rest hstack hcode hrun hvalid)
     (by simpa [TableTrace.xSetEntry] using hfork)
     (by simp [TableTrace.xSetPath, Schedule.xSetPath, CopyFree])
-  simpa [TableTrace.gasSteps_xSet, TableTrace.xSetEntry, xSetWork] using hraw
+  unfold TableTrace.gasSteps_xSet
+  change Stepper.runLocatedBlockCost TableTrace.xSetPath
+      (TableTrace.xSetEntry s i value returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [TableTrace.xSetEntry, xSetWork] using hraw
 
 theorem fCase_cost_potential (s : State) (j : Nat) (hj : j < 5)
     (x y z returnDest : UInt256) (rest : List UInt256)
@@ -149,8 +161,11 @@ theorem fCase_cost_potential (s : State) (j : Nat) (hj : j < 5)
           BooleanFunctionTrace.arm1, BooleanFunctionTrace.arm2,
           BooleanFunctionTrace.arm3, BooleanFunctionTrace.arm4,
           BooleanFunctionTrace.cleanup, CopyFree])
-  simpa [BooleanFunctionTrace.gasSteps_fCase,
-    BooleanFunctionTrace.fEntry, fCaseWork] using hraw
+  unfold BooleanFunctionTrace.gasSteps_fCase
+  change Stepper.runLocatedBlockCost (BooleanFunctionTrace.casePath j)
+      (BooleanFunctionTrace.fEntry s j x y z returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
+  simpa [BooleanFunctionTrace.fEntry, fCaseWork] using hraw
 
 private theorem potential_trans
     (cost₁ work₁ cost₂ work₂ p₀ p₁ p₂ : Nat)
@@ -158,6 +173,9 @@ private theorem potential_trans
     (h₂ : cost₂ + p₁ = work₂ + p₂) :
     (cost₁ + cost₂) + p₀ = (work₁ + work₂) + p₂ := by
   omega
+
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_ : cost + p₀ = work + p₁) : Nat := cost
 
 theorem roundBody_cost_potential (q : State) (base : UInt256)
     (j : Nat) (hj : j < 5) (wordIndex rotation k returnDest word : UInt256)
@@ -270,9 +288,12 @@ theorem roundBody_cost_potential (q : State) (base : UInt256)
   have h0123456 := potential_trans _ _ _ _ _ _ _ h012345 h6
   have h01234567 := potential_trans _ _ _ _ _ _ _ h0123456 h7
   have hall := potential_trans _ _ _ _ _ _ _ h01234567 h8
-  simpa [RoundTrace.gasSteps_roundBody, roundBodyWork, bodyEntry, q2,
-    RoundTrace.gasSteps_rotl, BooleanFunctionTrace.gasSteps_fCase,
-    TableTrace.gasSteps_wordSet, GasSteps.trans_cost, Nat.add_assoc] using hall
+  unfold RoundTrace.gasSteps_roundBody
+  change (potentialCost h0 + (potentialCost h1 + (potentialCost h2 +
+      (potentialCost h3 + (potentialCost h4 + (potentialCost h5 +
+        (potentialCost h6 + (potentialCost h7 + potentialCost h8)))))))) +
+      MachineState.memCost q.activeWords.toNat = _
+  simpa [potentialCost, roundBodyWork, bodyEntry, q2, Nat.add_assoc] using hall
 
 theorem round_cost_potential (s : State) (base : UInt256)
     (j : Nat) (hj : j < 5) (wordIndex rotation k returnDest : UInt256)
@@ -323,9 +344,11 @@ theorem round_cost_potential (s : State) (base : UInt256)
     hcodeQ hforkQ hrunQ hnpQ hvalid
   have h01 := potential_trans _ _ _ _ _ _ _ h0 h1
   have hall := potential_trans _ _ _ _ _ _ _ h01 h2
-  simpa [RoundTrace.gasSteps_round, RoundTrace.roundReturned, roundWork,
+  unfold RoundTrace.gasSteps_round
+  change (potentialCost h0 + (potentialCost h1 + potentialCost h2)) +
+      MachineState.memCost s.activeWords.toNat = _
+  simpa [potentialCost, RoundTrace.roundReturned, roundWork,
     RoundTrace.roundEntry, RoundTrace.xCallState, q0, q, xReturnedState,
-    RoundTrace.gasSteps_roundBody, TableTrace.gasSteps_xAt,
-    GasSteps.trans_cost, Nat.add_assoc] using hall
+    Nat.add_assoc] using hall
 
 end Challenge.Ripemd160.Reference.Proofs.Bytecode.CompressionRoundCostTrace

@@ -7,30 +7,42 @@ defaultTargets = ["Challenge"]
 # bytecode-level reasoning (see Challenge/Sha256/ProofSupport/Yul.lean). It also
 # brings in the two semantics it is proved against.
 #
-# Held one commit off that repository's `main`: this is its #149 plus the
-# single `FrameOK.noPrecompile` field the configured precompile semantics
-# below requires. `main` additionally carries the SSA cost-model work, under
-# which `compileSource` selects the SSA backend for both reference sources
-# and emits different (cheaper) bytecode — 1699 rather than 1524 bytes for
-# SHA-256, 1689 rather than 1671 for RIPEMD-160. Taking that here would
-# re-layout the frozen artifacts and invalidate every direct-bytecode proof,
-# which is a separate piece of work; this pin keeps the artifacts fixed.
+# The pinned Lean-4.33 compiler contains both verified backends. Its production
+# selector prefers SSA for two reference sources and would re-layout their
+# frozen artifacts (SHA-256: 1699 rather than 1524 bytes; RIPEMD-160: 1689
+# rather than 1671). CI applies the small patch under `patches/lean-4.33` to
+# select the compiler's verified classic backend, preserving all four frozen
+# artifacts byte-for-byte while keeping the current 4.33 dependency graph.
 [[require]]
 name = "yul-evm-compiler"
 git = "https://github.com/powdr-labs/yul-compiler"
-rev = "00e49b6a59642129c23935aaec701b327591419b"
+rev = "99518b86122f37aafd7194678bb18b17ea5c0656"
+
+# Pin the source semantics explicitly because it is part of the proof and
+# submission trust boundary, rather than relying on the compiler transitively.
+[[require]]
+name = "yul-semantics"
+git = "https://github.com/powdr-labs/yul-semantics"
+rev = "7acf6cfec4a0a8a3518f4d9c91f204daf31fc456"
 
 # The EVM semantics. This is where the *specification* lives: a challenge is
 # equality with `EvmSemantics.Crypto.Sha256.hash`, the function
 # `Precompile.runSha256` computes for the 0x02 precompile. Required explicitly
 # (rather than relied on transitively) because the pin is part of the trust
-# boundary a submission is judged against — it must stay identical to the
-# revision `yul-evm-compiler` pins, or Lake resolves the conflict silently in
-# this root package's favour and the two would drift apart.
+# boundary a submission is judged against. The compiler and its target-semantics
+# proofs are built against this resolved Lean-4.33 revision in CI.
 [[require]]
 name = "evm_semantics"
 git = "https://github.com/powdr-labs/evm-semantics"
-rev = "26fdf59"
+rev = "2f8714d6ba960a3de67720019b54513f5bc1a2e3"
+
+# Keep the inherited dependency graph on the same release as this project's
+# Lean toolchain. The backend-selection patch described above is applied by the
+# documented build helper.
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.33.0"
 
 [[lean_lib]]
 name = "Challenge"

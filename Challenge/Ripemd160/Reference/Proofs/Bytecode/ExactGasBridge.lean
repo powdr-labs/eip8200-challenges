@@ -250,6 +250,8 @@ theorem fullTrace_cost (input : ByteArray) (hfit : CalldataFits input)
   unfold blockWork at hloop
   omega
 
+set_option linter.defProp false
+
 /-- With concrete compression and outer cost facts installed, this discharges
 the exact-cost premise of `DirectCorrect`.  The inferred remaining argument is
 its already-separated functional output theorem. -/
@@ -274,5 +276,7 @@ noncomputable def correct
   DirectCorrect.correct_of_compression seam
     (fun input hfit => fullTrace_cost input hfit (seam input hfit)
       (compression input hfit) (outer input hfit))
+
+set_option linter.defProp true
 
 end Challenge.Ripemd160.Reference.Proofs.Bytecode.ExactGasBridge

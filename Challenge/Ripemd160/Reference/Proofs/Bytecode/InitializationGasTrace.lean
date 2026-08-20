@@ -117,22 +117,42 @@ private theorem initStores_cost_potential (s : State)
           have htail : Main.InitChain (next :: rest) := hchain.2
           have hfirst := initStore_cost_potential s w hw hpcw hstack hcode hfork
             hrun hnp
+          have hmem' : ∀ x, x ∈ next :: rest → x ∈ Artifact.initStores :=
+            fun x hx => hmem x (List.mem_cons_of_mem w hx)
+          have hpc' : ∀ x, (next :: rest).head? = some x →
+              (Main.applyInitStore s w).pc =
+                UInt256.ofNat (Artifact.instructionPC x.index) := by
+            intro x hx
+            simp only [List.head?_cons, Option.some.injEq] at hx
+            subst x
+            simp [Main.applyInitStore, hnext]
+          have hstack' : (Main.applyInitStore s w).stack = [] := by
+            simp [Main.applyInitStore]
+          have hcode' : (Main.applyInitStore s w).executionEnv.code =
+              referenceBytecode := by
+            simpa [Main.applyInitStore] using hcode
+          have hfork' : (Main.applyInitStore s w).fork = .Osaka := by
+            simpa [Main.applyInitStore] using hfork
+          have hrun' : (Main.applyInitStore s w).halt = .Running := by
+            simpa [Main.applyInitStore] using hrun
+          have hnp' : Precompile.isPrecompileWithConfig
+              (Main.applyInitStore s w).executionEnv.precompileConfig
+              (Main.applyInitStore s w).executionEnv.fork
+              (Main.applyInitStore s w).executionEnv.codeAddr = false := by
+            simpa [Main.applyInitStore] using hnp
           have hrest := ih (s := Main.applyInitStore s w)
-            (fun x hx => hmem x (List.mem_cons_of_mem w hx)) htail
-            (fun x hx => by
-              simp only [List.head?_cons, Option.some.injEq] at hx
-              subst x
-              simp [Main.applyInitStore, hnext])
-            (by simp [Main.applyInitStore])
-            (by simpa [Main.applyInitStore] using hcode)
-            (by simpa [Main.applyInitStore] using hfork)
-            (by simpa [Main.applyInitStore] using hrun)
-            (by simpa [Main.applyInitStore] using hnp)
+            hmem' htail hpc' hstack' hcode' hfork' hrun' hnp'
           simp only [List.map_cons, List.sum_cons, List.foldl_cons] at hrest
-          simp only [Main.gasSteps_initStores,
-            Challenge.EvmProof.GasSteps.cast_cost,
-            Challenge.EvmProof.GasSteps.trans_cost, List.map_cons,
-            List.sum_cons, List.foldl_cons]
+          change
+            (Main.gasSteps_initStore s w hw hpcw hstack hcode hfork hrun hnp).cost +
+                (Main.gasSteps_initStores (Main.applyInitStore s w) (next :: rest)
+                  hmem' htail hpc' hstack' hcode' hfork' hrun' hnp').cost +
+                MachineState.memCost s.activeWords.toNat =
+              initStoreWork w + (List.map initStoreWork (next :: rest)).sum +
+                MachineState.memCost
+                  (List.foldl Main.applyInitStore (Main.applyInitStore s w)
+                    (next :: rest)).activeWords.toNat
+          simp only [List.map_cons, List.sum_cons, List.foldl_cons]
           omega
 
 theorem bodyInitialization_cost_potential (input : ByteArray) :
@@ -157,12 +177,8 @@ theorem bodyInitialization_cost_potential (input : ByteArray) :
     norm_num [Artifact.initStores, initStoreWork,
       Challenge.EvmProof.Meter.instrStaticCost, Gas.baseCost]
   rw [hwork] at h
-  unfold Main.gasSteps_bodyInitialization
-  rw [Challenge.EvmProof.GasSteps.cast_cost]
-  change _ = 241 + MachineState.memCost
-    (Artifact.initStores.foldl Main.applyInitStore
-      (Execution.mainStart input)).activeWords.toNat
-  convert h using 1
+  simpa only [Main.gasSteps_bodyInitialization,
+    Challenge.EvmProof.GasSteps.cast_cost, Main.initializedState] using h
 
 theorem initialize_cost_of_active (input : ByteArray)
     (hactive : (Main.initializedState input).activeWords.toNat = 59) :

@@ -181,7 +181,7 @@ def lengthLoopState (input : ByteArray) (i : Nat) : State :=
     memory := lengthLoopMemory input i
     activeWords := lengthLoopActiveWords input i }
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :

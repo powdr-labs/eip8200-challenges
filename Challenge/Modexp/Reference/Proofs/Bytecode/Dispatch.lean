@@ -15,7 +15,7 @@ namespace Challenge.Modexp.Reference.Proofs.Bytecode.Dispatch
 open EvmSemantics
 open EvmSemantics.EVM
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -257,7 +257,10 @@ private def gasSteps_zeroReturn (input : ByteArray) :
 private theorem gasSteps_zeroSetup_cost (input : ByteArray)
     (hzero : modulusSize input = 0) :
     (gasSteps_zeroSetup input hzero).cost = 21 := by
-  simp [gasSteps_zeroSetup, Challenge.EvmProof.Stepper.runLocatedBlockCost,
+  unfold gasSteps_zeroSetup
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost zeroSetupPath
+      (Main.headerState input) = 21
+  simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
     zeroSetupPath, zeroSizePath, opAt, pushAt,
     Challenge.EvmProof.Stepper.instrCost, Gas.baseCost,
     Challenge.EvmProof.Stepper.runLocated,
@@ -269,7 +272,10 @@ private theorem gasSteps_zeroSetup_cost (input : ByteArray)
 @[simp] private theorem gasSteps_zeroReturn_cost (input : ByteArray) :
     (gasSteps_zeroReturn input).cost = 0 := by
   have h0 : (0 : UInt256).toNat = 0 := by decide
-  simp [gasSteps_zeroReturn, Challenge.EvmProof.Stepper.runLocatedBlockCost,
+  unfold gasSteps_zeroReturn
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost zeroReturnPath
+      (zeroSetupState input) = 0
+  simp [Challenge.EvmProof.Stepper.runLocatedBlockCost,
     zeroReturnPath, opAt, Challenge.EvmProof.Stepper.instrCost,
     Gas.totalCost, Gas.returnTotal, Gas.baseCost,
     MachineState.memExpansionDelta, MachineState.activeWordsAfter,

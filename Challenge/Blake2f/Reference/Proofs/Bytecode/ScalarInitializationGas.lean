@@ -3,6 +3,7 @@ import Challenge.Blake2f.Reference.Proofs.Bytecode.ScalarInitialization
 set_option warningAsError true
 set_option maxRecDepth 30000
 set_option maxHeartbeats 3000000
+set_option linter.unusedSimpArgs false
 
 /-! Exact gas certification for counter and final-flag initialization. -/
 
@@ -11,6 +12,8 @@ namespace Challenge.Blake2f.Reference.Proofs.Bytecode.ScalarInitialization
 open Challenge.Blake2f
 open EvmSemantics
 open EvmSemantics.EVM
+
+private def exactCost {cost expected : Nat} (_h : cost = expected) : Nat := cost
 
 private theorem ofNatAdd (a b : Nat) (h : a + b < 2 ^ 256) :
     UInt256.ofNat a + UInt256.ofNat b = UInt256.ofNat (a + b) :=
@@ -48,6 +51,7 @@ private theorem t0SetupCost_generic (s : State) (a b : UInt256)
     (hrun : s.halt = .Running) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost t0SetupPath
       { s with pc := UInt256.ofNat 811, stack := [a, b] } = 19 := by
+  simp only [t0SetupPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlockCost,
       Challenge.EvmProof.Stepper.runLocated,
@@ -74,6 +78,7 @@ private theorem t0StoreCost_generic (s : State) (x a b : UInt256)
       { s with
         pc := UInt256.ofNat 821
         stack := [x, a, b] } = 16 := by
+  simp only [t0StorePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlockCost,
       Challenge.EvmProof.Stepper.runLocated,
@@ -102,6 +107,7 @@ private theorem t1SetupCost_generic (s : State) (a b : UInt256)
     (hrun : s.halt = .Running) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost t1SetupPath
       { s with pc := UInt256.ofNat 831, stack := [a, b] } = 19 := by
+  simp only [t1SetupPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlockCost,
       Challenge.EvmProof.Stepper.runLocated,
@@ -128,6 +134,7 @@ private theorem t1StoreCost_generic (s : State) (x a b : UInt256)
       { s with
         pc := UInt256.ofNat 841
         stack := [x, a, b] } = 16 := by
+  simp only [t1StorePath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlockCost,
       Challenge.EvmProof.Stepper.runLocated,
@@ -155,6 +162,7 @@ private theorem flagTestCost_generic (s : State) (rounds flag : UInt256)
     (hrun : s.halt = .Running) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost flagTestPath
       { s with pc := UInt256.ofNat 851, stack := [rounds, flag] } = 19 := by
+  simp only [flagTestPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlockCost,
       Challenge.EvmProof.Stepper.runLocated,
@@ -187,6 +195,7 @@ private theorem flagMutationCost_generic (s : State) (rounds flag : UInt256)
       { s with
         pc := UInt256.ofNat 857
         stack := [rounds, flag] } = 18 := by
+  simp only [flagMutationPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 }) (discharger := omega)
     [Challenge.EvmProof.Stepper.runLocatedBlockCost,
       Challenge.EvmProof.Stepper.runLocated,
@@ -214,6 +223,7 @@ private theorem flagFinishCost_generic (s : State) (rounds flag : UInt256)
     (hrun : s.halt = .Running) :
     Challenge.EvmProof.Stepper.runLocatedBlockCost flagFinishPath
       { s with pc := UInt256.ofNat 875, stack := [rounds, flag] } = 4 := by
+  simp only [flagFinishPath, Artifact.locatedPath, List.map]
   simp (config := { maxSteps := 300000 })
     [Challenge.EvmProof.Stepper.runLocatedBlockCost,
       Challenge.EvmProof.Stepper.runLocated,
@@ -266,12 +276,18 @@ def t0GasSteps (input : ByteArray) :
 
 @[simp] theorem t0GasSteps_cost (input : ByteArray) :
     (t0GasSteps input).cost = 752 := by
+  have hsetup := t0Setup_cost input
+  have hload := LoadLE64.gasSteps_cost (Initialization.constantsFinalState input)
+    (UInt256.ofNat 196) (UInt256.ofNat 821)
+    [Prelude.roundsWord input, Prelude.finalFlagWord input]
+    (by simp) rfl rfl rfl deployAddress_not_precompile return821_valid
+  have hstore := t0Store_cost input
   unfold t0GasSteps
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost]
-  rw [t0Setup_cost input]
-  rw [LoadLE64.gasSteps_cost]
-  rw [t0Store_cost input]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hsetup + (exactCost hload + exactCost hstore) = 752
+  simp only [exactCost]
+  omega
 
 def t1GasSteps (input : ByteArray) :
     Challenge.EvmProof.GasSteps (t0FinalState input) (flagEntryState input) := by
@@ -294,12 +310,18 @@ def t1GasSteps (input : ByteArray) :
 
 @[simp] theorem t1GasSteps_cost (input : ByteArray) :
     (t1GasSteps input).cost = 752 := by
+  have hsetup := t1Setup_cost input
+  have hload := LoadLE64.gasSteps_cost (t0FinalState input)
+    (UInt256.ofNat 204) (UInt256.ofNat 841)
+    [Prelude.roundsWord input, Prelude.finalFlagWord input]
+    (by simp) rfl rfl rfl deployAddress_not_precompile return841_valid
+  have hstore := t1Store_cost input
   unfold t1GasSteps
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost]
-  rw [t1Setup_cost input]
-  rw [LoadLE64.gasSteps_cost]
-  rw [t1Store_cost input]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost hsetup + (exactCost hload + exactCost hstore) = 752
+  simp only [exactCost]
+  omega
 
 def flagZeroGasSteps (input : ByteArray) (hflag : input[212]!.toNat = 0) :
     Challenge.EvmProof.GasSteps (flagEntryState input) (roundEntryState input) := by
@@ -313,10 +335,14 @@ def flagZeroGasSteps (input : ByteArray) (hflag : input[212]!.toNat = 0) :
 @[simp] theorem flagZeroGasSteps_cost (input : ByteArray)
     (hflag : input[212]!.toNat = 0) :
     (flagZeroGasSteps input hflag).cost = 23 := by
+  have htest := flagTestZero_cost input hflag
+  have hfinish := flagFinish_cost input (t1Memory input)
   unfold flagZeroGasSteps
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost]
-  rw [flagTestZero_cost input hflag, flagFinish_cost input (t1Memory input)]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost htest + exactCost hfinish = 23
+  simp only [exactCost]
+  omega
 
 def flagOneGasSteps (input : ByteArray) (hflag : input[212]!.toNat = 1) :
     Challenge.EvmProof.GasSteps (flagEntryState input) (roundEntryState input) := by
@@ -333,11 +359,15 @@ def flagOneGasSteps (input : ByteArray) (hflag : input[212]!.toNat = 1) :
 @[simp] theorem flagOneGasSteps_cost (input : ByteArray)
     (hflag : input[212]!.toNat = 1) :
     (flagOneGasSteps input hflag).cost = 41 := by
+  have htest := flagTestOne_cost input hflag
+  have hmutation := flagMutation_cost input
+  have hfinish := flagFinish_cost input (flaggedMemory input)
   unfold flagOneGasSteps
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost, gasStepsBlock_cost]
-  rw [flagTestOne_cost input hflag, flagMutation_cost input,
-    flagFinish_cost input (flaggedMemory input)]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change exactCost htest + (exactCost hmutation + exactCost hfinish) = 41
+  simp only [exactCost]
+  omega
 
 def gasSteps (input : ByteArray) (hflag : input[212]!.toNat ≤ 1) :
     Challenge.EvmProof.GasSteps (Initialization.constantsFinalState input)

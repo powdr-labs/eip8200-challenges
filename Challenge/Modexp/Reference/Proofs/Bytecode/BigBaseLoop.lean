@@ -10,6 +10,9 @@ open EvmSemantics
 open EvmSemantics.EVM
 open BigBase
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 def baseLoopState (s : State) (accumulator : UInt256)
     (count baseSize e m baseOff : Nat) (rest : List UInt256) (i : Nat) : State :=
   outerLoop (baseProgress count baseOff i s) accumulator count baseSize
@@ -207,12 +210,19 @@ theorem gasSteps_baseFinish_cost_potential (s : State)
     (by simpa [baseConvertedExit, outerExit, outerLoop] using hrun)
     (by simpa [baseConvertedExit, outerExit, outerLoop, State.fork] using hnp)
     jump944
+  simp only [baseLoopState, baseConvertedExit, initialAccumulator, outerLoop,
+    outerExit, BigHelpers.addEntry, progress, fullRest, helperRest] at hguard htoAccumulator hadd
   unfold gasSteps_baseFinish
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
-    Challenge.EvmProof.GasSteps.trans_cost,
-    Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+    Challenge.EvmProof.GasSteps.trans_cost]
+  change (potentialCost hguard +
+      (potentialCost htoAccumulator + potentialCost hadd)) +
+    MachineState.memCost
+      (baseLoopState s accumulator count baseSize e m baseOff rest
+        baseSize).activeWords.toNat = _
+  simp only [potentialCost]
   simp only [baseLoopState, baseConvertedExit, initialAccumulator, outerLoop,
-    outerExit, BigHelpers.addEntry, progress, fullRest, helperRest] at hguard htoAccumulator hadd ⊢
+    outerExit, BigHelpers.addEntry, progress, fullRest, helperRest] at ⊢
   omega
 
 def gasSteps_baseConversion (s : State) (accumulator : UInt256)

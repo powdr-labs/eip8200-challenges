@@ -10,6 +10,9 @@ namespace Challenge.Modexp.Reference.Proofs.Bytecode.BigZeroCorrect
 open EvmSemantics
 open EvmSemantics.EVM
 
+private def potentialCost {cost work p₀ p₁ : Nat}
+    (_h : cost + p₀ = work + p₁) : Nat := cost
+
 theorem getByte_zero_of_readWord_zero (memory : ByteArray) (start rem : Nat)
     (hrem : rem < 32) (hword : MachineState.readWord memory start = 0) :
     memory[start + rem]?.getD 0 = 0 := by
@@ -272,10 +275,14 @@ theorem gasSteps_zero_cost_potential (s : State)
       change Precompile.isPrecompileWithConfig s.executionEnv.precompileConfig s.executionEnv.fork
         s.executionEnv.codeAddr = false
       exact hnp)
+  simp only [zeroWork, zeroFinalState, n, loaded, BigComplete.setupState] at hs hz
   unfold gasSteps_zero
   simp only [Challenge.EvmProof.GasSteps.cast_cost,
     Challenge.EvmProof.GasSteps.trans_cost]
-  simp only [zeroWork, zeroFinalState, n, loaded, BigComplete.setupState] at hs hz ⊢
+  change (potentialCost hs + potentialCost hz) +
+    MachineState.memCost s.activeWords.toNat = _
+  simp only [potentialCost]
+  simp only [zeroWork, zeroFinalState, n, loaded, BigComplete.setupState] at ⊢
   omega
 
 end Challenge.Modexp.Reference.Proofs.Bytecode.BigZeroCorrect

@@ -16,7 +16,7 @@ namespace Challenge.Modexp.Reference.Proofs.Bytecode.Accessors
 open EvmSemantics
 open EvmSemantics.EVM
 
-private def wfOp {op : Operation}
+private theorem wfOp {op : Operation}
     (hopcode : Decode.opcodeOf (YulEvmCompiler.Instr.opByte op) = some op)
     (hplain : YulEvmCompiler.plainOp op)
     (havailable : op.availableInFork .Osaka = true) :
@@ -114,7 +114,9 @@ theorem gasSteps_calldataByte_cost_potential (s : State)
       (run_calldataByte s offset output returnDest rest hcap hcode hrun hvalid)
       hfork (by decide) (by decide)
   unfold gasSteps_calldataByte
-  simp only [Challenge.EvmProof.Stepper.runLocatedBlock_sound_cost]
+  change Challenge.EvmProof.Stepper.runLocatedBlockCost calldataBytePath
+      (calldataByteEntry s offset output returnDest rest) +
+        MachineState.memCost s.activeWords.toNat = _
   simpa [calldataByteEntry, calldataByteReturned] using hmeter
 
 end Challenge.Modexp.Reference.Proofs.Bytecode.Accessors

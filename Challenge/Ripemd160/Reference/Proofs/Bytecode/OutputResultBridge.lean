@@ -181,7 +181,8 @@ private theorem readOutput_eq (s : State) (input : ByteArray) :
         change i < 12
         exact hprefix)]
       change 0 = (Array.replicate 12 0)[i]
-      rw [Array.getElem_replicate]
+      symm
+      apply Array.getElem_replicate
     · rw [if_pos (by omega), if_neg hprefix]
 
 private theorem wordBytes_ofUInt32 (w : UInt32) :

@@ -44,30 +44,15 @@ private theorem notAnd_ofUInt32 (x z : UInt32) :
 private theorem andNot_ofUInt32 (x z : UInt32) :
     ofUInt32 x &&& ~~~ofUInt32 z =
       ofUInt32 (x &&& Crypto.Ripemd160.bnot32 z) := by
-  have hcomm : ofUInt32 x &&& ~~~ofUInt32 z =
-      (~~~ofUInt32 z) &&& ofUInt32 x := by
-    apply word_ext
-    change ((ofUInt32 x).val &&& (~~~ofUInt32 z).val).val =
-      ((~~~ofUInt32 z).val &&& (ofUInt32 x).val).val
-    rw [Fin.and_val, Fin.and_val, Nat.and_comm]
-  rw [hcomm, and_ofUInt32, toUInt32_not_ofUInt32]
-  apply congrArg ofUInt32
-  unfold Crypto.Ripemd160.bnot32
-  rw [UInt32.and_comm]
+  rw [word_and_comm, notAnd_ofUInt32, UInt32.and_comm]
 
 @[simp] theorem evmF_ofUInt32 (j : Nat) (x y z : UInt32) (hj : j < 5) :
     evmF j (ofUInt32 x) (ofUInt32 y) (ofUInt32 z) =
       ofUInt32 (Crypto.Ripemd160.f j x y z) := by
   interval_cases j <;>
-    simp only [evmF, Crypto.Ripemd160.f]
-  · rw [← ofUInt32_xor, ← ofUInt32_xor]
-  · rw [notAnd_ofUInt32, ← ofUInt32_and, ← ofUInt32_or]
-  · rw [mask32_xor, toUInt32_or, toUInt32_ofUInt32,
-      toUInt32_not_ofUInt32, toUInt32_ofUInt32]
-    rfl
-  · rw [andNot_ofUInt32, ← ofUInt32_and, ← ofUInt32_or]
-  · rw [mask32_xor, toUInt32_or, toUInt32_ofUInt32,
-      toUInt32_not_ofUInt32, toUInt32_ofUInt32]
-    rfl
+    grind [evmF, Crypto.Ripemd160.f, notAnd_ofUInt32, andNot_ofUInt32,
+      mask32_xor, toUInt32_not_ofUInt32, Crypto.Ripemd160.bnot32,
+      ofUInt32_xor, ofUInt32_or, ofUInt32_and, toUInt32_or,
+      toUInt32_ofUInt32]
 
 end Challenge.Ripemd160.Reference.Proofs.Bytecode.Word
