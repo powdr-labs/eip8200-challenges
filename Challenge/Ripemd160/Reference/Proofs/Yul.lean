@@ -107,12 +107,12 @@ theorem computesDigest_optimized_iff :
     ComputesDigest referenceOptimizedBlock ↔
       ComputesDigest referenceParsedBlock := by
   constructor
-  · intro h yst hmem hhalted
-    obtain ⟨V, yst', hrun, hresult⟩ := h yst hmem hhalted
-    exact ⟨V, yst', (reference_runEquiv _ _ _ _).mpr hrun, hresult⟩
-  · intro h yst hmem hhalted
-    obtain ⟨V, yst', hrun, hresult⟩ := h yst hmem hhalted
-    exact ⟨V, yst', (reference_runEquiv _ _ _ _).mp hrun, hresult⟩
+  · intro h
+    exact h.map_program (fun initial finalEnv final outcome hrun =>
+      (reference_runEquiv initial finalEnv final outcome).mpr hrun)
+  · intro h
+    exact h.map_program (fun initial finalEnv final outcome hrun =>
+      (reference_runEquiv initial finalEnv final outcome).mp hrun)
 
 /-- End-to-end verified-compiler route for the frozen reference. The source
 semantics and initial-frame abstraction are explicit hypotheses; parsing,

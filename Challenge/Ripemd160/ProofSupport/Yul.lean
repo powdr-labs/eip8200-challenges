@@ -1,5 +1,5 @@
 import Challenge.Ripemd160.ProofSupport.InitialState
-import YulEvmCompiler.Correctness
+import YulEvmCompiler.ContractCorrectness
 
 set_option warningAsError true
 
@@ -16,7 +16,7 @@ namespace Challenge.Ripemd160
 
 open EvmSemantics
 open EvmSemantics.EVM
-open YulSemantics (Block Run VEnv)
+open YulSemantics (Block RunContract VEnv)
 open YulSemantics.EVM
   (EvmState Op evmWithExternal ExternalCalls ExternalCreates ExternalGas)
 open YulEvmCompiler
@@ -28,11 +28,67 @@ def digestOf (calldata : List UInt8) : List UInt8 :=
 
 /-- The reference implementation neither calls contracts nor creates them. -/
 @[reducible] def localModel : ExternalModel :=
-  { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.any }
+  { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.none }
 
 /-- The gas-free source dialect used by the functional obligation. -/
 abbrev localDialect := evmWithExternal ExternalCalls.none ExternalCreates.none
-  YulSemantics.EVM.ExternalGas.any
+  YulSemantics.EVM.ExternalGas.none
+
+/-- Executable built-in function for the fully closed compiler source dialect. The only
+non-`stepOp` results that remain possible are the deterministic static-context violations imposed
+before an unavailable call or creation is consulted. -/
+def localBuiltinFn (op : Op) (args : List YulSemantics.EVM.U256) (st : EvmState) :
+    Option (YulSemantics.BuiltinResult YulSemantics.EVM.U256 EvmState) :=
+  match op with
+  | .call => match args with
+      | [_, _, value, _, _, _, _] =>
+          if st.env.static ∧ value ≠ 0 then
+            some (YulSemantics.BuiltinResult.halt
+              { st with halted := some (.staticViolation, []) })
+          else none
+      | _ => none
+  | .callcode | .delegatecall | .staticcall => none
+  | .create => match args with
+      | [_, _, _] =>
+          if st.env.static then
+            some (YulSemantics.BuiltinResult.halt
+              { st with halted := some (.staticViolation, []) })
+          else none
+      | _ => none
+  | .create2 => match args with
+      | [_, _, _, _] =>
+          if st.env.static then
+            some (YulSemantics.BuiltinResult.halt
+              { st with halted := some (.staticViolation, []) })
+          else none
+      | _ => none
+  | .gas => none
+  | _ => YulSemantics.EVM.stepOp op args st
+
+/-- Executable presentation of the fully closed compiler source dialect. -/
+@[reducible] def localExec : YulSemantics.ExecDialect :=
+  { toDialect := localDialect, builtinFn := localBuiltinFn }
+
+/-- The closed presentation is lawful: calls, creations, and `gas()` are impossible on both sides,
+while every local operation is exactly `stepOp`. -/
+theorem localExec_lawful : localExec.Lawful := by
+  intro op args st result
+  cases op <;>
+    simp [localExec, localDialect, evmWithExternal,
+      localBuiltinFn,
+      YulSemantics.EVM.builtinWithExternal, YulSemantics.EVM.externalCall,
+      YulSemantics.EVM.externalCreate, ExternalCalls.none, ExternalCreates.none,
+      ExternalGas.none, YulSemantics.EVM.stepOp]
+  all_goals
+    rcases args with _ | ⟨a, _ | ⟨b, _ | ⟨c, _ | ⟨d, _ | ⟨e, _ | ⟨f, _ | ⟨g, args⟩⟩⟩⟩⟩⟩⟩ <;>
+      simp <;> try split <;> simp_all
+  all_goals
+    intros
+    constructor <;> intro h <;> exact h.symm
+
+/-- The fully closed external model has no realizability obligations. -/
+theorem localExternalsRealized : ExternalsRealized localModel :=
+  ⟨CallsRealized.none, CreatesRealized.none, GasCallsRealized.noneOracle _⟩
 
 /-- A target initial state is represented by a fresh Yul state carrying the
 same calldata. `StateMatch` is gas-independent, so one source state suffices
@@ -45,13 +101,15 @@ def AbstractsInitialState (code : ByteArray) : Prop :=
     (∀ k, yst.env.immutable k = 0) ∧
     yst.halted = none
 
-/-- From any fresh source state, the program returns the 32-byte, left-padded
-Ethereum RIPEMD-160 precompile result for its calldata. -/
+/-- From any fresh source state with realizable calldata, the program returns the 32-byte,
+left-padded Ethereum RIPEMD-160 precompile result. This proof-facing contract deliberately retains
+only the halt observation, not the constructed final memory or variable environment. -/
 def ComputesDigest (prog : Block Op) : Prop :=
-  ∀ yst : EvmState, yst.memory = (fun _ => 0) → yst.halted = none →
-    ∃ (V : VEnv localDialect) (yst' : EvmState),
-      Run localDialect prog yst V yst' .halt ∧
-        yst'.halted = some (.ret, digestOf yst.env.calldata)
+  RunContract (D := localDialect) prog
+    (fun yst => yst.memory = (fun _ => 0) ∧ yst.halted = none ∧
+      ∃ input : ByteArray, yst.env.calldata = input.toList ∧ CalldataFits input)
+    (fun yst _ yst' outcome => outcome = .halt ∧
+      yst'.halted = some (.ret, digestOf yst.env.calldata))
 
 /-- The challenge's fixed initial state meets the verified compiler theorem's
 target-side frame conditions. -/
@@ -72,12 +130,12 @@ theorem correct_of_computesDigest {prog : Block Op} {is : List Instr}
     (habs : AbstractsInitialState (assemble is))
     (hyul : ComputesDigest prog) :
     Correct (assemble is) := by
-  intro calldata _hfit
+  intro calldata hfit
   obtain ⟨yst, hmatch, hmem, hcd, himm, hhalted⟩ := habs calldata
-  obtain ⟨V, yst', hrun, hres⟩ := hyul yst hmem hhalted
-  obtain ⟨b, H⟩ :=
-    compile_correct_eval (model := localModel) ExternalsRealized.none hcomp
-      (fun key => (himm _).symm) hrun
+  obtain ⟨V, yst', outcome, ⟨houtcome, hres⟩, b, H⟩ :=
+    compile_runContract_eval (model := localModel) localExternalsRealized hcomp hyul
+      ⟨hmem, hhalted, calldata, hcd, hfit⟩ (fun key => (himm _).symm)
+  subst outcome
   refine ⟨b, fun g hg => ?_⟩
   obtain ⟨-, hhalt⟩ :=
     H (initialState (assemble is) calldata g) (initialState_frameOK hsize) (hmatch g)
