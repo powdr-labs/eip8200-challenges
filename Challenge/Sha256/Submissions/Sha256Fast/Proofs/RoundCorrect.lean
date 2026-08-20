@@ -683,7 +683,9 @@ def gasSteps_groupContinue (s : State) (initial : Ref.Working)
     simpa [afterCtrl, afterRounds, roundState] using hnp
   let gh := roundsHeadTrace codeCtrl forkCtrl hhRun runCtrl npCtrl rfl
   have hgr : gr.cost = 1648 := by
-    simpa [gr] using gasSteps_groupRounds_cost s x padded blockOff g tail
+    change (gasSteps_groupRounds s x padded blockOff g tail (by omega) hcap
+      hcode hfork hrun hnp hK hW).cost = 1648
+    exact gasSteps_groupRounds_cost s x padded blockOff g tail
       (by omega) hcap hcode hfork hrun hnp hK hW
   exact GasSteps.transKnown gr
     (GasSteps.transKnown gc gh 36 1 rfl rfl) 1648 37 hgr rfl
@@ -735,7 +737,9 @@ def gasSteps_groupExit (s : State) (initial : Ref.Working)
     (by simpa [afterRounds, roundState] using hrun)
     (by simpa [afterRounds, roundState] using hnp) rfl
   have hgr : gr.cost = 1648 := by
-    simpa [gr] using gasSteps_groupRounds_cost s x padded blockOff 7 tail
+    change (gasSteps_groupRounds s x padded blockOff 7 tail (by omega) hcap
+      hcode hfork hrun hnp hK hW).cost = 1648
+    exact gasSteps_groupRounds_cost s x padded blockOff 7 tail
       (by omega) hcap hcode hfork hrun hnp hK hW
   exact GasSteps.transKnown gr gc 1648 36 hgr rfl
 

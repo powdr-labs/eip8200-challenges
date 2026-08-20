@@ -156,7 +156,22 @@ noncomputable def gasSteps_compressBlock (s : State) (H : Array UInt32)
   have hRounds : gRounds.cost = 13479 := by
     simp [gRounds, prepared, folded]
   have hFold : gFold.cost = 178 := by
-    simp [gFold]
+    simp only [gFold]
+    exact FeedForwardCorrect.gasSteps_feedForward_cost folded x H returnDest rest
+      (by omega) (by simp [folded, RoundCorrect.foldEntry,
+        RoundCorrect.roundState])
+      (by simpa [folded, RoundCorrect.foldEntry, RoundCorrect.roundState,
+        scheduled, ScheduleTrace.exitState] using hcode)
+      (by simpa [folded, RoundCorrect.foldEntry, RoundCorrect.roundState,
+        scheduled, ScheduleTrace.exitState] using hfork)
+      hret
+      (by simpa [folded, RoundCorrect.foldEntry, RoundCorrect.roundState,
+        scheduled, ScheduleTrace.exitState] using hrun)
+      rfl rfl
+      (by simpa [folded, RoundCorrect.foldEntry, RoundCorrect.roundState,
+        scheduled, ScheduleTrace.exitState] using hnp)
+      (by simpa [folded, RoundCorrect.foldEntry, RoundCorrect.roundState]
+        using hHScheduled)
   let right := GasSteps.transKnown gRounds gFold 13479 178 hRounds hFold
   let right := GasSteps.transKnown gPrepare right 53 13657 rfl rfl
   let right := GasSteps.transKnown gSchedule right 7037 13710
