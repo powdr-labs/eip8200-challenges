@@ -1,5 +1,6 @@
 import Challenge.Modexp.Reference.Proofs.Yul.BigMul
 import Challenge.Modexp.Reference.Proofs.Limbs
+import Mathlib.Data.List.GetD
 
 set_option warningAsError true
 set_option maxRecDepth 20000
@@ -887,5 +888,291 @@ theorem addMaskedModState_represents (st : EvmState)
         omega
       · simp [hborrow, hc] at haddEq hsubEq
         omega
+
+theorem wordOffset_ofNat (ptr i : Nat) (hfit : ptr + 32 * i < 2 ^ 256) :
+    (wordOffset (BitVec.ofNat 256 ptr) i).toNat = ptr + 32 * i := by
+  simp [wordOffset, BitVec.toNat_add]
+  simpa using hfit
+
+theorem memoryLimbs_selectPhase_disjoint (st : EvmState) (dst mask : U256)
+    (dstPtr ptr total count : Nat) (hdst : dst = BitVec.ofNat 256 dstPtr)
+    (hcount : count ≤ total) (hdstfit : dstPtr + 32 * total < 2 ^ 256)
+    (hdisjoint : dstPtr + 32 * total ≤ ptr ∨
+      ptr + 32 * total ≤ dstPtr) :
+    memoryLimbs (BigArithmetic.selectPhase st dst mask count).memory ptr total =
+      memoryLimbs st.memory ptr total := by
+  subst dst
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [BigArithmetic.selectPhase]
+      simp only [BigArithmetic.selectStep]
+      rw [memoryLimbs_store_disjoint]
+      · exact ih (by omega)
+      · rw [limbAddr_ofNat dstPtr count (by omega)]
+        rcases hdisjoint with hbefore | hafter
+        · left; omega
+        · right; omega
+
+theorem addMaskedModState_preserves (st : EvmState)
+    (dst src modulus count take ptr value : Nat)
+    (hcount : count ≤ 32)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hptrDst : dst + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ dst)
+    (hptrCandidate : 5120 + 32 * count ≤ ptr ∨
+      ptr + 32 * count ≤ 5120)
+    (hrep : Represents st.memory ptr count value) :
+    Represents
+      (BigArithmetic.addMaskedModState st (BitVec.ofNat 256 dst)
+        (BitVec.ofNat 256 src) (BitVec.ofNat 256 take)
+        (BitVec.ofNat 256 modulus) count).memory
+      ptr count value := by
+  let added := BigArithmetic.addPhase st (BitVec.ofNat 256 dst)
+    (BitVec.ofNat 256 src) (0 - BitVec.ofNat 256 take) count
+  let subtracted := BigArithmetic.subPhase added.state
+    (BitVec.ofNat 256 dst) (BitVec.ofNat 256 modulus) count
+  have hadd : memoryLimbs added.state.memory ptr count =
+      memoryLimbs st.memory ptr count :=
+    memoryLimbs_addPhase_disjoint st _ _ _ dst ptr count count rfl
+      (by omega) hdstfit hptrDst
+  have hsub : memoryLimbs subtracted.state.memory ptr count =
+      memoryLimbs added.state.memory ptr count :=
+    memoryLimbs_subPhase_region added.state _ _ ptr count count (by omega)
+      (by omega : 5120 + 32 * count < 2 ^ 256) hptrCandidate
+  have hselect : memoryLimbs
+      (BigArithmetic.addMaskedModState st (BitVec.ofNat 256 dst)
+        (BitVec.ofNat 256 src) (BitVec.ofNat 256 take)
+        (BitVec.ofNat 256 modulus) count).memory
+      ptr count = memoryLimbs subtracted.state.memory ptr count := by
+    simp only [BigArithmetic.addMaskedModState]
+    exact memoryLimbs_selectPhase_disjoint subtracted.state _ _ dst ptr count
+      count rfl (by omega) hdstfit hptrDst
+  exact ⟨hrep.1, hselect.trans (hsub.trans (hadd.trans hrep.2))⟩
+
+theorem memoryLimbs_clearWordsState (st : EvmState) (ptr count : Nat)
+    (hfit : ptr + 32 * count < 2 ^ 256) :
+    memoryLimbs (clearWordsState st (BitVec.ofNat 256 ptr) count).memory
+      ptr count = List.replicate count 0 := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [clearWordsState_succ]
+      have haddr : wordOffset (BitVec.ofNat 256 ptr) count =
+          BigArithmetic.limbAddr (BitVec.ofNat 256 ptr) count := by
+        apply BitVec.eq_of_toNat_eq
+        rw [wordOffset_ofNat ptr count (by omega),
+          limbAddr_ofNat ptr count (by omega)]
+      rw [haddr, memoryLimbs_store_next _ _ _ _ (by omega), ih (by omega)]
+      simp [List.replicate_succ']
+
+theorem clearWordsState_represents_zero (st : EvmState) (ptr count : Nat)
+    (hfit : ptr + 32 * count < 2 ^ 256) :
+    Represents (clearWordsState st (BitVec.ofNat 256 ptr) count).memory
+      ptr count 0 := by
+  refine ⟨Nat.pow_pos Limbs.radix_pos, ?_⟩
+  rw [memoryLimbs_clearWordsState st ptr count hfit]
+  simp [Limbs.limbDigits, Nat.digitsAppend]
+
+theorem memoryLimbs_clearWordsState_disjoint (st : EvmState)
+    (dst ptr total count : Nat) (hcount : count ≤ total)
+    (hdstfit : dst + 32 * total < 2 ^ 256)
+    (hdisjoint : dst + 32 * total ≤ ptr ∨ ptr + 32 * total ≤ dst) :
+    memoryLimbs (clearWordsState st (BitVec.ofNat 256 dst) count).memory
+      ptr total = memoryLimbs st.memory ptr total := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [clearWordsState_succ, memoryLimbs_store_disjoint]
+      · exact ih (by omega)
+      · rw [wordOffset_ofNat dst count (by omega)]
+        rcases hdisjoint with hbefore | hafter
+        · left; omega
+        · right; omega
+
+theorem clearWordsState_preserves (st : EvmState) (dst ptr count value : Nat)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hdisjoint : dst + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ dst)
+    (hrep : Represents st.memory ptr count value) :
+    Represents (clearWordsState st (BitVec.ofNat 256 dst) count).memory
+      ptr count value :=
+  ⟨hrep.1, (memoryLimbs_clearWordsState_disjoint st dst ptr count count
+    (by omega) hdstfit hdisjoint).trans hrep.2⟩
+
+theorem loadWord_copyWordsState_source (st : EvmState)
+    (dst src total count j : Nat) (hcount : count ≤ j) (hj : j < total)
+    (hdstfit : dst + 32 * total < 2 ^ 256)
+    (hdisjoint : dst + 32 * total ≤ src ∨ src + 32 * total ≤ dst) :
+    loadWord (copyWordsState st (BitVec.ofNat 256 dst)
+      (BitVec.ofNat 256 src) count).memory (src + 32 * j) =
+      loadWord st.memory (src + 32 * j) := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [copyWordsState_succ]
+      simp only [copyWordAt, storeWordAt]
+      rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
+      · exact ih (by omega)
+      · rw [wordOffset_ofNat dst count (by omega)]
+        rcases hdisjoint with hbefore | hafter
+        · left; omega
+        · right; omega
+
+theorem memoryLimbs_copyWordsState (st : EvmState) (dst src count : Nat)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hsrcfit : src + 32 * count < 2 ^ 256)
+    (hdisjoint : dst + 32 * count ≤ src ∨ src + 32 * count ≤ dst) :
+    memoryLimbs (copyWordsState st (BitVec.ofNat 256 dst)
+      (BitVec.ofNat 256 src) count).memory dst count =
+      memoryLimbs st.memory src count := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [copyWordsState_succ]
+      let before := copyWordsState st (BitVec.ofNat 256 dst)
+        (BitVec.ofNat 256 src) count
+      have hdstAddr : wordOffset (BitVec.ofNat 256 dst) count =
+          BigArithmetic.limbAddr (BitVec.ofNat 256 dst) count := by
+        apply BitVec.eq_of_toNat_eq
+        rw [wordOffset_ofNat dst count (by omega),
+          limbAddr_ofNat dst count (by omega)]
+      have hsrcAddr := wordOffset_ofNat src count (by omega)
+      have hsrcWord : loadWord before.memory (src + 32 * count) =
+          loadWord st.memory (src + 32 * count) :=
+        loadWord_copyWordsState_source st dst src (count + 1) count count
+          (by omega) (by omega) (by omega) hdisjoint
+      rw [copyWordAt, hdstAddr, hsrcAddr]
+      rw [memoryLimbs_store_next _ _ _ _ (by omega),
+        show (touchMemory before (src + 32 * count) 32).memory = before.memory by rfl,
+        ih (by omega) (by omega) (by rcases hdisjoint with h | h <;> omega),
+        hsrcWord, memoryLimbs_succ]
+
+theorem copyWordsState_represents (st : EvmState) (dst src count value : Nat)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hsrcfit : src + 32 * count < 2 ^ 256)
+    (hdisjoint : dst + 32 * count ≤ src ∨ src + 32 * count ≤ dst)
+    (hrep : Represents st.memory src count value) :
+    Represents (copyWordsState st (BitVec.ofNat 256 dst)
+      (BitVec.ofNat 256 src) count).memory dst count value :=
+  ⟨hrep.1, (memoryLimbs_copyWordsState st dst src count hdstfit hsrcfit
+    hdisjoint).trans hrep.2⟩
+
+/-! ## Modular multiplication -/
+
+def wordBits (word : U256) (length : Nat) : List Nat :=
+  (List.range length).map fun j => (BigMul.multiplierBit word j).toNat
+
+theorem multiplierBit_toNat_le_one (word : U256) (j : Nat) (hj : j < 256) :
+    (BigMul.multiplierBit word j).toNat ≤ 1 := by
+  rw [BigMul.multiplierBit, BitVec.toNat_and, BitVec.toNat_ushiftRight,
+    BitVec.toNat_ofNat j 256,
+    Nat.mod_eq_of_lt (hj.trans (by norm_num : 256 < 2 ^ 256))]
+  rw [show BitVec.toNat (1 : U256) = 1 by decide]
+  exact Nat.and_le_right
+
+theorem multiplierBit_toNat (word : U256) (j : Nat) (hj : j < 256) :
+    (BigMul.multiplierBit word j).toNat = (word.toNat >>> j) &&& 1 := by
+  rw [BigMul.multiplierBit, BitVec.toNat_and, BitVec.toNat_ushiftRight,
+    BitVec.toNat_ofNat j 256,
+    Nat.mod_eq_of_lt (hj.trans (by norm_num : 256 < 2 ^ 256))]
+  rw [show BitVec.toNat (1 : U256) = 1 by decide]
+
+theorem wordBits_eq_digitsAppend (word : U256) :
+    wordBits word 256 = Nat.digitsAppend 2 256 word.toNat := by
+  apply List.ext_get
+  · simp [wordBits,
+      Nat.length_digitsAppend (n := word.toNat) (by norm_num) 256 word.isLt]
+  · intro j hleft hright
+    have hj : j < 256 := by simpa [wordBits] using hleft
+    have hleftValue : (wordBits word 256).get ⟨j, hleft⟩ =
+        (BigMul.multiplierBit word j).toNat := by simp [wordBits]
+    rw [hleftValue, multiplierBit_toNat word j hj, Nat.and_one_is_mod]
+    have hrightValue :
+        (Nat.digitsAppend 2 256 word.toNat).get ⟨j, hright⟩ =
+          (Nat.digitsAppend 2 256 word.toNat).getD j 0 :=
+      (List.getD_eq_getElem (Nat.digitsAppend 2 256 word.toNat) 0 hright).symm
+    rw [hrightValue]
+    have hpadded : (Nat.digitsAppend 2 256 word.toNat).getD j 0 =
+        (Nat.digits 2 word.toNat).getD j 0 := by
+      rw [Nat.digitsAppend]
+      by_cases hdigit : j < (Nat.digits 2 word.toNat).length
+      · rw [List.getD_append _ _ _ _ hdigit]
+      · rw [List.getD_append_right _ _ _ _ (Nat.le_of_not_gt hdigit),
+          List.getD_eq_default _ _ (Nat.le_of_not_gt hdigit)]
+        simp [List.getD_eq_getElem?_getD]
+    rw [hpadded, Nat.getD_digits word.toNat j (by omega),
+      Nat.shiftRight_eq_div_pow]
+
+theorem value_wordBits (word : U256) :
+    Nat.ofDigits 2 (wordBits word 256) = word.toNat := by
+  rw [wordBits_eq_digitsAppend, Nat.digitsAppend,
+    Nat.ofDigits_append_replicate_zero, Nat.ofDigits_digits]
+
+theorem mulBitStep_represents (st : EvmState) (word : U256)
+    (j count acc addend m : Nat) (hj : j < 256)
+    (hcount : count ≤ 32) (hmpos : 0 < m)
+    (hacc : Represents st.memory 3072 count acc)
+    (haddend : Represents st.memory 4096 count addend)
+    (hmodulus : Represents st.memory 0 count m)
+    (haccReduced : acc < m) (haddendReduced : addend < m) :
+    let bit := (BigMul.multiplierBit word j).toNat
+    let after := BigMul.mulBitStep 3072 0 (BitVec.ofNat 256 count) word j st
+    Represents after.memory 3072 count ((acc + bit * addend) % m) ∧
+      Represents after.memory 4096 count ((addend + addend) % m) ∧
+      Represents after.memory 0 count m := by
+  let bit := (BigMul.multiplierBit word j).toNat
+  let afterAdd := BigArithmetic.addMaskedModState st 3072 4096
+    (BigMul.multiplierBit word j) 0 count
+  let after := BigArithmetic.addMaskedModState afterAdd 4096 4096 1 0 count
+  have hbit : BigMul.multiplierBit word j = BitVec.ofNat 256 bit :=
+    (BitVec.eq_of_toNat_eq (by simp [bit])).symm
+  have hbitLe : bit ≤ 1 := multiplierBit_toNat_le_one word j hj
+  have hafterAcc : Represents afterAdd.memory 3072 count
+      ((acc + bit * addend) % m) := by
+    simpa [afterAdd, hbit] using
+      addMaskedModState_represents st 3072 4096 0 count bit acc addend m
+        hcount hbitLe hmpos haccReduced haddendReduced.le (by omega) (by omega)
+        (by omega) hacc haddend hmodulus (by right; left; omega)
+        (by left; omega) (by left; omega) (by right; omega)
+  have hafterAddend : Represents afterAdd.memory 4096 count addend := by
+    simpa [afterAdd, hbit] using
+      addMaskedModState_preserves st 3072 4096 0 count bit 4096 addend
+        hcount (by omega) (by left; omega) (by right; omega) haddend
+  have hafterModulus : Represents afterAdd.memory 0 count m := by
+    simpa [afterAdd, hbit] using
+      addMaskedModState_preserves st 3072 4096 0 count bit 0 m hcount
+        (by omega) (by right; omega) (by right; omega) hmodulus
+  have hdoubleAddend : Represents after.memory 4096 count
+      ((addend + addend) % m) := by
+    simpa [after] using
+      addMaskedModState_represents afterAdd 4096 4096 0 count 1 addend addend m
+        hcount (by omega) hmpos haddendReduced haddendReduced.le (by omega)
+        (by omega) (by omega) hafterAddend hafterAddend hafterModulus
+        (by left; rfl) (by left; omega) (by left; omega) (by right; omega)
+  have hdoubleAcc : Represents after.memory 3072 count
+      ((acc + bit * addend) % m) := by
+    exact addMaskedModState_preserves afterAdd 4096 4096 0 count 1 3072
+      ((acc + bit * addend) % m) hcount (by omega) (by right; omega)
+      (by right; omega) hafterAcc
+  have hdoubleModulus : Represents after.memory 0 count m := by
+    exact addMaskedModState_preserves afterAdd 4096 4096 0 count 1 0 m hcount
+      (by omega) (by right; omega) (by right; omega) hafterModulus
+  have hn : (BitVec.ofNat 256 count).toNat = count := by
+    rw [BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (hcount.trans_lt (by norm_num : 32 < 2 ^ 256))]
+  have hstate : BigMul.mulBitStep 3072 0 (BitVec.ofNat 256 count) word j st =
+      after := by
+    simp only [BigMul.mulBitStep, hn]
+    dsimp only [after, afterAdd]
+  change Represents
+      (BigMul.mulBitStep 3072 0 (BitVec.ofNat 256 count) word j st).memory
+        3072 count ((acc + bit * addend) % m) ∧
+    Represents
+      (BigMul.mulBitStep 3072 0 (BitVec.ofNat 256 count) word j st).memory
+        4096 count ((addend + addend) % m) ∧
+    Represents
+      (BigMul.mulBitStep 3072 0 (BitVec.ofNat 256 count) word j st).memory
+        0 count m
+  rw [hstate]
+  exact ⟨hdoubleAcc, hdoubleAddend, hdoubleModulus⟩
 
 end Challenge.Modexp.Reference.Proofs.Yul.BigMath
