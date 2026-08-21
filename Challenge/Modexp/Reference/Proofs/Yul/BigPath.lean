@@ -721,6 +721,416 @@ def exponentiatedState (st : EvmState)
   exponentBytePrefix expOff (limbCount modulusSize) esize.toNat
     (initializedAccumulatorState st bsize modulusSize baseOff modOff)
 
+private def expOuterEnv (bsize esize modulusSize baseOff expOff modOff n
+    modulusOr : U256) (i : Nat) : VEnv D :=
+  [("i", BitVec.ofNat 256 i), ("modulusOr", modulusOr), ("n", n)] ++
+    paramsEnv bsize esize modulusSize baseOff expOff modOff
+
+private def expInnerEnv (bsize esize modulusSize baseOff expOff modOff n
+    modulusOr word : U256) (i j : Nat) : VEnv D :=
+  [("j", BitVec.ofNat 256 j), ("w", word), ("i", BitVec.ofNat 256 i),
+    ("modulusOr", modulusOr), ("n", n)] ++
+    paramsEnv bsize esize modulusSize baseOff expOff modOff
+
+private def expBitEnv (bsize esize modulusSize baseOff expOff modOff n
+    modulusOr word bit : U256) (i j : Nat) : VEnv D :=
+  [("bit", bit)] ++ expInnerEnv bsize esize modulusSize baseOff expOff modOff
+    n modulusOr word i j
+
+private def expMaskEnv (bsize esize modulusSize baseOff expOff modOff n
+    modulusOr word bit mask : U256) (i j : Nat) : VEnv D :=
+  [("mask", mask), ("bit", bit)] ++
+    expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word i j
+
+private def expSelectEnv (bsize esize modulusSize baseOff expOff modOff n
+    modulusOr word bit mask : U256) (i j k : Nat) : VEnv D :=
+  [("k", BitVec.ofNat 256 k), ("mask", mask), ("bit", bit)] ++
+    expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word i j
+
+private def expSelectBody : Block Op := yul% {
+  let off := mul(k, 32)
+  let square := mload(add(0x0800, off))
+  let product := mload(add(0x0c00, off))
+  mstore(add(0x0800, off),
+    xor(square, and(xor(square, product), mask)))
+}
+
+private def expBitBody : Block Op := yul% {
+  let bit := and(shr(sub(7, j), w), 1)
+  mulModBig(0x0800, 0x0800, 0x0c00, 0x0000, n)
+  copyLimbs(0x0800, 0x0c00, n)
+  mulModBig(0x0800, 0x0400, 0x0c00, 0x0000, n)
+  let mask := sub(0, bit)
+  for { let k := 0 } lt(k, n) { k := add(k, 1) } {
+    let off := mul(k, 32)
+    let square := mload(add(0x0800, off))
+    let product := mload(add(0x0c00, off))
+    mstore(add(0x0800, off),
+      xor(square, and(xor(square, product), mask)))
+  }
+}
+
+private def expOuterBody : Block Op := yul% {
+  let w := calldataByte(add(expOff, i))
+  for { let j := 0 } lt(j, 8) { j := add(j, 1) } {
+    let bit := and(shr(sub(7, j), w), 1)
+    mulModBig(0x0800, 0x0800, 0x0c00, 0x0000, n)
+    copyLimbs(0x0800, 0x0c00, n)
+    mulModBig(0x0800, 0x0400, 0x0c00, 0x0000, n)
+    let mask := sub(0, bit)
+    for { let k := 0 } lt(k, n) { k := add(k, 1) } {
+      let off := mul(k, 32)
+      let square := mload(add(0x0800, off))
+      let product := mload(add(0x0c00, off))
+      mstore(add(0x0800, off),
+        xor(square, and(xor(square, product), mask)))
+    }
+  }
+}
+
+private theorem exec_expIncrementK {funs : FunEnv D} (current : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr word bit mask : U256)
+    (i j k : Nat) :
+    ExecStmt D funs
+      (expSelectEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word bit mask i j k) current (.block (yul% { k := add(k, 1) }))
+      (expSelectEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word bit mask i j (k + 1)) current .normal := by
+  apply execStmt_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
+  simp only [expSelectEnv, expInnerEnv, paramsEnv]
+  rw [← ofNat_succ]
+  rfl
+
+private theorem exec_expSelectBody {funs : FunEnv D} (current : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr word bit mask : U256)
+    (i j k : Nat) :
+    ExecStmt D funs
+      (expSelectEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word bit mask i j k) current (.block expSelectBody)
+      (expSelectEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word bit mask i j k) (selectLimbStep mask k current) .normal := by
+  apply execStmt_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 150)
+  rfl
+
+private theorem exec_expSelectLoop {funs : FunEnv D} (initial : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr word bit mask : U256)
+    (i j : Nat) :
+    ∀ (remaining k : Nat), k + remaining = n.toNat →
+      ExecLoop D funs
+        (expSelectEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+          word bit mask i j k) (selectLimbPrefix mask k initial)
+        (yulE% lt(k, n)) (yul% { k := add(k, 1) }) expSelectBody
+        (expSelectEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+          word bit mask i j n.toNat)
+        (selectLimbPrefix mask n.toNat initial) .normal := by
+  intro remaining
+  induction remaining with
+  | zero =>
+      intro k hk
+      have : k = n.toNat := by omega
+      subst k
+      refine Step.loopDone
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) (Step.var rfl))
+          rfl) ?_
+      simp [D, Challenge.YulProof.ClosedEvm.dialect,
+        YulSemantics.EVM.evmWithExternal, dialect_zero,
+        YulSemantics.EVM.b2w, BitVec.ult]
+  | succ remaining ih =>
+      intro k hk
+      have hkn : k < n.toNat := by omega
+      refine Step.loopStep
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) (Step.var rfl))
+          rfl) ?_
+        (exec_expSelectBody (selectLimbPrefix mask k initial) bsize esize
+          modulusSize baseOff expOff modOff n modulusOr word bit mask i j k)
+        (Or.inl rfl)
+        (exec_expIncrementK (selectLimbPrefix mask (k + 1) initial) bsize esize
+          modulusSize baseOff expOff modOff n modulusOr word bit mask i j k) ?_
+      · rw [dialect_zero]
+        simp [D, Challenge.YulProof.ClosedEvm.dialect,
+          YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.b2w, BitVec.ult]
+        rw [Nat.mod_eq_of_lt (hkn.trans n.isLt)]
+        exact hkn
+      · simpa [selectLimbPrefix] using ih (k + 1) (by omega)
+
+private theorem exec_expIncrementJ {funs : FunEnv D} (current : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr word : U256)
+    (i j : Nat) :
+    ExecStmt D funs
+      (expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word i j) current (.block incrementJ)
+      (expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word i (j + 1)) current .normal := by
+  apply execStmt_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
+  simp only [incrementJ, expInnerEnv, paramsEnv]
+  rw [← ofNat_succ]
+  rfl
+
+private theorem exec_expBitBody {funs : FunEnv D} (current : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr word : U256)
+    (i j : Nat)
+    (hmul : lookupFun (hoist D expBitBody :: funs) "mulModBig" =
+      lookupFun verifiedFunctions "mulModBig")
+    (hcopy : lookupFun (hoist D expBitBody :: funs) "copyLimbs" =
+      lookupFun verifiedFunctions "copyLimbs") :
+    ExecStmt D funs
+      (expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word i j) current (.block expBitBody)
+      (expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        word i j) (exponentBitStep n word j current) .normal := by
+  let V := expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+    word i j
+  let bit := baseBit word j
+  let squared := BigMul.mulModBigState current 0x0800 0x0800 0x0c00 0x0000 n
+  let copied := copyWordsState squared 0x0800 0x0c00 n.toNat
+  let product := BigMul.mulModBigState copied 0x0800 0x0400 0x0c00 0x0000 n
+  let mask : U256 := 0 - bit
+  let bodyFuns : FunEnv D := hoist D expBitBody :: funs
+  let selectFuns : FunEnv D := [] :: bodyFuns
+  have hbit : EvalExpr D bodyFuns V current
+      (yulE% and(shr(sub(7, j), w), 1)) (.vals [bit] current) := by
+    apply evalExpr_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 50)
+    rfl
+  have hmulArgs1 : EvalArgs D bodyFuns
+      (expBitEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word
+        bit i j) current
+      [yulE% 0x0800, yulE% 0x0800, yulE% 0x0c00, yulE% 0x0000, yulE% n]
+      (.vals [0x0800, 0x0800, 0x0c00, 0x0000, n] current) := by
+    apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 60)
+    rfl
+  have hmul1 : EvalExpr D bodyFuns
+      (expBitEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word
+        bit i j) current
+      (yulE% mulModBig(0x0800, 0x0800, 0x0c00, 0x0000, n))
+      (.vals [] squared) := by
+    simpa [bodyFuns, squared, mkCall, parse] using
+      (BigMul.eval_mulModBig (funs := bodyFuns) (st := current)
+        (0x0800 : U256) 0x0800 0x0c00 0x0000 n (by rw [hmul]; rfl) hmulArgs1)
+  have hcopyArgs : EvalArgs D bodyFuns
+      (expBitEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word
+        bit i j) squared [yulE% 0x0800, yulE% 0x0c00, yulE% n]
+      (.vals [0x0800, 0x0c00, n] squared) := by
+    apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 40)
+    rfl
+  have hcopyCall : EvalExpr D bodyFuns
+      (expBitEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word
+        bit i j) squared (yulE% copyLimbs(0x0800, 0x0c00, n))
+      (.vals [] copied) := by
+    simpa [bodyFuns, copied, mkCall, parse] using
+      (eval_copyLimbs (funs := bodyFuns) (st := squared)
+        (0x0800 : U256) 0x0c00 n (by rw [hcopy]; rfl) hcopyArgs)
+  have hmulArgs2 : EvalArgs D bodyFuns
+      (expBitEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word
+        bit i j) copied
+      [yulE% 0x0800, yulE% 0x0400, yulE% 0x0c00, yulE% 0x0000, yulE% n]
+      (.vals [0x0800, 0x0400, 0x0c00, 0x0000, n] copied) := by
+    apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 60)
+    rfl
+  have hmul2 : EvalExpr D bodyFuns
+      (expBitEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word
+        bit i j) copied
+      (yulE% mulModBig(0x0800, 0x0400, 0x0c00, 0x0000, n))
+      (.vals [] product) := by
+    simpa [bodyFuns, product, mkCall, parse] using
+      (BigMul.eval_mulModBig (funs := bodyFuns) (st := copied)
+        (0x0800 : U256) 0x0400 0x0c00 0x0000 n (by rw [hmul]; rfl) hmulArgs2)
+  have hmask : EvalExpr D bodyFuns
+      (expBitEnv bsize esize modulusSize baseOff expOff modOff n modulusOr word
+        bit i j) product (yulE% sub(0, bit)) (.vals [mask] product) := by
+    apply evalExpr_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
+    rfl
+  have hselect := exec_expSelectLoop (funs := selectFuns) product bsize esize
+    modulusSize baseOff expOff modOff n modulusOr word bit mask i j n.toNat 0
+    (by omega)
+  refine Step.block (D := D)
+    (Vb := expMaskEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+      word bit mask i j) ?_
+  refine Step.seqCons (Step.letVal hbit rfl) ?_
+  refine Step.seqCons (Step.exprStmt hmul1) ?_
+  refine Step.seqCons (Step.exprStmt hcopyCall) ?_
+  refine Step.seqCons (Step.exprStmt hmul2) ?_
+  refine Step.seqCons (Step.letVal hmask rfl) ?_
+  refine Step.seqCons ?_ Step.seqNil
+  refine Step.forLoop (D := D)
+    (Vinit := expSelectEnv bsize esize modulusSize baseOff expOff modOff n
+      modulusOr word bit mask i j 0) (stinit := product)
+    (Vend := expSelectEnv bsize esize modulusSize baseOff expOff modOff n
+      modulusOr word bit mask i j n.toNat) ?_ ?_
+  · exact Step.seqCons (Step.letVal Step.lit rfl) Step.seqNil
+  · simpa [selectFuns, bodyFuns, expBitBody, expSelectBody,
+      exponentBitStep, bit, squared, copied, product, mask,
+      selectLimbPrefix, hoist] using hselect
+
+private theorem exec_expBitLoop {funs : FunEnv D} (initial : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr word : U256)
+    (i : Nat)
+    (hmul : lookupFun funs "mulModBig" =
+      lookupFun verifiedFunctions "mulModBig")
+    (hcopy : lookupFun funs "copyLimbs" =
+      lookupFun verifiedFunctions "copyLimbs") :
+    ∀ (remaining j : Nat), j + remaining = 8 →
+      ExecLoop D funs
+        (expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+          word i j) (exponentBitPrefix n word j initial)
+        (yulE% lt(j, 8)) incrementJ expBitBody
+        (expInnerEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+          word i 8) (exponentBitPrefix n word 8 initial) .normal := by
+  intro remaining
+  induction remaining with
+  | zero =>
+      intro j hj
+      have : j = 8 := by omega
+      subst j
+      refine Step.loopDone
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil Step.lit) (Step.var rfl)) rfl)
+        ?_
+      norm_num [D, Challenge.YulProof.ClosedEvm.dialect,
+        YulSemantics.EVM.evmWithExternal, dialect_zero,
+        YulSemantics.EVM.b2w, BitVec.ult, YulSemantics.EVM.litValue]
+  | succ remaining ih =>
+      intro j hj
+      have hj8 : j < 8 := by omega
+      have hmul' : lookupFun (hoist D expBitBody :: funs) "mulModBig" =
+          lookupFun verifiedFunctions "mulModBig" := by
+        simpa [expBitBody, hoist, lookupFun] using hmul
+      have hcopy' : lookupFun (hoist D expBitBody :: funs) "copyLimbs" =
+          lookupFun verifiedFunctions "copyLimbs" := by
+        simpa [expBitBody, hoist, lookupFun] using hcopy
+      refine Step.loopStep
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil Step.lit) (Step.var rfl)) rfl)
+        ?_
+        (exec_expBitBody (exponentBitPrefix n word j initial) bsize esize
+          modulusSize baseOff expOff modOff n modulusOr word i j hmul' hcopy')
+        (Or.inl rfl)
+        (exec_expIncrementJ (exponentBitPrefix n word (j + 1) initial)
+          bsize esize modulusSize baseOff expOff modOff n modulusOr word i j) ?_
+      · rw [dialect_zero]
+        simp [D, Challenge.YulProof.ClosedEvm.dialect,
+          YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.b2w, BitVec.ult,
+          YulSemantics.EVM.litValue]
+        have hjM : j <
+            115792089237316195423570985008687907853269984665640564039457584007913129639936 :=
+          by omega
+        rw [Nat.mod_eq_of_lt hjM]
+        exact hj8
+      · simpa [exponentBitPrefix] using ih (j + 1) (by omega)
+
+private theorem exec_expOuterBody {funs : FunEnv D} (current : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr : U256)
+    (i : Nat)
+    (hmul : lookupFun funs "mulModBig" =
+      lookupFun verifiedFunctions "mulModBig")
+    (hcopy : lookupFun funs "copyLimbs" =
+      lookupFun verifiedFunctions "copyLimbs")
+    (hbyte : lookupFun (hoist D expOuterBody :: funs) "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions)) :
+    ExecStmt D funs
+      (expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i)
+      current (.block expOuterBody)
+      (expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i)
+      (exponentByteStep expOff n i current) .normal := by
+  let V := expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i
+  let off := expOff + BitVec.ofNat 256 i
+  let word := StateModel.calldataByteValue current off
+  let bodyFuns : FunEnv D := hoist D expOuterBody :: funs
+  let loopFuns : FunEnv D := [] :: bodyFuns
+  have hoff : EvalExpr D bodyFuns V current (yulE% add(expOff, i))
+      (.vals [off] current) := by
+    apply evalExpr_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
+    rfl
+  have hw : EvalExpr D bodyFuns V current
+      (yulE% calldataByte(add(expOff, i))) (.vals [word] current) := by
+    simpa [bodyFuns, word, off, mkCall, parse] using
+      (eval_calldataByte off hbyte hoff)
+  have hmul' : lookupFun loopFuns "mulModBig" =
+      lookupFun verifiedFunctions "mulModBig" := by
+    simpa [loopFuns, bodyFuns, expOuterBody, hoist, lookupFun] using hmul
+  have hcopy' : lookupFun loopFuns "copyLimbs" =
+      lookupFun verifiedFunctions "copyLimbs" := by
+    simpa [loopFuns, bodyFuns, expOuterBody, hoist, lookupFun] using hcopy
+  have hbits := exec_expBitLoop (funs := loopFuns) current bsize esize
+    modulusSize baseOff expOff modOff n modulusOr word i hmul' hcopy' 8 0 (by omega)
+  refine Step.block (D := D)
+    (Vb := ("w", word) ::
+      expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i) ?_
+  refine Step.seqCons (Step.letVal hw rfl) ?_
+  refine Step.seqCons ?_ Step.seqNil
+  refine Step.forLoop (D := D)
+    (Vinit := expInnerEnv bsize esize modulusSize baseOff expOff modOff n
+      modulusOr word i 0) (stinit := current)
+    (Vend := expInnerEnv bsize esize modulusSize baseOff expOff modOff n
+      modulusOr word i 8) ?_ ?_
+  · exact Step.seqCons (Step.letVal Step.lit rfl) Step.seqNil
+  · simpa [loopFuns, bodyFuns, expOuterBody, expBitBody, incrementJ,
+      exponentByteStep, exponentBitPrefix, word, off, hoist] using hbits
+
+private theorem exec_expIncrementI {funs : FunEnv D} (current : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr : U256)
+    (i : Nat) :
+    ExecStmt D funs
+      (expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i)
+      current (.block incrementI)
+      (expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+        (i + 1)) current .normal := by
+  simpa [expOuterEnv, baseOuterEnv] using
+    (exec_incrementI (funs := funs) current bsize esize modulusSize baseOff
+      expOff modOff n modulusOr i)
+
+theorem exec_exponentLoop {funs : FunEnv D} (initial : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr : U256)
+    (hmul : lookupFun funs "mulModBig" =
+      lookupFun verifiedFunctions "mulModBig")
+    (hcopy : lookupFun funs "copyLimbs" =
+      lookupFun verifiedFunctions "copyLimbs")
+    (hbyte : lookupFun funs "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions)) :
+    ∀ (remaining i : Nat), i + remaining = esize.toNat →
+      ExecLoop D funs
+        (expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i)
+        (exponentBytePrefix expOff n i initial)
+        (yulE% lt(i, esize)) incrementI expOuterBody
+        (expOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+          esize.toNat)
+        (exponentBytePrefix expOff n esize.toNat initial) .normal := by
+  intro remaining
+  induction remaining with
+  | zero =>
+      intro i hi
+      have : i = esize.toNat := by omega
+      subst i
+      refine Step.loopDone
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) (Step.var rfl))
+          rfl) ?_
+      simp [D, Challenge.YulProof.ClosedEvm.dialect,
+        YulSemantics.EVM.evmWithExternal, dialect_zero,
+        YulSemantics.EVM.b2w, BitVec.ult]
+  | succ remaining ih =>
+      intro i hi
+      have hie : i < esize.toNat := by omega
+      have hbyte' : lookupFun (hoist D expOuterBody :: funs) "calldataByte" =
+          some (calldataByteDecl, verifiedFunctions) := by
+        simpa [expOuterBody, hoist, lookupFun] using hbyte
+      refine Step.loopStep
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) (Step.var rfl))
+          rfl) ?_
+        (exec_expOuterBody (exponentBytePrefix expOff n i initial)
+          bsize esize modulusSize baseOff expOff modOff n modulusOr i
+          hmul hcopy hbyte') (Or.inl rfl)
+        (exec_expIncrementI (exponentBytePrefix expOff n (i + 1) initial)
+          bsize esize modulusSize baseOff expOff modOff n modulusOr i) ?_
+      · rw [dialect_zero]
+        simp [D, Challenge.YulProof.ClosedEvm.dialect,
+          YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.b2w, BitVec.ult]
+        rw [Nat.mod_eq_of_lt (hie.trans esize.isLt)]
+        exact hie
+      · simpa [exponentBytePrefix] using ih (i + 1) (by omega)
+
 def serializedResultState (st : EvmState) (modulusSize : U256) : EvmState :=
   serializePrefix modulusSize modulusSize.toNat st
 
