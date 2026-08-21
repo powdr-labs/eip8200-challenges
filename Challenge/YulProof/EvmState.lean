@@ -18,13 +18,91 @@ open YulSemantics.EVM
 def storeWordAt (st : EvmState) (p v : U256) : EvmState :=
   { touchMemory st p.toNat 32 with memory := storeWord st.memory p.toNat v }
 
-def storeMany : EvmState → List (U256 × U256) → EvmState
-  | st, [] => st
-  | st, (p, v) :: rest => storeMany (storeWordAt st p v) rest
+def storeByteAt (st : EvmState) (p v : U256) : EvmState :=
+  { touchMemory st p.toNat 1 with memory := storeByte st.memory p.toNat v }
 
 /-- Two 32-byte Yul memory words do not overlap. -/
 def WordDisjoint (p q : U256) : Prop :=
   p.toNat + 32 ≤ q.toNat ∨ q.toNat + 32 ≤ p.toNat
+
+@[simp] theorem loadWord_storeWordAt (st : EvmState) (p v : U256) :
+    loadWord (storeWordAt st p v).memory p.toNat = v := by
+  exact YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord
+    st.memory p.toNat v
+
+theorem loadWord_storeWordAt_other (st : EvmState) (write read v : U256)
+    (hdisjoint : WordDisjoint write read) :
+    loadWord (storeWordAt st write v).memory read.toNat =
+      loadWord st.memory read.toNat := by
+  exact YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other
+    st.memory write.toNat read.toNat v hdisjoint
+
+@[simp] theorem memory_storeByteAt_same (st : EvmState) (p v : U256) :
+    (storeByteAt st p v).memory p.toNat = byteAt v 0 := by
+  simp [storeByteAt, storeByte]
+
+theorem memory_storeByteAt_other (st : EvmState) (p v : U256) (q : Nat)
+    (hne : q ≠ p.toNat) :
+    (storeByteAt st p v).memory q = st.memory q := by
+  simp [storeByteAt, storeByte, hne]
+
+theorem loadWord_storeByteAt_other (st : EvmState) (write read v : U256)
+    (hdisjoint : write.toNat < read.toNat ∨ read.toNat + 32 ≤ write.toNat) :
+    loadWord (storeByteAt st write v).memory read.toNat =
+      loadWord st.memory read.toNat := by
+  unfold loadWord
+  apply List.foldl_ext _ _ 0
+  intro _ i hi
+  have hi32 : i < 32 := List.mem_range.mp hi
+  rw [memory_storeByteAt_other]
+  rcases hdisjoint with hbefore | hafter <;> omega
+
+/-- The address of word `i` in a contiguous 32-byte word array. Arithmetic
+is intentionally in `U256`, matching Yul's `add(base, mul(i, 32))`. -/
+def wordOffset (base : U256) (i : Nat) : U256 :=
+  base + BitVec.ofNat 256 (32 * i)
+
+/-- State after clearing the first `count` words of a contiguous word array. -/
+def clearWordsState (st : EvmState) (base : U256) : Nat → EvmState
+  | 0 => st
+  | count + 1 => storeWordAt (clearWordsState st base count) (wordOffset base count) 0
+
+/-- One `mload` followed by one `mstore`, including both memory touches. -/
+def copyWordAt (st : EvmState) (dst src : U256) : EvmState :=
+  let loaded := touchMemory st src.toNat 32
+  storeWordAt loaded dst (loadWord st.memory src.toNat)
+
+/-- State after forward-copying the first `count` words between contiguous
+word arrays. Reads observe prior writes, as in an ordinary Yul loop. -/
+def copyWordsState (st : EvmState) (dst src : U256) : Nat → EvmState
+  | 0 => st
+  | count + 1 =>
+      copyWordAt (copyWordsState st dst src count)
+        (wordOffset dst count) (wordOffset src count)
+
+@[simp] theorem clearWordsState_zero (st : EvmState) (base : U256) :
+    clearWordsState st base 0 = st := rfl
+
+@[simp] theorem clearWordsState_succ (st : EvmState) (base : U256) (count : Nat) :
+    clearWordsState st base (count + 1) =
+      storeWordAt (clearWordsState st base count) (wordOffset base count) 0 := rfl
+
+@[simp] theorem copyWordsState_zero (st : EvmState) (dst src : U256) :
+    copyWordsState st dst src 0 = st := rfl
+
+@[simp] theorem copyWordsState_succ (st : EvmState) (dst src : U256) (count : Nat) :
+    copyWordsState st dst src (count + 1) =
+      copyWordAt (copyWordsState st dst src count)
+        (wordOffset dst count) (wordOffset src count) := rfl
+
+@[simp] theorem loadWord_copyWordAt (st : EvmState) (dst src : U256) :
+    loadWord (copyWordAt st dst src).memory dst.toNat =
+      loadWord st.memory src.toNat := by
+  simp [copyWordAt]
+
+def storeMany : EvmState → List (U256 × U256) → EvmState
+  | st, [] => st
+  | st, (p, v) :: rest => storeMany (storeWordAt st p v) rest
 
 theorem loadWord_storeMany_preserved (st : EvmState)
     (stores : List (U256 × U256)) (p v : U256)
@@ -144,6 +222,15 @@ theorem loadWord {cutoff : Nat} {before after : EvmState}
   have hi' : i < 32 := List.mem_range.mp hi
   rw [h (p + i) (by omega)]
 
+theorem readBytes {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqFrom cutoff before after) (p n : Nat) (hp : cutoff ≤ p) :
+    YulSemantics.EVM.readBytes after.memory p n =
+      YulSemantics.EVM.readBytes before.memory p n := by
+  unfold YulSemantics.EVM.readBytes
+  apply List.map_congr_left
+  intro i hi
+  rw [h (p + i) (by omega)]
+
 theorem storeWordAt {cutoff : Nat} {before after : EvmState}
     (h : MemoryEqFrom cutoff before after) (p v : U256)
     (hp : p.toNat + 32 ≤ cutoff) :
@@ -156,10 +243,31 @@ theorem storeWordAt {cutoff : Nat} {before after : EvmState}
     omega
   · exact h q hq
 
+theorem storeByteAt {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqFrom cutoff before after) (p v : U256)
+    (hp : p.toNat < cutoff) :
+    MemoryEqFrom cutoff before
+      (Challenge.YulProof.EvmState.storeByteAt after p v) := by
+  intro q hq
+  unfold Challenge.YulProof.EvmState.storeByteAt
+  simp only [storeByte]
+  rw [if_neg (by omega)]
+  exact h q hq
+
 theorem touch (cutoff : Nat) (st : EvmState) (offset size : Nat) :
     MemoryEqFrom cutoff st (touchMemory st offset size) := by
   intro _ _
   rfl
+
+theorem copyWordAt {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqFrom cutoff before after) (dst src : U256)
+    (hdst : dst.toNat + 32 ≤ cutoff) :
+    MemoryEqFrom cutoff before
+      (Challenge.YulProof.EvmState.copyWordAt after dst src) := by
+  unfold Challenge.YulProof.EvmState.copyWordAt
+  apply storeWordAt
+  · exact trans h (touch cutoff after src.toNat 32)
+  · exact hdst
 
 theorem storeMany (st : EvmState) (stores : List (U256 × U256))
     (cutoff : Nat) (hall : ∀ p v, (p, v) ∈ stores → p.toNat + 32 ≤ cutoff) :
@@ -172,6 +280,32 @@ theorem storeMany (st : EvmState) (stores : List (U256 × U256))
       exact trans (storeWordAt (refl cutoff st) p v (hall p v (by simp)))
         (ih (Challenge.YulProof.EvmState.storeWordAt st p v)
           (fun p' v' hm => hall p' v' (by simp [hm])))
+
+theorem clearWordsState {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqFrom cutoff before after) (base : U256) (count : Nat)
+    (hall : ∀ i, i < count → (wordOffset base i).toNat + 32 ≤ cutoff) :
+    MemoryEqFrom cutoff before
+      (Challenge.YulProof.EvmState.clearWordsState after base count) := by
+  induction count with
+  | zero => simpa
+  | succ count ih =>
+      rw [Challenge.YulProof.EvmState.clearWordsState_succ]
+      apply storeWordAt
+      · exact ih (fun i hi => hall i (by omega))
+      · exact hall count (by omega)
+
+theorem copyWordsState {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqFrom cutoff before after) (dst src : U256) (count : Nat)
+    (hall : ∀ i, i < count → (wordOffset dst i).toNat + 32 ≤ cutoff) :
+    MemoryEqFrom cutoff before
+      (Challenge.YulProof.EvmState.copyWordsState after dst src count) := by
+  induction count with
+  | zero => simpa
+  | succ count ih =>
+      rw [Challenge.YulProof.EvmState.copyWordsState_succ]
+      apply copyWordAt
+      · exact ih (fun i hi => hall i (by omega))
+      · exact hall count (by omega)
 
 theorem mcopyState (cutoff : Nat) (st : EvmState) (dst src n : U256)
     (hdst : dst.toNat + n.toNat ≤ cutoff) :
@@ -209,6 +343,17 @@ theorem loadWord {cutoff : Nat} {before after : EvmState}
   have hi' : i < 32 := List.mem_range.mp hi
   rw [h (p + i) (by omega)]
 
+theorem readBytes {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqBefore cutoff before after) (p n : Nat)
+    (hp : p + n ≤ cutoff) :
+    YulSemantics.EVM.readBytes after.memory p n =
+      YulSemantics.EVM.readBytes before.memory p n := by
+  unfold YulSemantics.EVM.readBytes
+  apply List.map_congr_left
+  intro i hi
+  have hi' : i < n := List.mem_range.mp hi
+  rw [h (p + i) (by omega)]
+
 theorem storeWordAt {cutoff : Nat} {before after : EvmState}
     (h : MemoryEqBefore cutoff before after) (p v : U256)
     (hp : cutoff ≤ p.toNat) :
@@ -221,10 +366,57 @@ theorem storeWordAt {cutoff : Nat} {before after : EvmState}
     omega
   · exact h q hq
 
+theorem storeByteAt {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqBefore cutoff before after) (p v : U256)
+    (hp : cutoff ≤ p.toNat) :
+    MemoryEqBefore cutoff before
+      (Challenge.YulProof.EvmState.storeByteAt after p v) := by
+  intro q hq
+  unfold Challenge.YulProof.EvmState.storeByteAt
+  simp only [storeByte]
+  rw [if_neg (by omega)]
+  exact h q hq
+
 theorem touch (cutoff : Nat) (st : EvmState) (offset size : Nat) :
     MemoryEqBefore cutoff st (touchMemory st offset size) := by
   intro _ _
   rfl
+
+theorem copyWordAt {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqBefore cutoff before after) (dst src : U256)
+    (hdst : cutoff ≤ dst.toNat) :
+    MemoryEqBefore cutoff before
+      (Challenge.YulProof.EvmState.copyWordAt after dst src) := by
+  unfold Challenge.YulProof.EvmState.copyWordAt
+  apply storeWordAt
+  · exact trans h (touch cutoff after src.toNat 32)
+  · exact hdst
+
+theorem clearWordsState {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqBefore cutoff before after) (base : U256) (count : Nat)
+    (hall : ∀ i, i < count → cutoff ≤ (wordOffset base i).toNat) :
+    MemoryEqBefore cutoff before
+      (Challenge.YulProof.EvmState.clearWordsState after base count) := by
+  induction count with
+  | zero => simpa
+  | succ count ih =>
+      rw [Challenge.YulProof.EvmState.clearWordsState_succ]
+      apply storeWordAt
+      · exact ih (fun i hi => hall i (by omega))
+      · exact hall count (by omega)
+
+theorem copyWordsState {cutoff : Nat} {before after : EvmState}
+    (h : MemoryEqBefore cutoff before after) (dst src : U256) (count : Nat)
+    (hall : ∀ i, i < count → cutoff ≤ (wordOffset dst i).toNat) :
+    MemoryEqBefore cutoff before
+      (Challenge.YulProof.EvmState.copyWordsState after dst src count) := by
+  induction count with
+  | zero => simpa
+  | succ count ih =>
+      rw [Challenge.YulProof.EvmState.copyWordsState_succ]
+      apply copyWordAt
+      · exact ih (fun i hi => hall i (by omega))
+      · exact hall count (by omega)
 
 end MemoryEqBefore
 

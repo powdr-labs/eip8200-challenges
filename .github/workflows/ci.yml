@@ -22,7 +22,7 @@ jobs:
       - name: Exercise acceptance and rejection controls
         run: scripts/check-submission-boundary.sh --self-test
 
-  # Build external Lean dependencies and the direct-EVM proof layer once.
+  # Build external Lean dependencies and the shared EVM/Yul proof layers once.
   # Challenge jobs restore these complete global caches and own only their
   # root-package outputs.
   shared-lean:
@@ -41,7 +41,7 @@ jobs:
         env:
           DEPENDENCY_HASH: ${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'patches/lean-4.33/*.patch', 'scripts/apply-lean-4.33-dependency-patches.sh') }}
           PACKAGE_TARGET_HASH: ${{ hashFiles('.github/lean-package-cache-targets') }}
-          SHARED_HASH: ${{ hashFiles('lakefile.toml', 'Challenge/EvmProof.lean', 'Challenge/EvmProof/**/*.lean', 'Checks/EvmProof.lean') }}
+          SHARED_HASH: ${{ hashFiles('lakefile.toml', 'Challenge/EvmProof.lean', 'Challenge/EvmProof/**/*.lean', 'Challenge/YulProof.lean', 'Challenge/YulProof/**/*.lean', 'Checks/EvmProof.lean', 'Checks/YulProof.lean') }}
         run: |
           package_key="lake-packages-v4-${{ runner.os }}-${{ runner.arch }}-${DEPENDENCY_HASH}-${PACKAGE_TARGET_HASH}"
           shared_key="project-shared-v3-${{ runner.os }}-${{ runner.arch }}-${DEPENDENCY_HASH}-${PACKAGE_TARGET_HASH}-${SHARED_HASH}"
@@ -89,16 +89,18 @@ jobs:
           mapfile -t targets < .github/lean-package-cache-targets
           lake build "${targets[@]}"
 
-      - name: Build shared EVM proof support
-        run: lake build +Challenge.EvmProof:c.o
+      - name: Build shared EVM and Yul proof support
+        run: lake build +Challenge.EvmProof:c.o +Challenge.YulProof:c.o
 
       - name: Verify shared soundness
         run: |
-          if grep -rn --include='*.lean' -w 'sorry' Challenge/EvmProof Challenge/EvmProof.lean; then
-            echo "::error::found an unfinished proof in shared EVM support"
+          if grep -rn --include='*.lean' -w 'sorry' \
+              Challenge/EvmProof Challenge/EvmProof.lean \
+              Challenge/YulProof Challenge/YulProof.lean; then
+            echo "::error::found an unfinished proof in shared EVM/Yul support"
             exit 1
           fi
-          lake build +Checks.EvmProof
+          lake build +Checks.EvmProof +Checks.YulProof
 
   # Each matrix entry has its own job and source-keyed project cache. A RIPEMD
   # submission therefore neither rebuilds nor invalidates SHA-256 or MODEXP.
