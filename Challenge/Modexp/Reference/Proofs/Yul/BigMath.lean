@@ -1056,6 +1056,35 @@ theorem copyWordsState_represents (st : EvmState) (dst src count value : Nat)
   ⟨hrep.1, (memoryLimbs_copyWordsState st dst src count hdstfit hsrcfit
     hdisjoint).trans hrep.2⟩
 
+theorem memoryLimbs_copyWordsState_disjoint (st : EvmState)
+    (dst src ptr total count : Nat) (hcount : count ≤ total)
+    (hdstfit : dst + 32 * total < 2 ^ 256)
+    (hdisjoint : dst + 32 * total ≤ ptr ∨ ptr + 32 * total ≤ dst) :
+    memoryLimbs (copyWordsState st (BitVec.ofNat 256 dst)
+      (BitVec.ofNat 256 src) count).memory ptr total =
+      memoryLimbs st.memory ptr total := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [copyWordsState_succ]
+      simp only [copyWordAt]
+      rw [memoryLimbs_store_disjoint]
+      · simpa [YulSemantics.EVM.touchMemory] using ih (by omega)
+      · rw [wordOffset_ofNat dst count (by omega)]
+        rcases hdisjoint with hbefore | hafter
+        · left; omega
+        · right; omega
+
+theorem copyWordsState_preserves (st : EvmState)
+    (dst src ptr count value : Nat)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hdisjoint : dst + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ dst)
+    (hrep : Represents st.memory ptr count value) :
+    Represents (copyWordsState st (BitVec.ofNat 256 dst)
+      (BitVec.ofNat 256 src) count).memory ptr count value :=
+  ⟨hrep.1, (memoryLimbs_copyWordsState_disjoint st dst src ptr count count
+    (by omega) hdstfit hdisjoint).trans hrep.2⟩
+
 /-! ## Modular multiplication -/
 
 def wordBits (word : U256) (length : Nat) : List Nat :=
@@ -1106,6 +1135,50 @@ theorem value_wordBits (word : U256) :
     Nat.ofDigits 2 (wordBits word 256) = word.toNat := by
   rw [wordBits_eq_digitsAppend, Nat.digitsAppend,
     Nat.ofDigits_append_replicate_zero, Nat.ofDigits_digits]
+
+theorem wordBits_succ (word : U256) (length : Nat) :
+    wordBits word (length + 1) =
+      wordBits word length ++ [(BigMul.multiplierBit word length).toNat] := by
+  simp [wordBits, List.range_succ]
+
+def limbBits (memory : Nat → UInt8) (ptr steps : Nat) : List Nat :=
+  (List.range steps).flatMap fun i =>
+    wordBits (loadWord memory (ptr + 32 * i)) 256
+
+theorem limbBits_succ (memory : Nat → UInt8) (ptr steps : Nat) :
+    limbBits memory ptr (steps + 1) =
+      limbBits memory ptr steps ++
+        wordBits (loadWord memory (ptr + 32 * steps)) 256 := by
+  simp [limbBits, List.range_succ]
+
+@[simp] theorem length_limbBits (memory : Nat → UInt8)
+    (ptr steps : Nat) :
+    (limbBits memory ptr steps).length = 256 * steps := by
+  simp [limbBits, wordBits]
+  omega
+
+theorem value_limbBits (memory : Nat → UInt8) (ptr count : Nat) :
+    Nat.ofDigits 2 (limbBits memory ptr count) =
+      Nat.ofDigits Limbs.radix (memoryLimbs memory ptr count) := by
+  induction count with
+  | zero => simp [limbBits, memoryLimbs]
+  | succ count ih =>
+      rw [limbBits_succ, Nat.ofDigits_append, ih, value_wordBits]
+      simp [memoryLimbs, List.range_succ, Nat.ofDigits_append,
+        Limbs.radix, Nat.pow_mul]
+
+theorem loadWord_eq_of_represents (left right : Nat → UInt8)
+    (ptr count value i : Nat) (hi : i < count)
+    (hleft : Represents left ptr count value)
+    (hright : Represents right ptr count value) :
+    loadWord left (ptr + 32 * i) = loadWord right (ptr + 32 * i) := by
+  have hlists : memoryLimbs left ptr count = memoryLimbs right ptr count :=
+    hleft.2.trans hright.2.symm
+  have hget := congrArg (fun digits => digits[i]?) hlists
+  have htoNat : (loadWord left (ptr + 32 * i)).toNat =
+      (loadWord right (ptr + 32 * i)).toNat := by
+    simpa [memoryLimbs, hi] using hget
+  exact BitVec.eq_of_toNat_eq htoNat
 
 theorem mulBitStep_represents (st : EvmState) (word : U256)
     (j count acc addend m : Nat) (hj : j < 256)
@@ -1174,5 +1247,197 @@ theorem mulBitStep_represents (st : EvmState) (word : U256)
         0 count m
   rw [hstate]
   exact ⟨hdoubleAcc, hdoubleAddend, hdoubleModulus⟩
+
+theorem mulBitStep_preserves (st : EvmState) (word : U256)
+    (j count ptr value : Nat) (hcount : count ≤ 32)
+    (hptrOut : 3072 + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ 3072)
+    (hptrAddend : 4096 + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ 4096)
+    (hptrCandidate : 5120 + 32 * count ≤ ptr ∨
+      ptr + 32 * count ≤ 5120)
+    (hrep : Represents st.memory ptr count value) :
+    Represents
+      (BigMul.mulBitStep 3072 0 (BitVec.ofNat 256 count) word j st).memory
+      ptr count value := by
+  let bit := (BigMul.multiplierBit word j).toNat
+  let afterAdd := BigArithmetic.addMaskedModState st 3072 4096
+    (BigMul.multiplierBit word j) 0 count
+  have hbit : BigMul.multiplierBit word j = BitVec.ofNat 256 bit :=
+    (BitVec.eq_of_toNat_eq (by simp [bit])).symm
+  have hafter : Represents afterAdd.memory ptr count value := by
+    simpa [afterAdd, hbit] using
+      addMaskedModState_preserves st 3072 4096 0 count bit ptr value hcount
+        (by omega) hptrOut hptrCandidate hrep
+  have hfinal : Represents
+      (BigArithmetic.addMaskedModState afterAdd 4096 4096 1 0 count).memory
+      ptr count value :=
+    addMaskedModState_preserves afterAdd 4096 4096 0 count 1 ptr value
+      hcount (by omega) hptrAddend hptrCandidate hafter
+  have hn : (BitVec.ofNat 256 count).toNat = count := by
+    rw [BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (hcount.trans_lt (by norm_num : 32 < 2 ^ 256))]
+  simpa [BigMul.mulBitStep, hn, afterAdd] using hfinal
+
+theorem mulBitPrefix_preserves (st : EvmState) (word : U256)
+    (steps count ptr value : Nat) (hsteps : steps ≤ 256)
+    (hcount : count ≤ 32)
+    (hptrOut : 3072 + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ 3072)
+    (hptrAddend : 4096 + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ 4096)
+    (hptrCandidate : 5120 + 32 * count ≤ ptr ∨
+      ptr + 32 * count ≤ 5120)
+    (hrep : Represents st.memory ptr count value) :
+    Represents
+      (BigMul.mulBitPrefix 3072 0 (BitVec.ofNat 256 count) word steps st).memory
+      ptr count value := by
+  induction steps with
+  | zero => simpa [BigMul.mulBitPrefix] using hrep
+  | succ steps ih =>
+      have hbefore := ih (by omega)
+      simpa [BigMul.mulBitPrefix] using
+        mulBitStep_preserves
+          (BigMul.mulBitPrefix 3072 0 (BitVec.ofNat 256 count) word steps st)
+          word steps count ptr value hcount hptrOut hptrAddend
+          hptrCandidate hbefore
+
+theorem mulBitPrefix_represents (st : EvmState) (word : U256)
+    (steps count acc addend m : Nat) (hsteps : steps ≤ 256)
+    (hcount : count ≤ 32) (hmpos : 0 < m)
+    (hacc : Represents st.memory 3072 count acc)
+    (haddend : Represents st.memory 4096 count addend)
+    (hmodulus : Represents st.memory 0 count m)
+    (haccReduced : acc < m) (haddendReduced : addend < m) :
+    let progress := BigMul.mulBitPrefix 3072 0
+      (BitVec.ofNat 256 count) word steps st
+    let result := Algorithm.mulBits m acc addend (wordBits word steps)
+    Represents progress.memory 3072 count result.1 ∧
+      Represents progress.memory 4096 count result.2 ∧
+      Represents progress.memory 0 count m := by
+  induction steps with
+  | zero =>
+      simp [BigMul.mulBitPrefix, wordBits, Algorithm.mulBits, hacc, haddend,
+        hmodulus]
+  | succ steps ih =>
+      have hsteps' : steps ≤ 256 := by omega
+      let before := BigMul.mulBitPrefix 3072 0
+        (BitVec.ofNat 256 count) word steps st
+      let beforeResult := Algorithm.mulBits m acc addend (wordBits word steps)
+      have hbefore := ih hsteps'
+      have hbeforeReduced := Algorithm.mulBits_lt (wordBits word steps) hmpos
+        haccReduced haddendReduced
+      have hstep := mulBitStep_represents before word steps count
+        beforeResult.1 beforeResult.2 m (by omega) hcount hmpos hbefore.1
+        hbefore.2.1 hbefore.2.2 hbeforeReduced.1 hbeforeReduced.2
+      simpa [BigMul.mulBitPrefix, wordBits_succ, Algorithm.mulBits_append,
+        Algorithm.mulBits, before, beforeResult] using hstep
+
+theorem mulLimbPrefix_represents (st : EvmState)
+    (bPtr count steps acc addend bValue m : Nat)
+    (hsteps : steps ≤ count) (hcount : count ≤ 32)
+    (hbPtr : bPtr + 32 * count ≤ 3072) (hmpos : 0 < m)
+    (hacc : Represents st.memory 3072 count acc)
+    (haddend : Represents st.memory 4096 count addend)
+    (hb : Represents st.memory bPtr count bValue)
+    (hmodulus : Represents st.memory 0 count m)
+    (haccReduced : acc < m) (haddendReduced : addend < m) :
+    let progress := BigMul.mulLimbPrefix (BitVec.ofNat 256 bPtr) 3072 0
+      (BitVec.ofNat 256 count) steps st
+    let result := Algorithm.mulBits m acc addend
+      (limbBits st.memory bPtr steps)
+    Represents progress.memory 3072 count result.1 ∧
+      Represents progress.memory 4096 count result.2 ∧
+      Represents progress.memory bPtr count bValue ∧
+      Represents progress.memory 0 count m := by
+  induction steps with
+  | zero =>
+      simp [BigMul.mulLimbPrefix, limbBits, Algorithm.mulBits, hacc, haddend,
+        hb, hmodulus]
+  | succ steps ih =>
+      have hsteps' : steps ≤ count := by omega
+      have hi : steps < count := by omega
+      let before := BigMul.mulLimbPrefix (BitVec.ofNat 256 bPtr) 3072 0
+        (BitVec.ofNat 256 count) steps st
+      let word := loadWord before.memory (bPtr + 32 * steps)
+      let loaded := touchMemory before (bPtr + 32 * steps) 32
+      let beforeResult := Algorithm.mulBits m acc addend
+        (limbBits st.memory bPtr steps)
+      have hbefore := ih hsteps'
+      dsimp only at hbefore
+      have hbeforeReduced := Algorithm.mulBits_lt
+        (limbBits st.memory bPtr steps) hmpos haccReduced haddendReduced
+      have hloadedAcc : Represents loaded.memory 3072 count beforeResult.1 := by
+        simpa only [loaded, YulSemantics.EVM.touchMemory, before,
+          beforeResult] using hbefore.1
+      have hloadedAddend : Represents loaded.memory 4096 count
+          beforeResult.2 := by
+        simpa only [loaded, YulSemantics.EVM.touchMemory, before,
+          beforeResult] using hbefore.2.1
+      have hloadedB : Represents loaded.memory bPtr count bValue := by
+        simpa only [loaded, YulSemantics.EVM.touchMemory, before] using
+          hbefore.2.2.1
+      have hloadedModulus : Represents loaded.memory 0 count m := by
+        simpa only [loaded, YulSemantics.EVM.touchMemory, before] using
+          hbefore.2.2.2
+      have hwordOriginal : word =
+          loadWord st.memory (bPtr + 32 * steps) := by
+        exact loadWord_eq_of_represents before.memory st.memory bPtr count
+          bValue steps hi hbefore.2.2.1 hb
+      have hwordProgress := mulBitPrefix_represents loaded word 256 count
+        beforeResult.1 beforeResult.2 m (by omega) hcount hmpos hloadedAcc
+        hloadedAddend hloadedModulus hbeforeReduced.1 hbeforeReduced.2
+      have hwordB := mulBitPrefix_preserves loaded word 256 count bPtr bValue
+        (by omega) hcount (by right; omega) (by right; omega)
+        (by right; omega) hloadedB
+      let afterWord := BigMul.mulBitPrefix 3072 0
+        (BitVec.ofNat 256 count) word 256 loaded
+      let wordResult := Algorithm.mulBits m beforeResult.1 beforeResult.2
+        (wordBits word 256)
+      have hbits : limbBits st.memory bPtr (steps + 1) =
+          limbBits st.memory bPtr steps ++ wordBits word 256 := by
+        rw [limbBits_succ, hwordOriginal]
+      have hresult : Algorithm.mulBits m acc addend
+          (limbBits st.memory bPtr (steps + 1)) = wordResult := by
+        rw [hbits, Algorithm.mulBits_append]
+      have hn : (BitVec.ofNat 256 count).toNat = count := by
+        rw [BitVec.toNat_ofNat,
+          Nat.mod_eq_of_lt (hcount.trans_lt (by norm_num : 32 < 2 ^ 256))]
+      have haddr :
+          (BigMul.limbAddr (BitVec.ofNat 256 bPtr) steps).toNat =
+            bPtr + 32 * steps := by
+        simp [BigMul.limbAddr, BitVec.toNat_add, BitVec.toNat_mul,
+          Nat.mul_comm steps 32]
+        omega
+      have hstate : BigMul.mulLimbStep (BitVec.ofNat 256 bPtr) 3072 0
+          (BitVec.ofNat 256 count) steps before = afterWord := by
+        simp only [BigMul.mulLimbStep, haddr, hn]
+        rfl
+      have hwordProgress' :
+          Represents afterWord.memory 3072 count wordResult.1 ∧
+            Represents afterWord.memory 4096 count wordResult.2 ∧
+            Represents afterWord.memory 0 count m := by
+        simpa only [afterWord, wordResult] using hwordProgress
+      have hwordB' : Represents afterWord.memory bPtr count bValue := by
+        simpa only [afterWord] using hwordB
+      change Represents
+          (BigMul.mulLimbStep (BitVec.ofNat 256 bPtr) 3072 0
+            (BitVec.ofNat 256 count) steps before).memory
+          3072 count
+          (Algorithm.mulBits m acc addend
+            (limbBits st.memory bPtr (steps + 1))).1 ∧
+        Represents
+          (BigMul.mulLimbStep (BitVec.ofNat 256 bPtr) 3072 0
+            (BitVec.ofNat 256 count) steps before).memory
+          4096 count
+          (Algorithm.mulBits m acc addend
+            (limbBits st.memory bPtr (steps + 1))).2 ∧
+        Represents
+          (BigMul.mulLimbStep (BitVec.ofNat 256 bPtr) 3072 0
+            (BitVec.ofNat 256 count) steps before).memory
+          bPtr count bValue ∧
+        Represents
+          (BigMul.mulLimbStep (BitVec.ofNat 256 bPtr) 3072 0
+            (BitVec.ofNat 256 count) steps before).memory
+          0 count m
+      rw [hstate, hresult]
+      exact ⟨hwordProgress'.1, hwordProgress'.2.1, hwordB',
+        hwordProgress'.2.2⟩
 
 end Challenge.Modexp.Reference.Proofs.Yul.BigMath

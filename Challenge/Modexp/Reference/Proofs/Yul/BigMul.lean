@@ -23,7 +23,7 @@ open Challenge.YulProof.Interpreter
 
 private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 
-private def limbAddr (base : U256) (i : Nat) : U256 :=
+def limbAddr (base : U256) (i : Nat) : U256 :=
   base + BitVec.ofNat 256 i * 32
 
 /-- One bit of the little-endian multiplier limb, as selected by the Yul. -/
