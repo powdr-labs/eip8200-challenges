@@ -21,9 +21,15 @@ A valid candidate contributes concrete bytecode and a Lean theorem proving
 depend on `sorry`, `native_decide`, or project-defined axioms. Executable test
 vectors are a required falsification check, but they never replace the proof.
 
+A challenge may additionally publish a source-level predicate such as
+`Yul.Correct : Block Op → Prop`. It must expose the same mathematical result
+as the bytecode predicate while depending only on the source semantics; parser,
+optimizer, compiler, artifact, and scorer facts stay outside that specification.
+
 Each challenge directory separates:
 
 - `Spec.lean`: the minimal statement an auditor must accept;
+- `YulSpec.lean`: an optional source-level statement for Yul candidates;
 - `SUBMITTING.md`: the exact PR layout and required theorem;
 - `ProofSupport/`: optional reusable reductions and helper lemmas;
 - `AdditionalGoals/`: stronger properties not required by `Correct`;
@@ -32,14 +38,16 @@ Each challenge directory separates:
 - `Scorer.lean`: executable testing and gas measurement.
 
 Generic direct-EVM proof infrastructure lives in [`Challenge/EvmProof/`](Challenge/EvmProof/).
-It is independent of any particular precompile or challenge specification.
+Generic source-Yul proof infrastructure lives in
+[`Challenge/YulProof/`](Challenge/YulProof/). Both are independent of any
+particular precompile or challenge specification.
 
 ## Active challenges
 
 | challenge | audit map | submission guide |
 |---|---|---|
 | SHA-256 | [`Challenge/Sha256/README.md`](Challenge/Sha256/README.md) | [`Challenge/Sha256/SUBMITTING.md`](Challenge/Sha256/SUBMITTING.md) |
-| MODEXP | [`Challenge/Modexp/README.md`](Challenge/Modexp/README.md) | reference implementation in progress |
+| MODEXP | [`Challenge/Modexp/README.md`](Challenge/Modexp/README.md) | [`Challenge/Modexp/SUBMITTING.md`](Challenge/Modexp/SUBMITTING.md) |
 | RIPEMD-160 | [`Challenge/Ripemd160/README.md`](Challenge/Ripemd160/README.md) | [`Challenge/Ripemd160/SUBMITTING.md`](Challenge/Ripemd160/SUBMITTING.md) |
 | BLAKE2f | [`Challenge/Blake2f/README.md`](Challenge/Blake2f/README.md) | [`Challenge/Blake2f/SUBMITTING.md`](Challenge/Blake2f/SUBMITTING.md) |
 

@@ -52,7 +52,9 @@ private def fuzzInput (index seed : Nat) : ByteArray × Nat :=
   let modulus := if index % 11 = 0 then 0 else modulusRaw
   let full := makeInput baseRaw exponentRaw modulus bsize esize msize
   let input :=
-    if truncateMode = 0 then
+    if big then
+      full
+    else if truncateMode = 0 then
       full.extract 0 (tailKeep % 97)
     else if truncateMode = 1 then
       full.extract 0 (Nat.min full.size
