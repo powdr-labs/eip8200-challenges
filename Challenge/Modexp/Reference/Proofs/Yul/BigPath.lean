@@ -1188,4 +1188,73 @@ theorem exec_serializeReturn (V : VEnv D) (st : EvmState)
       Challenge.Modexp.Reference.Proofs.Yul.serializeBody] using hfor
   exact Step.seqStop (Step.exprStmtHalt hret) (by decide)
 
+/-- Direct execution from the initialized accumulator through every exponent
+byte and bit, branchless limb selection, serialization, and return. -/
+theorem exec_exponentAndReturn (st : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff : U256) :
+    let n := limbCount modulusSize
+    let modulusOr := modulusOrValue st modulusSize modOff
+    let V := ("modulusOr", modulusOr) :: ("n", n) ::
+      paramsEnv bsize esize modulusSize baseOff expOff modOff
+    let initial := initializedAccumulatorState st bsize modulusSize baseOff modOff
+    let exponentiated := exponentiatedState st bsize esize modulusSize baseOff
+      expOff modOff
+    ExecStmts D verifiedFunctions V initial
+      (yul% {
+        for { let i := 0 } lt(i, esize) { i := add(i, 1) } {
+          let w := calldataByte(add(expOff, i))
+          for { let j := 0 } lt(j, 8) { j := add(j, 1) } {
+            let bit := and(shr(sub(7, j), w), 1)
+            mulModBig(0x0800, 0x0800, 0x0c00, 0x0000, n)
+            copyLimbs(0x0800, 0x0c00, n)
+            mulModBig(0x0800, 0x0400, 0x0c00, 0x0000, n)
+            let mask := sub(0, bit)
+            for { let k := 0 } lt(k, n) { k := add(k, 1) } {
+              let off := mul(k, 32)
+              let square := mload(add(0x0800, off))
+              let product := mload(add(0x0c00, off))
+              mstore(add(0x0800, off),
+                xor(square, and(xor(square, product), mask)))
+            }
+          }
+        }
+        for { let i := 0 } lt(i, modulusSize) { i := add(i, 1) } {
+          let reverse := sub(sub(modulusSize, 1), i)
+          let limb := div(reverse, 32)
+          let shift := mul(mod(reverse, 32), 8)
+          mstore8(add(0x1800, i),
+            and(shr(shift, mload(add(0x0800, mul(limb, 32)))), 0xff))
+        }
+        return(0x1800, modulusSize)
+      }) V (returnedResultState exponentiated modulusSize) .halt := by
+  dsimp only
+  let n := limbCount modulusSize
+  let modulusOr := modulusOrValue st modulusSize modOff
+  let V := ("modulusOr", modulusOr) :: ("n", n) ::
+    paramsEnv bsize esize modulusSize baseOff expOff modOff
+  let initial := initializedAccumulatorState st bsize modulusSize baseOff modOff
+  let exponentiated := exponentiatedState st bsize esize modulusSize baseOff
+    expOff modOff
+  let loopFuns : FunEnv D := [] :: verifiedFunctions
+  have hmul : lookupFun loopFuns "mulModBig" =
+      lookupFun verifiedFunctions "mulModBig" := by rfl
+  have hcopy : lookupFun loopFuns "copyLimbs" =
+      lookupFun verifiedFunctions "copyLimbs" := by rfl
+  have hbyte : lookupFun loopFuns "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions) := by rfl
+  have hexp := exec_exponentLoop (funs := loopFuns) initial bsize esize
+    modulusSize baseOff expOff modOff n modulusOr hmul hcopy hbyte
+    esize.toNat 0 (by omega)
+  have htail := exec_serializeReturn V exponentiated modulusSize (by rfl) (by rfl)
+  refine Step.seqCons (D := D) (V1 := V) (st1 := exponentiated) ?_ ?_
+  · refine Step.forLoop (D := D)
+      (Vinit := expOuterEnv bsize esize modulusSize baseOff expOff modOff n
+        modulusOr 0) (stinit := initial)
+      (Vend := expOuterEnv bsize esize modulusSize baseOff expOff modOff n
+        modulusOr esize.toNat) ?_ ?_
+    · exact Step.seqCons (Step.letVal Step.lit rfl) Step.seqNil
+    · simpa [loopFuns, expOuterEnv, expOuterBody, incrementI, exponentiated,
+        exponentiatedState, exponentBytePrefix, n, initial, hoist] using hexp
+  simpa using htail
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigPath
