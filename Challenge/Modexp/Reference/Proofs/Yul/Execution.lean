@@ -1,5 +1,6 @@
 import Challenge.Modexp.Reference.Proofs.Yul.Word
 import Challenge.Modexp.Reference.Proofs.Yul.WordMath
+import Challenge.Modexp.Reference.Proofs.Yul.BigPath
 import Challenge.YulProof.Interpreter
 
 set_option warningAsError true
@@ -544,6 +545,95 @@ theorem run_verifiedProgram_word_nonzero (st : EvmState) (input : ByteArray)
         (sourceWordResult st input)) .halt :=
   run_prefix_then input hcd hvalid hpos
     (exec_wordTail_nonzero st input hvalid hword hnonzero)
+
+private theorem literal32_ult_size_true (n : Nat) (h : 32 < n) (hlt : n < 2 ^ 256) :
+    (32 : U256).ult (BitVec.ofNat 256 n) = true := by
+  rw [BitVec.ult_iff_toNat_lt]
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hlt]
+  exact h
+
+private theorem eval_bigCondition (st : EvmState) (input : ByteArray)
+    (hbig : 32 < modulusSize input) :
+    EvalExpr D verifiedFunctions (offsetsEnv input) st
+      (yulE% iszero(gt(modulusSize, 32))) (.vals [(0 : U256)] st) := by
+  have hgt : EvalExpr D verifiedFunctions (offsetsEnv input) st
+      (yulE% gt(modulusSize, 32)) (.vals [(1 : U256)] st) := by
+    apply Step.builtinOk (D := D)
+      (Step.argsCons (Step.argsCons Step.argsNil Step.lit) (Step.var (by rfl)))
+    simp [D, Challenge.YulProof.ClosedEvm.dialect,
+      YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.builtinWithExternal,
+      YulSemantics.EVM.stepOp, YulSemantics.EVM.bin, YulSemantics.EVM.b2w,
+      YulSemantics.EVM.litValue]
+    change (if (32 : U256).ult (BitVec.ofNat 256 (modulusSize input)) = true then
+      (1 : U256) else 0) = 1
+    rw [literal32_ult_size_true (modulusSize input) hbig (by
+      simpa [modulusSize] using headerSize_lt_word input 64)]
+    rfl
+  apply Step.builtinOk (D := D) (Step.argsCons Step.argsNil hgt)
+  rfl
+
+private theorem exec_bigCall_zero (st : EvmState) (input : ByteArray)
+    (hzero : BigPath.modulusOrValue st (BitVec.ofNat 256 (modulusSize input))
+      (BitVec.ofNat 256 (96 + baseSize input + exponentSize input)) = 0) :
+    EvalExpr D verifiedFunctions (offsetsEnv input) st
+      (yulE% modexpBig(bsize, esize, modulusSize, baseOff, expOff, modOff))
+      (.halt (BigPath.zeroModulusReturnedState st
+        (BitVec.ofNat 256 (modulusSize input))
+        (BitVec.ofNat 256 (96 + baseSize input + exponentSize input)))) := by
+  apply BigPath.eval_modexpBig_zero
+    (BitVec.ofNat 256 (baseSize input))
+    (BitVec.ofNat 256 (exponentSize input))
+    (BitVec.ofNat 256 (modulusSize input)) (BitVec.ofNat 256 96)
+    (BitVec.ofNat 256 (96 + baseSize input))
+    (BitVec.ofNat 256 (96 + baseSize input + exponentSize input))
+    (by rfl) (eval_wordArgs st input) hzero
+
+private theorem exec_bigTail_zero (st : EvmState) (input : ByteArray)
+    (hvalid : ValidInput input) (hbig : 32 < modulusSize input)
+    (hzero : BigPath.modulusOrValue st (BitVec.ofNat 256 (modulusSize input))
+      (BitVec.ofNat 256 (96 + baseSize input + exponentSize input)) = 0) :
+    ExecStmts D verifiedFunctions (headerEnv input) st
+      [Stmt.letDecl ["baseOff"] (some (yulE% 96)),
+        Stmt.letDecl ["expOff"] (some (yulE% add(baseOff, bsize))),
+        Stmt.letDecl ["modOff"] (some (yulE% add(expOff, esize))),
+        Stmt.cond (yulE% iszero(gt(modulusSize, 32)))
+          (yul% { modexpWord(bsize, esize, modulusSize, baseOff, expOff, modOff) }),
+        Stmt.exprStmt
+          (yulE% modexpBig(bsize, esize, modulusSize, baseOff, expOff, modOff))]
+      (offsetsEnv input)
+      (BigPath.zeroModulusReturnedState st
+        (BitVec.ofNat 256 (modulusSize input))
+        (BitVec.ofNat 256 (96 + baseSize input + exponentSize input))) .halt := by
+  have hwordIf : ExecStmt D verifiedFunctions (offsetsEnv input) st
+      (.cond (yulE% iszero(gt(modulusSize, 32)))
+        (yul% { modexpWord(bsize, esize, modulusSize, baseOff, expOff, modOff) }))
+      (offsetsEnv input) st .normal :=
+    Step.ifFalse (D := D) (eval_bigCondition st input hbig) rfl
+  have hsuffix : ExecStmts D verifiedFunctions (offsetsEnv input) st
+      [Stmt.cond (yulE% iszero(gt(modulusSize, 32)))
+          (yul% { modexpWord(bsize, esize, modulusSize, baseOff, expOff, modOff) }),
+        Stmt.exprStmt
+          (yulE% modexpBig(bsize, esize, modulusSize, baseOff, expOff, modOff))]
+      (offsetsEnv input)
+      (BigPath.zeroModulusReturnedState st
+        (BitVec.ofNat 256 (modulusSize input))
+        (BitVec.ofNat 256 (96 + baseSize input + exponentSize input))) .halt :=
+    Step.seqCons hwordIf
+      (Step.seqStop (Step.exprStmtHalt (exec_bigCall_zero st input hzero)) (by decide))
+  simpa using execStmts_append_normal (exec_offsets st input hvalid) hsuffix
+
+/-- Direct top-level execution of the big-path zero-modulus return. -/
+theorem run_verifiedProgram_big_zero (st : EvmState) (input : ByteArray)
+    (hcd : st.env.calldata = input.toList) (hvalid : ValidInput input)
+    (hbig : 32 < modulusSize input)
+    (hzero : BigPath.modulusOrValue st (BitVec.ofNat 256 (modulusSize input))
+      (BitVec.ofNat 256 (96 + baseSize input + exponentSize input)) = 0) :
+    Run D verifiedProgram st []
+      (BigPath.zeroModulusReturnedState st
+        (BitVec.ofNat 256 (modulusSize input))
+        (BitVec.ofNat 256 (96 + baseSize input + exponentSize input))) .halt :=
+  run_prefix_then input hcd hvalid (by omega)
+    (exec_bigTail_zero st input hvalid hbig hzero)
 
 theorem emptyReturnedState_result (st : EvmState) (input : ByteArray)
     (hzero : modulusSize input = 0) :
