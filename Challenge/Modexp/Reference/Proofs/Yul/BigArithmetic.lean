@@ -100,18 +100,18 @@ private def selectEnv (dst src take modulus n mask carry borrow useSub
     ("useSub", useSub), ("borrow", borrow), ("carry", carry),
     ("mask", mask)] ++ params dst src take modulus n
 
-private def carryWord (smaller larger : U256) : U256 :=
+def carryWord (smaller larger : U256) : U256 :=
   YulSemantics.EVM.b2w (BitVec.ult smaller larger)
 
 /-- The source expression `add(base, mul(i, 32))`, kept in word arithmetic. -/
-private def limbAddr (base : U256) (i : Nat) : U256 :=
+def limbAddr (base : U256) (i : Nat) : U256 :=
   base + BitVec.ofNat 256 i * 32
 
-private structure AddPhase where
+structure AddPhase where
   state : EvmState
   carry : U256
 
-private def addStep (dst src mask : U256) (i : Nat)
+def addStep (dst src mask : U256) (i : Nat)
     (phase : AddPhase) : AddPhase :=
   let dstAt := limbAddr dst i
   let srcAt := limbAddr src i
@@ -125,15 +125,15 @@ private def addStep (dst src mask : U256) (i : Nat)
   let carry2 := carryWord z sum
   { state := storeWordAt afterSrc dstAt z, carry := carry1 ||| carry2 }
 
-private def addPhase (st : EvmState) (dst src mask : U256) : Nat → AddPhase
+def addPhase (st : EvmState) (dst src mask : U256) : Nat → AddPhase
   | 0 => ⟨st, 0⟩
   | i + 1 => addStep dst src mask i (addPhase st dst src mask i)
 
-private structure SubPhase where
+structure SubPhase where
   state : EvmState
   borrow : U256
 
-private def subStep (dst modulus : U256) (i : Nat)
+def subStep (dst modulus : U256) (i : Nat)
     (phase : SubPhase) : SubPhase :=
   let dstAt := limbAddr dst i
   let modulusAt := limbAddr modulus i
@@ -149,11 +149,11 @@ private def subStep (dst modulus : U256) (i : Nat)
   { state := storeWordAt afterModulus candidateAt z,
     borrow := borrow1 ||| borrow2 }
 
-private def subPhase (st : EvmState) (dst modulus : U256) : Nat → SubPhase
+def subPhase (st : EvmState) (dst modulus : U256) : Nat → SubPhase
   | 0 => ⟨st, 0⟩
   | i + 1 => subStep dst modulus i (subPhase st dst modulus i)
 
-private def selectStep (dst selectMask : U256) (i : Nat)
+def selectStep (dst selectMask : U256) (i : Nat)
     (st : EvmState) : EvmState :=
   let dstAt := limbAddr dst i
   let candidateAt := limbAddr 0x1400 i
@@ -164,7 +164,7 @@ private def selectStep (dst selectMask : U256) (i : Nat)
   let chosen := (reduced &&& selectMask) ||| (sum &&& ~~~selectMask)
   storeWordAt afterReduced dstAt chosen
 
-private def selectPhase (st : EvmState) (dst selectMask : U256) : Nat → EvmState
+def selectPhase (st : EvmState) (dst selectMask : U256) : Nat → EvmState
   | 0 => st
   | i + 1 => selectStep dst selectMask i (selectPhase st dst selectMask i)
 
