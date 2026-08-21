@@ -1,5 +1,8 @@
 import Challenge.Modexp.Reference.Bytecode
+import Challenge.Modexp.Reference.Proofs.Yul.BigArithmetic
+import Challenge.Modexp.Reference.Proofs.Yul.BigDriver
 import Challenge.Modexp.Reference.Proofs.Yul.Program
+import Challenge.Modexp.Reference.Proofs.Yul.Word
 import YulEvmCompiler.Optimizer.Implementation.Pipeline
 
 set_option warningAsError true
