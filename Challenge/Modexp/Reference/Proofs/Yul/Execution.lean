@@ -1,7 +1,9 @@
 import Challenge.Modexp.Reference.Proofs.Yul.Word
 import Challenge.Modexp.Reference.Proofs.Yul.WordMath
 import Challenge.Modexp.Reference.Proofs.Yul.BigPath
+import Challenge.Modexp.Reference.Proofs.Yul.BigFinal
 import Challenge.YulProof.Interpreter
+import YulEvmCompiler.Optimizer.Implementation.ReuseValuesSound
 
 set_option warningAsError true
 set_option maxRecDepth 20000
@@ -722,6 +724,32 @@ theorem run_verifiedProgram_big_nonzero (st : EvmState) (input : ByteArray)
   run_prefix_then input hcd hvalid (by omega)
     (exec_bigTail_nonzero st input hvalid hbig hnonzero)
 
+theorem run_verifiedProgram_big_nonzero_result (st : EvmState)
+    (input : ByteArray) (hcd : st.env.calldata = input.toList)
+    (hvalid : ValidInput input) (hbig : 32 < modulusSize input)
+    (hmodulus : BigSetup.modulusNat input ≠ 0) :
+    let final := BigPath.returnedResultState
+      (BigPath.exponentiatedState st
+        (BitVec.ofNat 256 (baseSize input))
+        (BitVec.ofNat 256 (exponentSize input))
+        (BitVec.ofNat 256 (modulusSize input)) 96
+        (BitVec.ofNat 256 (BigFinal.exponentOffset input))
+        (BitVec.ofNat 256 (BigSetup.modulusOffset input)))
+      (BitVec.ofNat 256 (modulusSize input))
+    Run D verifiedProgram st [] final .halt ∧
+      final.halted = some (HaltKind.ret, (spec input).toList) := by
+  have hsource : BigPath.modulusOrValue st
+      (BitVec.ofNat 256 (modulusSize input))
+      (BitVec.ofNat 256 (BigSetup.modulusOffset input)) ≠ 0 := by
+    intro hzero
+    exact hmodulus ((BigSetup.modulusOrValue_eq_zero_iff st input hcd hvalid).mp
+      hzero)
+  constructor
+  · simpa [BigFinal.exponentOffset, BigSetup.modulusOffset] using
+      run_verifiedProgram_big_nonzero st input hcd hvalid hbig hsource
+  · exact BigFinal.returnedResultState_nonzero_spec_complete st input hcd
+      hvalid hbig hmodulus
+
 theorem emptyReturnedState_result (st : EvmState) (input : ByteArray)
     (hzero : modulusSize input = 0) :
     (emptyReturnedState st).halted = some (HaltKind.ret, (spec input).toList) := by
@@ -744,6 +772,49 @@ private theorem natToBE_zero (width : Nat) :
       change List.replicate width 0 ++ List.replicate 1 0 =
         List.replicate (width + 1) 0
       rw [← List.replicate_add]
+
+private theorem readBytes_zero_of_represents (memory : Nat → UInt8)
+    (ptr count width : Nat) (hwidth : width ≤ 32 * count)
+    (hrep : BigMath.Represents memory ptr count 0) :
+    readBytes memory ptr width = List.replicate width 0 := by
+  have hlimbs : BigMath.memoryLimbs memory ptr count =
+      List.replicate count 0 :=
+    hrep.2.trans (by simp [Limbs.limbDigits, Nat.digitsAppend])
+  have hloads : ∀ i (_hi : i < count),
+      loadWord memory (ptr + 32 * i) = 0 := by
+    intro i hi
+    apply BitVec.eq_of_toNat_eq
+    have hget := congrArg (fun xs : List Nat => xs[i]?) hlimbs
+    simpa [BigMath.memoryLimbs, hi] using hget
+  have hfull :=
+    YulEvmCompiler.Optimizer.ReuseValues.readBytes_wordsBytes
+      (mem := memory) (ws := List.replicate count (0 : U256)) (a := ptr) (by
+        intro i hi
+        have hi' : i < count := by simpa using hi
+        simpa [hi'] using hloads i hi')
+  have words_zero : ∀ n : Nat,
+      YulEvmCompiler.Optimizer.ReuseValues.wordsBytes
+        (List.replicate n (0 : U256)) = List.replicate (32 * n) 0 := by
+    intro n
+    induction n with
+    | zero => rfl
+    | succ n ih =>
+        simp only [List.replicate_succ,
+          YulEvmCompiler.Optimizer.ReuseValues.wordsBytes]
+        rw [ih]
+        rw [show 32 * (n + 1) = 32 + 32 * n by omega,
+          List.replicate_add]
+        simp [YulEvmCompiler.Optimizer.ReuseValues.wordBytes,
+          YulSemantics.EVM.byteAt]
+  have hwords := words_zero count
+  have hfullzero : readBytes memory ptr (32 * count) =
+      List.replicate (32 * count) 0 := by
+    simpa using hfull.trans hwords
+  have htake := congrArg (List.take width) hfullzero
+  unfold readBytes at htake ⊢
+  rw [← List.map_take] at htake
+  simpa [List.take_range, List.take_replicate,
+    Nat.min_eq_left hwidth] using htake
 
 theorem zeroModulusReturnedState_result (st : EvmState) (input : ByteArray)
     (hmem : st.memory = fun _ => 0) (hpos : 0 < modulusSize input)
@@ -768,6 +839,61 @@ theorem zeroModulusReturnedState_result (st : EvmState) (input : ByteArray)
     Challenge.EvmProof.Memory.natToBytesPadded_eq_natToBE, natToBE_zero]
   rw [YulEvmCompiler.ByteArray.toList_eq_data]
 
+theorem bigZeroModulusReturnedState_result (st : EvmState)
+    (input : ByteArray) (hvalid : ValidInput input)
+    (hbig : 32 < modulusSize input)
+    (hzero : BigSetup.modulusNat input = 0) :
+    (BigPath.zeroModulusReturnedState st
+      (BitVec.ofNat 256 (modulusSize input))
+      (BitVec.ofNat 256 (BigSetup.modulusOffset input))).halted =
+      some (HaltKind.ret, (spec input).toList) := by
+  let m := modulusSize input
+  let off := BigSetup.modulusOffset input
+  let count := Limbs.limbCount m
+  let cleared := BigPath.clearedOutputState st (BitVec.ofNat 256 m)
+  let loaded := BigPath.loadedModulusState st (BitVec.ofNat 256 m)
+    (BitVec.ofNat 256 off)
+  let scanned := BigPath.scannedModulusState st (BitVec.ofNat 256 m)
+    (BitVec.ofNat 256 off)
+  have hm : m ≤ 1024 := hvalid.2.2.2
+  have hcount : count ≤ 32 := Limbs.limbCount_le_32 m hm
+  have hn := BigSetup.limbCount_toNat m hm
+  have hmWord : (BitVec.ofNat 256 m).toNat = m := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : m < 2 ^ 256)]
+  have hcleared : BigMath.Represents cleared.memory 6144 count 0 := by
+    simpa [cleared, BigPath.clearedOutputState, hn] using
+      BigMath.clearWordsState_represents_zero
+        (BigPath.clearedAccumulatorState st (BitVec.ofNat 256 m)) 6144 count
+        (by omega)
+  have hloaded : BigMath.Represents loaded.memory 6144 count 0 := by
+    have hpreserved := BigSetup.loadBigEndianPrefix_preserves cleared off m 0
+      m 6144 count 0 (by omega) (by omega) (by omega) (by left; omega)
+      hcleared
+    simpa [loaded, BigPath.loadedModulusState, cleared, hmWord] using hpreserved
+  have hscanned : BigMath.Represents scanned.memory 6144 count 0 := by
+    simpa [scanned, BigPath.scannedModulusState, hn,
+      BigSetup.modulusScanPrefix_memory] using hloaded
+  have hread : readBytes scanned.memory 6144 m = List.replicate m 0 :=
+    readBytes_zero_of_represents scanned.memory 6144 count m
+      (Limbs.width_le_limbs m) hscanned
+  have hspec : (spec input).toList = List.replicate m 0 := by
+    unfold spec
+    rw [if_neg (by omega)]
+    rw [show Precompile.bytesToNatPadded input
+      (96 + baseSize input + exponentSize input) (modulusSize input) =
+        BigSetup.modulusNat input by rfl, hzero]
+    simp only
+    rw [show Precompile.modPow
+      (Precompile.bytesToNatPadded input 96 (baseSize input))
+      (Precompile.bytesToNatPadded input (96 + baseSize input)
+        (exponentSize input)) 0 = 0 by simp [Precompile.modPow]]
+    rw [Precompile.natToBytes,
+      Challenge.EvmProof.Memory.natToBytesPadded_eq_natToBE, natToBE_zero]
+    rw [YulEvmCompiler.ByteArray.toList_eq_data]
+  change some (HaltKind.ret, readBytes scanned.memory 6144
+    (BitVec.ofNat 256 m).toNat) = _
+  rw [hmWord, hread, hspec]
+
 /-- Assemble the complete source contract once the nonzero big branch supplies
 its exact execution-and-result endpoint.  Keeping this theorem here makes the
 remaining dependency explicit while all other top-level cases stay closed. -/
@@ -783,7 +909,7 @@ theorem verifiedProgram_computesResult_of_big
   by_cases hsize : modulusSize input = 0
   · refine ⟨[], emptyReturnedState st, .halt,
       run_verifiedProgram_zeroSize st input hcd hvalid hsize, rfl, ?_⟩
-    simpa [resultBytes, hcd, mkCode_toList] using
+    simpa [resultBytes, hcd, YulEvmCompiler.mkCode_toList] using
       emptyReturnedState_result st input hsize
   by_cases hword : modulusSize input ≤ 32
   · have hpos : 0 < modulusSize input := Nat.pos_of_ne_zero hsize
@@ -794,18 +920,48 @@ theorem verifiedProgram_computesResult_of_big
           (BitVec.ofNat 256 (modulusSize input)), .halt,
         run_verifiedProgram_word_zero st input hcd hvalid hpos hword hsource,
         rfl, ?_⟩
-      simpa [resultBytes, hcd, mkCode_toList] using
+      simpa [resultBytes, hcd, YulEvmCompiler.mkCode_toList] using
         zeroModulusReturnedState_result st input hmem hpos hmodulus
     · have hsource := sourceModulus_nonzero st input hcd hvalid hword hmodulus
       refine ⟨[], wordReturnedState st (BitVec.ofNat 256 (modulusSize input))
           (sourceWordResult st input), .halt,
         run_verifiedProgram_word_nonzero st input hcd hvalid hpos hword hsource,
         rfl, ?_⟩
-      simpa [resultBytes, hcd, mkCode_toList] using
+      simpa [resultBytes, hcd, YulEvmCompiler.mkCode_toList] using
         wordReturnedState_result st input hmem hcd hvalid hpos hword hmodulus
   · have hlarge : 32 < modulusSize input := by omega
     obtain ⟨final, hrun, hresult⟩ := hbig st input hmem hcd hvalid hlarge
     refine ⟨[], final, .halt, hrun, rfl, ?_⟩
-    simpa [resultBytes, hcd, mkCode_toList] using hresult
+    simpa [resultBytes, hcd, YulEvmCompiler.mkCode_toList] using hresult
+
+/-- The reference MODEXP source returns the specification on every valid
+input, proved directly against the relational Yul semantics. -/
+theorem verifiedProgram_computesResult : ComputesResult verifiedProgram := by
+  apply verifiedProgram_computesResult_of_big
+  intro st input _hmem hcd hvalid hbig
+  by_cases hmodulus : BigSetup.modulusNat input = 0
+  · have hsource : BigPath.modulusOrValue st
+        (BitVec.ofNat 256 (modulusSize input))
+        (BitVec.ofNat 256 (BigSetup.modulusOffset input)) = 0 :=
+      (BigSetup.modulusOrValue_eq_zero_iff st input hcd hvalid).mpr hmodulus
+    let final := BigPath.zeroModulusReturnedState st
+      (BitVec.ofNat 256 (modulusSize input))
+      (BitVec.ofNat 256 (BigSetup.modulusOffset input))
+    refine ⟨final, ?_, ?_⟩
+    · simpa [final, BigSetup.modulusOffset] using
+        run_verifiedProgram_big_zero st input hcd hvalid hbig hsource
+    · simpa [final] using
+        bigZeroModulusReturnedState_result st input hvalid hbig hmodulus
+  · let final := BigPath.returnedResultState
+      (BigPath.exponentiatedState st
+        (BitVec.ofNat 256 (baseSize input))
+        (BitVec.ofNat 256 (exponentSize input))
+        (BitVec.ofNat 256 (modulusSize input)) 96
+        (BitVec.ofNat 256 (BigFinal.exponentOffset input))
+        (BitVec.ofNat 256 (BigSetup.modulusOffset input)))
+      (BitVec.ofNat 256 (modulusSize input))
+    have hresult := run_verifiedProgram_big_nonzero_result st input hcd hvalid
+      hbig hmodulus
+    exact ⟨final, hresult.1, hresult.2⟩
 
 end Challenge.Modexp.Reference.Proofs.Yul.Execution
