@@ -99,8 +99,8 @@
             let reverse := sub(sub(len, 1), i)
             let limb := div(reverse, 32)
             let shift := mul(mod(reverse, 32), 8)
-            let at := add(dst, mul(limb, 32))
-            mstore(at, or(mload(at), shl(shift, calldataByte(add(off, i)))))
+            let dstAt := add(dst, mul(limb, 32))
+            mstore(dstAt, or(mload(dstAt), shl(shift, calldataByte(add(off, i)))))
         }
     }
 
