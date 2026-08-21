@@ -98,14 +98,21 @@ def main (args : List String) : IO UInt32 := do
     if arg.startsWith "--hex=" then some (arg.drop 6).copy else none
   let yulPath := args.findSome? fun arg =>
     if arg.startsWith "--yul=" then some (arg.drop 6).copy else none
-  let fuzzCount? := args.findSome? fun arg =>
-    if arg.startsWith "--fuzz=" then (arg.drop 7).toNat? else none
-  let seed? := args.findSome? fun arg =>
-    if arg.startsWith "--seed=" then (arg.drop 7).toNat? else none
+  let fuzzText? := args.findSome? fun arg =>
+    if arg.startsWith "--fuzz=" then some (arg.drop 7).copy else none
+  let seedText? := args.findSome? fun arg =>
+    if arg.startsWith "--seed=" then some (arg.drop 7).copy else none
+  let fuzzCount? := fuzzText?.bind String.toNat?
+  let seed? := seedText?.bind String.toNat?
   let csv := args.contains "--csv"
   if args.contains "--help" then
     IO.println usage
     return 0
+  if (fuzzText?.isSome && fuzzCount?.isNone) ||
+      (seedText?.isSome && seed?.isNone) ||
+      (seed?.isSome && fuzzCount?.isNone) then
+    IO.eprintln usage
+    return 64
   if csv && fuzzCount?.isSome then
     IO.eprintln "--csv and --fuzz cannot be combined"
     return 64
