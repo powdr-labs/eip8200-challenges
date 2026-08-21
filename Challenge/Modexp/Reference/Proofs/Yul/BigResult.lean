@@ -24,83 +24,6 @@ open YulSemantics.EVM
 open Challenge.YulProof.EvmState
 open BigMath
 
-/-! ## Setup and modulus scan -/
-
-@[simp] theorem modulusScanPrefix_memory (steps : Nat) (st : EvmState) :
-    (modulusScanPrefix steps st).memory = st.memory := by
-  induction steps with
-  | zero => rfl
-  | succ steps ih => simp [modulusScanPrefix, ih, YulSemantics.EVM.touchMemory]
-
-theorem scannedModulusState_represents (st : EvmState)
-    (modulusSize modOff : U256) (value : Nat)
-    (hrep : Represents (BigPath.loadedModulusState st modulusSize modOff).memory
-      (0x0000 : Nat) (BigPath.limbCount modulusSize).toNat value) :
-    Represents (BigPath.scannedModulusState st modulusSize modOff).memory
-      (0x0000 : Nat) (BigPath.limbCount modulusSize).toNat value := by
-  simpa [BigPath.scannedModulusState] using hrep
-
-theorem modulusOrPrefix_eq_zero_iff (count : Nat) (st : EvmState)
-    (hcount : count ≤ 32) :
-    modulusOrPrefix count st = 0 ↔
-      memoryLimbs st.memory 0 count = List.replicate count 0 := by
-  induction count with
-  | zero => simp [modulusOrPrefix, memoryLimbs]
-  | succ count ih =>
-      rw [modulusOrPrefix, memoryLimbs_succ, List.replicate_succ']
-      have haddr : (BitVec.ofNat 256 count * (32 : U256)).toNat =
-          count * 32 := by
-        rw [BitVec.toNat_mul, BitVec.toNat_ofNat]
-        change (count % 2 ^ 256 * 32) % 2 ^ 256 = count * 32
-        rw [Nat.mod_eq_of_lt (show count < 2 ^ 256 by
-          exact (by omega : count < 32).trans (by norm_num)),
-          Nat.mod_eq_of_lt (show count * 32 < 2 ^ 256 by
-            calc
-              count * 32 < 32 * 32 := Nat.mul_lt_mul_of_pos_right
-                (by omega) (by omega)
-              _ < 2 ^ 256 := by norm_num)]
-      constructor
-      · intro hor
-        have hparts : modulusOrPrefix count st = (0 : U256) ∧
-            loadWord (modulusScanPrefix count st).memory
-              (BitVec.ofNat 256 count * 32).toNat = 0 :=
-          BitVec.or_eq_zero_iff.mp hor
-        rw [modulusScanPrefix_memory, haddr] at hparts
-        rw [(ih (by omega)).mp hparts.1]
-        have hlast : (loadWord st.memory (count * 32)).toNat = 0 := by
-          simpa using congrArg BitVec.toNat hparts.2
-        simp [hlast, Nat.mul_comm]
-      · intro hlist
-        have hparts := List.append_inj hlist (by simp [memoryLimbs])
-        apply BitVec.or_eq_zero_iff.mpr
-        refine ⟨(ih (by omega)).mpr hparts.1, ?_⟩
-        apply BitVec.eq_of_toNat_eq
-        rw [modulusScanPrefix_memory, haddr]
-        simpa [Nat.mul_comm] using congrArg List.head? hparts.2
-
-theorem modulusOrValue_eq_zero_iff (st : EvmState)
-    (modulusSize modOff : U256) (value : Nat)
-    (hsize : modulusSize.toNat ≤ 1024)
-    (hrep : Represents (BigPath.loadedModulusState st modulusSize modOff).memory
-      (0x0000 : Nat) (BigPath.limbCount modulusSize).toNat value) :
-    BigPath.modulusOrValue st modulusSize modOff = 0 ↔ value = 0 := by
-  rw [BigPath.modulusOrValue, modulusOrPrefix_eq_zero_iff _ _ (by
-    simp [BigPath.limbCount, BitVec.toNat_udiv, BitVec.toNat_add]
-    rw [Nat.mod_eq_of_lt (by omega : modulusSize.toNat + 31 <
-      115792089237316195423570985008687907853269984665640564039457584007913129639936)]
-    omega)]
-  constructor
-  · intro hzero
-    calc
-      value = Nat.ofDigits Limbs.radix
-          (memoryLimbs (BigPath.loadedModulusState st modulusSize modOff).memory
-            0 (BigPath.limbCount modulusSize).toNat) :=
-        (value_of_represents hrep).symm
-      _ = 0 := by rw [hzero]; simp
-  · intro hzero
-    subst value
-    exact hrep.2.trans (by simp [Limbs.limbDigits, Nat.digitsAppend])
-
 /-! ## Base conversion -/
 
 theorem baseBit_toNat (word : U256) (j : Nat) (hj : j < 8) :
@@ -325,13 +248,137 @@ theorem baseBytePrefix_represents (st : EvmState) (input : ByteArray)
       simpa [BigPath.baseBytePrefix, BigPath.baseByteStep, BigFold.baseByteAfter,
         before, beforeValue, address, word] using hbits
 
-theorem limbCount_toNat (m : Nat) (hm : m ≤ 1024) :
-    (BigPath.limbCount (BitVec.ofNat 256 m)).toNat = Limbs.limbCount m := by
-  unfold BigPath.limbCount Limbs.limbCount
-  rw [BitVec.toNat_udiv, BitVec.toNat_add, BitVec.toNat_ofNat,
-    Nat.mod_eq_of_lt (by omega : m < 2 ^ 256)]
-  change ((m + 31) % 2 ^ 256) / 32 = (m + 31) / 32
-  rw [Nat.mod_eq_of_lt (by omega : m + 31 < 2 ^ 256)]
+theorem baseBitStep_preserves_accumulator (st : EvmState) (n word : U256)
+    (j count value : Nat) (hn : n.toNat = count) (hcount : count ≤ 32)
+    (hrep : Represents st.memory 0x0800 count value) :
+    Represents (BigPath.baseBitStep n word j st).memory 0x0800 count value := by
+  let doubled := BigArithmetic.addMaskedModState st 0x0400 0x0400 1 0x0000 count
+  have hdouble : Represents doubled.memory 0x0800 count value := by
+    simpa [doubled] using addMaskedModState_preserves st 0x0400 0x0400
+      0x0000 count 1 0x0800 value hcount (by omega) (by left; omega)
+      (by right; omega) hrep
+  have hfinal := addMaskedModState_preserves doubled 0x0400 0x0c00
+    0x0000 count (BigPath.baseBit word j).toNat 0x0800 value hcount
+    (by omega) (by left; omega) (by right; omega) hdouble
+  have hbit : BigPath.baseBit word j =
+      BitVec.ofNat 256 (BigPath.baseBit word j).toNat :=
+    (BitVec.eq_of_toNat_eq (by simp)).symm
+  change Represents
+    (BigArithmetic.addMaskedModState
+      (BigArithmetic.addMaskedModState st 0x0400 0x0400 1 0x0000 n.toNat)
+      0x0400 0x0c00 (BigPath.baseBit word j) 0x0000 n.toNat).memory
+    0x0800 count value
+  rw [hn, hbit]
+  exact hfinal
+
+theorem baseBitPrefix_preserves_accumulator (st : EvmState) (n word : U256)
+    (steps count value : Nat) (hn : n.toNat = count) (hcount : count ≤ 32)
+    (hrep : Represents st.memory 0x0800 count value) :
+    Represents (BigPath.baseBitPrefix n word steps st).memory
+      0x0800 count value := by
+  induction steps with
+  | zero => simpa [BigPath.baseBitPrefix] using hrep
+  | succ steps ih =>
+      simpa [BigPath.baseBitPrefix] using baseBitStep_preserves_accumulator
+        (BigPath.baseBitPrefix n word steps st) n word steps count value hn
+        hcount ih
+
+theorem baseBytePrefix_preserves_accumulator (st : EvmState)
+    (baseOff n : U256) (steps count value : Nat) (hn : n.toNat = count)
+    (hcount : count ≤ 32) (hrep : Represents st.memory 0x0800 count value) :
+    Represents (BigPath.baseBytePrefix baseOff n steps st).memory
+      0x0800 count value := by
+  induction steps with
+  | zero => simpa [BigPath.baseBytePrefix] using hrep
+  | succ steps ih =>
+      simpa [BigPath.baseBytePrefix, BigPath.baseByteStep] using
+        baseBitPrefix_preserves_accumulator
+          (BigPath.baseBytePrefix baseOff n steps st) n
+          (StateModel.calldataByteValue
+            (BigPath.baseBytePrefix baseOff n steps st)
+            (baseOff + BitVec.ofNat 256 steps)) 8 count value hn hcount ih
+
+theorem convertedBaseState_represents (st : EvmState) (input : ByteArray)
+    (bsize modulusSize baseOff modOff : U256) (count modulus : Nat)
+    (hn : (BigPath.limbCount modulusSize).toNat = count)
+    (hbfit : baseOff.toNat + bsize.toNat < 2 ^ 256)
+    (hcount : count ≤ 32) (hmodulus : 0 < modulus)
+    (hcalldata : (BigPath.scratchOneState st modulusSize modOff).env.calldata =
+      input.toList)
+    (hbase : Represents (BigPath.scratchOneState st modulusSize modOff).memory
+      0x0400 count 0)
+    (hone : Represents (BigPath.scratchOneState st modulusSize modOff).memory
+      0x0c00 count 1)
+    (hmod : Represents (BigPath.scratchOneState st modulusSize modOff).memory
+      0x0000 count modulus) :
+    Represents
+      (BigPath.convertedBaseState st bsize modulusSize baseOff modOff).memory
+      0x0400 count
+      (Precompile.bytesToNatPadded input baseOff.toNat bsize.toNat % modulus) ∧
+    Represents
+      (BigPath.convertedBaseState st bsize modulusSize baseOff modOff).memory
+      0x0c00 count 1 ∧
+    Represents
+      (BigPath.convertedBaseState st bsize modulusSize baseOff modOff).memory
+      0x0000 count modulus := by
+  have hfold := baseBytePrefix_represents
+    (BigPath.scratchOneState st modulusSize modOff) input baseOff bsize.toNat
+    count 0 modulus hbfit hcount hmodulus (by omega) hcalldata hbase hone hmod
+  rw [BigFold.baseByteAfter_zero_eq input baseOff.toNat modulus bsize.toNat
+    hmodulus] at hfold
+  have hnword : BigPath.limbCount modulusSize = BitVec.ofNat 256 count := by
+    apply BitVec.eq_of_toNat_eq
+    rw [hn, BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (show count < 2 ^ 256 by
+        exact hcount.trans_lt (by norm_num))]
+  simpa [BigPath.convertedBaseState, hnword] using hfold
+
+theorem initializedAccumulatorState_represents (st : EvmState)
+    (input : ByteArray) (bsize modulusSize baseOff modOff : U256)
+    (count modulus : Nat)
+    (hn : (BigPath.limbCount modulusSize).toNat = count)
+    (hbfit : baseOff.toNat + bsize.toNat < 2 ^ 256)
+    (hcount : count ≤ 32) (hmodulus : 0 < modulus)
+    (hcalldata : (BigPath.scratchOneState st modulusSize modOff).env.calldata =
+      input.toList)
+    (hbaseZero : Represents
+      (BigPath.scratchOneState st modulusSize modOff).memory 0x0400 count 0)
+    (haccZero : Represents
+      (BigPath.scratchOneState st modulusSize modOff).memory 0x0800 count 0)
+    (hone : Represents
+      (BigPath.scratchOneState st modulusSize modOff).memory 0x0c00 count 1)
+    (hmod : Represents
+      (BigPath.scratchOneState st modulusSize modOff).memory 0x0000 count modulus) :
+    let base := Precompile.bytesToNatPadded input baseOff.toNat bsize.toNat %
+      modulus
+    let initialized := BigPath.initializedAccumulatorState st bsize modulusSize
+      baseOff modOff
+    Represents initialized.memory 0x0800 count (1 % modulus) ∧
+      Represents initialized.memory 0x0400 count base ∧
+      Represents initialized.memory 0x0000 count modulus := by
+  let one := BigPath.scratchOneState st modulusSize modOff
+  let converted := BigPath.convertedBaseState st bsize modulusSize baseOff modOff
+  let base := Precompile.bytesToNatPadded input baseOff.toNat bsize.toNat % modulus
+  have hconverted := convertedBaseState_represents st input bsize modulusSize
+    baseOff modOff count modulus hn hbfit hcount hmodulus hcalldata hbaseZero
+    hone hmod
+  have hconvertedAcc : Represents converted.memory 0x0800 count 0 := by
+    simpa [converted, BigPath.convertedBaseState, one] using
+      baseBytePrefix_preserves_accumulator one baseOff
+        (BigPath.limbCount modulusSize) bsize.toNat count 0 hn hcount haccZero
+  have hresult := addMaskedModState_represents converted 0x0800 0x0c00
+    0x0000 count 1 0 1 modulus hcount (by omega) hmodulus (by omega)
+    (by omega) (by omega) (by omega) (by omega) hconvertedAcc hconverted.2.1
+    hconverted.2.2 (by right; left; omega) (by left; omega) (by left; omega)
+    (by right; omega)
+  have hbaseFinal := addMaskedModState_preserves converted 0x0800 0x0c00
+    0x0000 count 1 0x0400 base hcount (by omega) (by right; omega)
+    (by right; omega) hconverted.1
+  have hmodFinal := addMaskedModState_preserves converted 0x0800 0x0c00
+    0x0000 count 1 0x0000 modulus hcount (by omega) (by right; omega)
+    (by right; omega) hconverted.2.2
+  simpa [BigPath.initializedAccumulatorState, converted, hn, base] using
+    And.intro hresult (And.intro hbaseFinal hmodFinal)
 
 theorem readLimb_of_represents {memory : Nat → UInt8} {ptr count value index : Nat}
     (hrep : Represents memory ptr count value) (hindex : index < count) :
