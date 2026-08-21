@@ -1,5 +1,6 @@
 import Challenge.Modexp.Reference.Proofs.Yul.BigMul
 import Challenge.Modexp.Reference.Proofs.Limbs
+import Challenge.YulProof.Limbs
 import Mathlib.Data.List.GetD
 
 set_option warningAsError true
@@ -10,11 +11,9 @@ set_option linter.unusedSimpArgs false
 /-!
 # Mathematical interpretation of the direct Yul big-number states
 
-The Yul interpreter models memory as a total byte function, whereas the
-bytecode development's `Limbs.Represents` uses the machine's finite
-`ByteArray`.  `Represents` below is the corresponding predicate for source
-states.  It deliberately reuses the canonical digits and all arithmetic
-lemmas from `Proofs.Limbs`; only the memory observation is source-specific.
+The challenge-independent Yul memory representation and its clear/copy frame
+facts live in `Challenge.YulProof.Limbs`.  This module re-exports that
+interface and connects it to MODEXP's arithmetic lemmas from `Proofs.Limbs`.
 -/
 
 namespace Challenge.Modexp.Reference.Proofs.Yul.BigMath
@@ -22,107 +21,32 @@ namespace Challenge.Modexp.Reference.Proofs.Yul.BigMath
 open YulSemantics.EVM
 open Challenge.YulProof.EvmState
 
-/-- Consecutive little-endian Yul words, viewed as natural-number limbs. -/
-def memoryLimbs (memory : Nat → UInt8) (ptr count : Nat) : List Nat :=
-  (List.range count).map fun i => (loadWord memory (ptr + 32 * i)).toNat
+export Challenge.YulProof.Limbs
+  (memoryLimbs Represents length_memoryLimbs memoryLimb_lt
+    represents_value_unique
+    wordOffset_ofNat memoryLimbs_succ memoryLimbs_store_next
+    memoryLimbs_store_disjoint memoryLimbs_clearWordsState
+    clearWordsState_represents_zero memoryLimbs_clearWordsState_disjoint
+    clearWordsState_preserves loadWord_copyWordsState_source
+    memoryLimbs_copyWordsState copyWordsState_represents
+    memoryLimbs_copyWordsState_disjoint copyWordsState_preserves)
 
-/-- A mathematical integer represented by little-endian words in a direct
-source-Yul state. -/
-def Represents (memory : Nat → UInt8) (ptr count value : Nat) : Prop :=
-  value < Limbs.radix ^ count ∧
-    memoryLimbs memory ptr count = Limbs.limbDigits count value
-
-@[simp] theorem length_memoryLimbs (memory : Nat → UInt8) (ptr count : Nat) :
-    (memoryLimbs memory ptr count).length = count := by
-  simp [memoryLimbs]
-
-theorem memoryLimb_lt (memory : Nat → UInt8) (ptr count : Nat)
-    {digit : Nat} (hdigit : digit ∈ memoryLimbs memory ptr count) :
-    digit < Limbs.radix := by
-  simp only [memoryLimbs, List.mem_map] at hdigit
-  rcases hdigit with ⟨i, _, rfl⟩
-  exact (loadWord memory (ptr + 32 * i)).isLt
-
+/-- MODEXP-facing value view of the generic Yul limb representation. -/
 theorem value_of_represents {memory : Nat → UInt8} {ptr count value : Nat}
     (hrep : Represents memory ptr count value) :
     Nat.ofDigits Limbs.radix (memoryLimbs memory ptr count) = value := by
-  rw [hrep.2, Limbs.value_limbDigits]
+  simpa [Limbs.radix, Challenge.YulProof.Limbs.radix] using
+    Challenge.YulProof.Limbs.value_of_represents hrep
 
+/-- MODEXP-facing extensional view of the generic Yul limb representation. -/
 theorem represents_iff_value {memory : Nat → UInt8} {ptr count value : Nat}
     (hvalue : value < Limbs.radix ^ count) :
     Represents memory ptr count value ↔
       Nat.ofDigits Limbs.radix (memoryLimbs memory ptr count) = value := by
-  constructor
-  · exact value_of_represents
-  · intro heq
-    refine ⟨hvalue, ?_⟩
-    apply Nat.ofDigits_inj_of_len_eq Limbs.radix_gt_one
-    · rw [length_memoryLimbs, Limbs.length_limbDigits hvalue]
-    · exact fun digit hdigit => memoryLimb_lt _ _ _ hdigit
-    · exact fun digit hdigit => Limbs.limbDigits_lt hdigit
-    · rw [heq, Limbs.value_limbDigits]
-
-theorem limbAddr_ofNat (base i : Nat) (hfit : base + 32 * i < 2 ^ 256) :
-    (BigArithmetic.limbAddr (BitVec.ofNat 256 base) i).toNat =
-      base + 32 * i := by
-  simp [BigArithmetic.limbAddr, BitVec.toNat_add, BitVec.toNat_mul,
-    Nat.mul_comm i 32]
-  simpa using hfit
-
-theorem memoryLimbs_succ (memory : Nat → UInt8) (ptr count : Nat) :
-    memoryLimbs memory ptr (count + 1) =
-      memoryLimbs memory ptr count ++
-        [(loadWord memory (ptr + 32 * count)).toNat] := by
-  simp [memoryLimbs, List.range_succ]
-
-theorem memoryLimbs_store_next (st : EvmState) (ptr count : Nat) (v : U256)
-    (hfit : ptr + 32 * count < 2 ^ 256) :
-    memoryLimbs
-        (storeWordAt st
-          (BigArithmetic.limbAddr (BitVec.ofNat 256 ptr) count) v).memory
-        ptr (count + 1) = memoryLimbs st.memory ptr count ++ [v.toNat] := by
-  rw [memoryLimbs_succ]
-  have hprefix :
-      memoryLimbs
-          (storeWordAt st
-            (BigArithmetic.limbAddr (BitVec.ofNat 256 ptr) count) v).memory
-          ptr count = memoryLimbs st.memory ptr count := by
-    unfold memoryLimbs
-    apply List.map_congr_left
-    intro i hi
-    have hi' : i < count := by simpa using hi
-    change BitVec.toNat
-        (loadWord (storeWord st.memory
-          (BigArithmetic.limbAddr (BitVec.ofNat 256 ptr) count).toNat v)
-          (ptr + 32 * i)) = _
-    rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
-    right
-    rw [limbAddr_ofNat ptr count hfit]
-    omega
-  have hlast :
-      loadWord
-          (storeWordAt st
-            (BigArithmetic.limbAddr (BitVec.ofNat 256 ptr) count) v).memory
-          (ptr + 32 * count) = v := by
-    rw [← limbAddr_ofNat ptr count hfit]
-    exact loadWord_storeWordAt st _ v
-  rw [hprefix, hlast]
-
-theorem memoryLimbs_store_disjoint (st : EvmState) (write : U256)
-    (ptr count : Nat) (v : U256)
-    (hdisjoint : write.toNat + 32 ≤ ptr ∨ ptr + 32 * count ≤ write.toNat) :
-    memoryLimbs (storeWordAt st write v).memory ptr count =
-      memoryLimbs st.memory ptr count := by
-  unfold memoryLimbs
-  apply List.map_congr_left
-  intro i hi
-  have hi' : i < count := by simpa using hi
-  change BitVec.toNat
-      (loadWord (storeWord st.memory write.toNat v) (ptr + 32 * i)) = _
-  rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
-  rcases hdisjoint with hbefore | hafter
-  · left; omega
-  · right; omega
+  have hvalue' : value < Challenge.YulProof.Limbs.radix ^ count := by
+    simpa [Limbs.radix, Challenge.YulProof.Limbs.radix] using hvalue
+  simpa [Limbs.radix, Challenge.YulProof.Limbs.radix] using
+    Challenge.YulProof.Limbs.represents_iff_value hvalue'
 
 /-! ## Addition phase -/
 
@@ -160,7 +84,7 @@ theorem loadWord_addPhase_future (st : EvmState) (dst src mask : U256)
       rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
       · exact ih (by omega)
       · left
-        rw [limbAddr_ofNat ptr count (by omega)]
+        rw [wordOffset_ofNat ptr count (by omega)]
         omega
 
 theorem loadWord_addPhase_source (st : EvmState) (dst src mask : U256)
@@ -185,7 +109,7 @@ theorem loadWord_addPhase_source (st : EvmState) (dst src mask : U256)
         simp only [BigArithmetic.addStep, storeWordAt]
         rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
         · exact ih (by omega)
-        · rw [limbAddr_ofNat dstPtr count (by omega)]
+        · rw [wordOffset_ofNat dstPtr count (by omega)]
           rcases hdisjoint with hbefore | hafter
           · left; omega
           · right; omega
@@ -260,8 +184,8 @@ theorem addPhase_matches_nat (st : EvmState)
       have hsum := Limbs.addCarryBits
         (x := x.toNat) (y := y.toNat) (carry := before.carry.toNat)
         x.isLt y.isLt (by omega)
-      have hdstAddr := limbAddr_ofNat dstPtr count (by omega)
-      have hsrcAddr := limbAddr_ofNat srcPtr count (by omega)
+      have hdstAddr := wordOffset_ofNat dstPtr count (by omega)
+      have hsrcAddr := wordOffset_ofNat srcPtr count (by omega)
       let loadedDst := touchMemory before.state (dstPtr + 32 * count) 32
       let loadedSrc := touchMemory loadedDst (srcPtr + 32 * count) 32
       have hstore := memoryLimbs_store_next loadedSrc dstPtr count
@@ -271,7 +195,7 @@ theorem addPhase_matches_nat (st : EvmState)
       change
         memoryLimbs
             (storeWordAt loadedSrc
-              (BigArithmetic.limbAddr (BitVec.ofNat 256 dstPtr) count)
+              (wordOffset (BitVec.ofNat 256 dstPtr) count)
               (x + y + before.carry)).memory dstPtr (count + 1) =
               (addNatPhase st.memory dstPtr srcPtr take (count + 1)).digits ∧
           (BigArithmetic.carryWord (x + y) x |||
@@ -282,7 +206,8 @@ theorem addPhase_matches_nat (st : EvmState)
       constructor
       · rw [show loadedSrc.memory = before.state.memory by rfl, hbefore.1]
         congr 2
-        simp [BitVec.toNat_add, Limbs.radix, hx, hy, hbeforeCarry,
+        simp [BitVec.toNat_add, Limbs.radix,
+          Challenge.YulProof.Limbs.radix, hx, hy, hbeforeCarry,
           naturalBefore, addNatPhase]
       · constructor
         · simp only [BitVec.toNat_or, carryWord_toNat, BitVec.toNat_add]
@@ -332,7 +257,7 @@ theorem loadWord_subPhase_region (st : EvmState) (dst modulus : U256)
       rw [show (5120 : U256) = BitVec.ofNat 256 5120 by rfl]
       rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
       · exact ih (by omega) (by omega)
-      · rw [limbAddr_ofNat 5120 count (by omega)]
+      · rw [wordOffset_ofNat 5120 count (by omega)]
         rcases hdisjoint with hafter | hbefore
         · left; omega
         · right; omega
@@ -351,7 +276,7 @@ theorem loadWord_subPhase_future (st : EvmState) (dst modulus : U256)
       rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
       · exact ih (by omega)
       · left
-        rw [limbAddr_ofNat 5120 count (by omega)]
+        rw [wordOffset_ofNat 5120 count (by omega)]
         omega
 
 structure SubNatPhase where
@@ -431,9 +356,9 @@ theorem subPhase_matches_nat (st : EvmState)
             (if x.toNat < y.toNat then Limbs.radix + x.toNat - y.toNat
              else x.toNat - y.toNat) by exact sub_toNat x y]
         exact hstep.1
-      have hdstAddr := limbAddr_ofNat dstPtr count (by omega)
-      have hmodAddr := limbAddr_ofNat modulusPtr count (by omega)
-      have hcandAddr := limbAddr_ofNat 5120 count (by omega)
+      have hdstAddr := wordOffset_ofNat dstPtr count (by omega)
+      have hmodAddr := wordOffset_ofNat modulusPtr count (by omega)
+      have hcandAddr := wordOffset_ofNat 5120 count (by omega)
       let loadedDst := touchMemory before.state (dstPtr + 32 * count) 32
       let loadedMod := touchMemory loadedDst (modulusPtr + 32 * count) 32
       have hstore := memoryLimbs_store_next loadedMod 5120 count z (by omega)
@@ -442,7 +367,7 @@ theorem subPhase_matches_nat (st : EvmState)
       rw [hdstAddr, hmodAddr]
       change
         memoryLimbs (storeWordAt loadedMod
-            (BigArithmetic.limbAddr (BitVec.ofNat 256 5120) count) z).memory
+            (wordOffset (BitVec.ofNat 256 5120) count) z).memory
             5120 (count + 1) =
               (subNatPhase st.memory dstPtr modulusPtr (count + 1)).digits ∧
           (BigArithmetic.carryWord x y |||
@@ -591,7 +516,7 @@ theorem loadWord_selectPhase_future (st : EvmState) (dst mask : U256)
       rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
       · exact ih (by omega)
       · left
-        rw [limbAddr_ofNat dstPtr count (by omega)]
+        rw [wordOffset_ofNat dstPtr count (by omega)]
         omega
 
 theorem loadWord_selectPhase_candidate (st : EvmState) (dst mask : U256)
@@ -610,7 +535,7 @@ theorem loadWord_selectPhase_candidate (st : EvmState) (dst mask : U256)
       simp only [BigArithmetic.selectStep, storeWordAt]
       rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
       · exact ih (by omega)
-      · rw [limbAddr_ofNat dstPtr count (by omega)]
+      · rw [wordOffset_ofNat dstPtr count (by omega)]
         rcases hdisjoint with hbefore | hafter
         · left; omega
         · right; omega
@@ -648,12 +573,12 @@ theorem selectPhase_memoryLimbs (st : EvmState)
       have hstore := memoryLimbs_store_next loadedReduced dst count chosen
         (by omega)
       simp only [BigArithmetic.selectPhase, BigArithmetic.selectStep]
-      rw [limbAddr_ofNat dst count (by omega)]
+      rw [wordOffset_ofNat dst count (by omega)]
       rw [show (5120 : U256) = BitVec.ofNat 256 5120 by rfl,
-        limbAddr_ofNat 5120 count (by omega)]
+        wordOffset_ofNat 5120 count (by omega)]
       change memoryLimbs
           (storeWordAt loadedReduced
-            (BigArithmetic.limbAddr (BitVec.ofNat 256 dst) count) chosen).memory
+            (wordOffset (BitVec.ofNat 256 dst) count) chosen).memory
             dst (count + 1) = _
       rw [hstore, show loadedReduced.memory = before.memory by rfl,
         ih (by omega) (by rcases hdisjoint with h | h <;> omega)]
@@ -675,7 +600,7 @@ theorem memoryLimbs_addPhase_disjoint (st : EvmState) (dst src mask : U256)
       simp only [BigArithmetic.addStep]
       rw [memoryLimbs_store_disjoint]
       · exact ih (by omega)
-      · rw [limbAddr_ofNat dstPtr count (by omega)]
+      · rw [wordOffset_ofNat dstPtr count (by omega)]
         rcases hdisjoint with hbefore | hafter
         · left; omega
         · right; omega
@@ -851,10 +776,14 @@ theorem addMaskedModState_represents (st : EvmState)
         omega
     rcases hcarryOrBorrow with hcarry | hborrow
     · simp [hcarry] at haddEq
-      have hmBound := hmodulus.1
+      have hmBound : m < bound := by
+        simpa [bound, Limbs.radix, Challenge.YulProof.Limbs.radix] using
+          hmodulus.1
       omega
     · simp [hborrow] at hsubEq
-      have hmBound := hmodulus.1
+      have hmBound : m < bound := by
+        simpa [bound, Limbs.radix, Challenge.YulProof.Limbs.radix] using
+          hmodulus.1
       have htotalBound : total < bound := by omega
       rw [Nat.mod_eq_of_lt htotalBound] at hsubEq
       omega
@@ -881,23 +810,22 @@ theorem addMaskedModState_represents (st : EvmState)
           exact huseNonzero
         omega
     rcases hcarryOrBorrow with hcarry | hborrow
-    · have hmBound : m < bound := by simpa [bound] using hmodulus.1
+    · have hmBound : m < bound := by
+        simpa [bound, Limbs.radix, Challenge.YulProof.Limbs.radix] using
+          hmodulus.1
       interval_cases hb : subtracted.borrow.toNat
       · simp [hcarry, hb] at haddEq hsubEq
         omega
       · simp [hcarry, hb] at haddEq hsubEq
         omega
-    · have hmBound : m < bound := by simpa [bound] using hmodulus.1
+    · have hmBound : m < bound := by
+        simpa [bound, Limbs.radix, Challenge.YulProof.Limbs.radix] using
+          hmodulus.1
       interval_cases hc : added.carry.toNat
       · simp [hborrow, hc] at haddEq hsubEq
         omega
       · simp [hborrow, hc] at haddEq hsubEq
         omega
-
-theorem wordOffset_ofNat (ptr i : Nat) (hfit : ptr + 32 * i < 2 ^ 256) :
-    (wordOffset (BitVec.ofNat 256 ptr) i).toNat = ptr + 32 * i := by
-  simp [wordOffset, BitVec.toNat_add]
-  simpa using hfit
 
 theorem memoryLimbs_selectPhase_disjoint (st : EvmState) (dst mask : U256)
     (dstPtr ptr total count : Nat) (hdst : dst = BitVec.ofNat 256 dstPtr)
@@ -914,7 +842,7 @@ theorem memoryLimbs_selectPhase_disjoint (st : EvmState) (dst mask : U256)
       simp only [BigArithmetic.selectStep]
       rw [memoryLimbs_store_disjoint]
       · exact ih (by omega)
-      · rw [limbAddr_ofNat dstPtr count (by omega)]
+      · rw [wordOffset_ofNat dstPtr count (by omega)]
         rcases hdisjoint with hbefore | hafter
         · left; omega
         · right; omega
@@ -953,142 +881,6 @@ theorem addMaskedModState_preserves (st : EvmState)
     exact memoryLimbs_selectPhase_disjoint subtracted.state _ _ dst ptr count
       count rfl (by omega) hdstfit hptrDst
   exact ⟨hrep.1, hselect.trans (hsub.trans (hadd.trans hrep.2))⟩
-
-theorem memoryLimbs_clearWordsState (st : EvmState) (ptr count : Nat)
-    (hfit : ptr + 32 * count < 2 ^ 256) :
-    memoryLimbs (clearWordsState st (BitVec.ofNat 256 ptr) count).memory
-      ptr count = List.replicate count 0 := by
-  induction count with
-  | zero => rfl
-  | succ count ih =>
-      rw [clearWordsState_succ]
-      have haddr : wordOffset (BitVec.ofNat 256 ptr) count =
-          BigArithmetic.limbAddr (BitVec.ofNat 256 ptr) count := by
-        apply BitVec.eq_of_toNat_eq
-        rw [wordOffset_ofNat ptr count (by omega),
-          limbAddr_ofNat ptr count (by omega)]
-      rw [haddr, memoryLimbs_store_next _ _ _ _ (by omega), ih (by omega)]
-      simp [List.replicate_succ']
-
-theorem clearWordsState_represents_zero (st : EvmState) (ptr count : Nat)
-    (hfit : ptr + 32 * count < 2 ^ 256) :
-    Represents (clearWordsState st (BitVec.ofNat 256 ptr) count).memory
-      ptr count 0 := by
-  refine ⟨Nat.pow_pos Limbs.radix_pos, ?_⟩
-  rw [memoryLimbs_clearWordsState st ptr count hfit]
-  simp [Limbs.limbDigits, Nat.digitsAppend]
-
-theorem memoryLimbs_clearWordsState_disjoint (st : EvmState)
-    (dst ptr total count : Nat) (hcount : count ≤ total)
-    (hdstfit : dst + 32 * total < 2 ^ 256)
-    (hdisjoint : dst + 32 * total ≤ ptr ∨ ptr + 32 * total ≤ dst) :
-    memoryLimbs (clearWordsState st (BitVec.ofNat 256 dst) count).memory
-      ptr total = memoryLimbs st.memory ptr total := by
-  induction count with
-  | zero => rfl
-  | succ count ih =>
-      rw [clearWordsState_succ, memoryLimbs_store_disjoint]
-      · exact ih (by omega)
-      · rw [wordOffset_ofNat dst count (by omega)]
-        rcases hdisjoint with hbefore | hafter
-        · left; omega
-        · right; omega
-
-theorem clearWordsState_preserves (st : EvmState) (dst ptr count value : Nat)
-    (hdstfit : dst + 32 * count < 2 ^ 256)
-    (hdisjoint : dst + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ dst)
-    (hrep : Represents st.memory ptr count value) :
-    Represents (clearWordsState st (BitVec.ofNat 256 dst) count).memory
-      ptr count value :=
-  ⟨hrep.1, (memoryLimbs_clearWordsState_disjoint st dst ptr count count
-    (by omega) hdstfit hdisjoint).trans hrep.2⟩
-
-theorem loadWord_copyWordsState_source (st : EvmState)
-    (dst src total count j : Nat) (hcount : count ≤ j) (hj : j < total)
-    (hdstfit : dst + 32 * total < 2 ^ 256)
-    (hdisjoint : dst + 32 * total ≤ src ∨ src + 32 * total ≤ dst) :
-    loadWord (copyWordsState st (BitVec.ofNat 256 dst)
-      (BitVec.ofNat 256 src) count).memory (src + 32 * j) =
-      loadWord st.memory (src + 32 * j) := by
-  induction count with
-  | zero => rfl
-  | succ count ih =>
-      rw [copyWordsState_succ]
-      simp only [copyWordAt, storeWordAt]
-      rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
-      · exact ih (by omega)
-      · rw [wordOffset_ofNat dst count (by omega)]
-        rcases hdisjoint with hbefore | hafter
-        · left; omega
-        · right; omega
-
-theorem memoryLimbs_copyWordsState (st : EvmState) (dst src count : Nat)
-    (hdstfit : dst + 32 * count < 2 ^ 256)
-    (hsrcfit : src + 32 * count < 2 ^ 256)
-    (hdisjoint : dst + 32 * count ≤ src ∨ src + 32 * count ≤ dst) :
-    memoryLimbs (copyWordsState st (BitVec.ofNat 256 dst)
-      (BitVec.ofNat 256 src) count).memory dst count =
-      memoryLimbs st.memory src count := by
-  induction count with
-  | zero => rfl
-  | succ count ih =>
-      rw [copyWordsState_succ]
-      let before := copyWordsState st (BitVec.ofNat 256 dst)
-        (BitVec.ofNat 256 src) count
-      have hdstAddr : wordOffset (BitVec.ofNat 256 dst) count =
-          BigArithmetic.limbAddr (BitVec.ofNat 256 dst) count := by
-        apply BitVec.eq_of_toNat_eq
-        rw [wordOffset_ofNat dst count (by omega),
-          limbAddr_ofNat dst count (by omega)]
-      have hsrcAddr := wordOffset_ofNat src count (by omega)
-      have hsrcWord : loadWord before.memory (src + 32 * count) =
-          loadWord st.memory (src + 32 * count) :=
-        loadWord_copyWordsState_source st dst src (count + 1) count count
-          (by omega) (by omega) (by omega) hdisjoint
-      rw [copyWordAt, hdstAddr, hsrcAddr]
-      rw [memoryLimbs_store_next _ _ _ _ (by omega),
-        show (touchMemory before (src + 32 * count) 32).memory = before.memory by rfl,
-        ih (by omega) (by omega) (by rcases hdisjoint with h | h <;> omega),
-        hsrcWord, memoryLimbs_succ]
-
-theorem copyWordsState_represents (st : EvmState) (dst src count value : Nat)
-    (hdstfit : dst + 32 * count < 2 ^ 256)
-    (hsrcfit : src + 32 * count < 2 ^ 256)
-    (hdisjoint : dst + 32 * count ≤ src ∨ src + 32 * count ≤ dst)
-    (hrep : Represents st.memory src count value) :
-    Represents (copyWordsState st (BitVec.ofNat 256 dst)
-      (BitVec.ofNat 256 src) count).memory dst count value :=
-  ⟨hrep.1, (memoryLimbs_copyWordsState st dst src count hdstfit hsrcfit
-    hdisjoint).trans hrep.2⟩
-
-theorem memoryLimbs_copyWordsState_disjoint (st : EvmState)
-    (dst src ptr total count : Nat) (hcount : count ≤ total)
-    (hdstfit : dst + 32 * total < 2 ^ 256)
-    (hdisjoint : dst + 32 * total ≤ ptr ∨ ptr + 32 * total ≤ dst) :
-    memoryLimbs (copyWordsState st (BitVec.ofNat 256 dst)
-      (BitVec.ofNat 256 src) count).memory ptr total =
-      memoryLimbs st.memory ptr total := by
-  induction count with
-  | zero => rfl
-  | succ count ih =>
-      rw [copyWordsState_succ]
-      simp only [copyWordAt]
-      rw [memoryLimbs_store_disjoint]
-      · simpa [YulSemantics.EVM.touchMemory] using ih (by omega)
-      · rw [wordOffset_ofNat dst count (by omega)]
-        rcases hdisjoint with hbefore | hafter
-        · left; omega
-        · right; omega
-
-theorem copyWordsState_preserves (st : EvmState)
-    (dst src ptr count value : Nat)
-    (hdstfit : dst + 32 * count < 2 ^ 256)
-    (hdisjoint : dst + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ dst)
-    (hrep : Represents st.memory ptr count value) :
-    Represents (copyWordsState st (BitVec.ofNat 256 dst)
-      (BitVec.ofNat 256 src) count).memory ptr count value :=
-  ⟨hrep.1, (memoryLimbs_copyWordsState_disjoint st dst src ptr count count
-    (by omega) hdstfit hdisjoint).trans hrep.2⟩
 
 /-! ## Modular multiplication -/
 
@@ -1170,7 +962,7 @@ theorem value_limbBits (memory : Nat → UInt8) (ptr count : Nat) :
   | succ count ih =>
       rw [limbBits_succ, Nat.ofDigits_append, ih, value_wordBits]
       simp [memoryLimbs, List.range_succ, Nat.ofDigits_append,
-        Limbs.radix, Nat.pow_mul]
+        Limbs.radix, Challenge.YulProof.Limbs.radix, Nat.pow_mul]
 
 theorem loadWord_eq_of_represents (left right : Nat → UInt8)
     (ptr count value i : Nat) (hi : i < count)
@@ -1405,9 +1197,9 @@ theorem mulLimbPrefix_represents (st : EvmState)
         rw [BitVec.toNat_ofNat,
           Nat.mod_eq_of_lt (hcount.trans_lt (by norm_num : 32 < 2 ^ 256))]
       have haddr :
-          (BigMul.limbAddr (BitVec.ofNat 256 bPtr) steps).toNat =
+          (wordOffset (BitVec.ofNat 256 bPtr) steps).toNat =
             bPtr + 32 * steps := by
-        simp [BigMul.limbAddr, BitVec.toNat_add, BitVec.toNat_mul,
+        simp [wordOffset, BitVec.toNat_add, BitVec.toNat_mul,
           Nat.mul_comm steps 32]
         omega
       have hstate : BigMul.mulLimbStep (BitVec.ofNat 256 bPtr) 3072 0
@@ -1461,7 +1253,7 @@ theorem mulLimbPrefix_preserves (st : EvmState) (bPtr : U256)
   | succ steps ih =>
       let before := BigMul.mulLimbPrefix bPtr 3072 0
         (BitVec.ofNat 256 count) steps st
-      let address := BigMul.limbAddr bPtr steps
+      let address := wordOffset bPtr steps
       let word := loadWord before.memory address.toNat
       let loaded := touchMemory before address.toNat 32
       have hbefore : Represents before.memory ptr count value := by

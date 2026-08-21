@@ -60,7 +60,7 @@ theorem loadWord_storeByteAt_other (st : EvmState) (write read v : U256)
 /-- The address of word `i` in a contiguous 32-byte word array. Arithmetic
 is intentionally in `U256`, matching Yul's `add(base, mul(i, 32))`. -/
 def wordOffset (base : U256) (i : Nat) : U256 :=
-  base + BitVec.ofNat 256 (32 * i)
+  base + BitVec.ofNat 256 i * 32
 
 /-- State after clearing the first `count` words of a contiguous word array. -/
 def clearWordsState (st : EvmState) (base : U256) : Nat → EvmState

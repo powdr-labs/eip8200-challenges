@@ -1,6 +1,7 @@
 import Challenge.YulProof.ClosedEvm
 import Challenge.YulProof.EvmState
 import Challenge.YulProof.Interpreter
+import Challenge.YulProof.Limbs
 import Challenge.YulProof.NatDigits
 import Challenge.YulProof.Word
 

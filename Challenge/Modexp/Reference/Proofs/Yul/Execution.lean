@@ -779,7 +779,8 @@ private theorem readBytes_zero_of_represents (memory : Nat → UInt8)
     readBytes memory ptr width = List.replicate width 0 := by
   have hlimbs : BigMath.memoryLimbs memory ptr count =
       List.replicate count 0 :=
-    hrep.2.trans (by simp [Limbs.limbDigits, Nat.digitsAppend])
+    hrep.2.trans (by simp [Challenge.YulProof.Limbs.limbDigits,
+      Challenge.YulProof.Limbs.radix, Nat.digitsAppend])
   have hloads : ∀ i (_hi : i < count),
       loadWord memory (ptr + 32 * i) = 0 := by
     intro i hi

@@ -103,18 +103,14 @@ private def selectEnv (dst src take modulus n mask carry borrow useSub
 def carryWord (smaller larger : U256) : U256 :=
   YulSemantics.EVM.b2w (BitVec.ult smaller larger)
 
-/-- The source expression `add(base, mul(i, 32))`, kept in word arithmetic. -/
-def limbAddr (base : U256) (i : Nat) : U256 :=
-  base + BitVec.ofNat 256 i * 32
-
 structure AddPhase where
   state : EvmState
   carry : U256
 
 def addStep (dst src mask : U256) (i : Nat)
     (phase : AddPhase) : AddPhase :=
-  let dstAt := limbAddr dst i
-  let srcAt := limbAddr src i
+  let dstAt := wordOffset dst i
+  let srcAt := wordOffset src i
   let x := loadWord phase.state.memory dstAt.toNat
   let afterDst := touchMemory phase.state dstAt.toNat 32
   let y := loadWord afterDst.memory srcAt.toNat &&& mask
@@ -135,9 +131,9 @@ structure SubPhase where
 
 def subStep (dst modulus : U256) (i : Nat)
     (phase : SubPhase) : SubPhase :=
-  let dstAt := limbAddr dst i
-  let modulusAt := limbAddr modulus i
-  let candidateAt := limbAddr 0x1400 i
+  let dstAt := wordOffset dst i
+  let modulusAt := wordOffset modulus i
+  let candidateAt := wordOffset 0x1400 i
   let x := loadWord phase.state.memory dstAt.toNat
   let afterDst := touchMemory phase.state dstAt.toNat 32
   let y := loadWord afterDst.memory modulusAt.toNat
@@ -155,8 +151,8 @@ def subPhase (st : EvmState) (dst modulus : U256) : Nat → SubPhase
 
 def selectStep (dst selectMask : U256) (i : Nat)
     (st : EvmState) : EvmState :=
-  let dstAt := limbAddr dst i
-  let candidateAt := limbAddr 0x1400 i
+  let dstAt := wordOffset dst i
+  let candidateAt := wordOffset 0x1400 i
   let sum := loadWord st.memory dstAt.toNat
   let afterSum := touchMemory st dstAt.toNat 32
   let reduced := loadWord afterSum.memory candidateAt.toNat

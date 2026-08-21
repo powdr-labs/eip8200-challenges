@@ -376,7 +376,15 @@ theorem loadBigEndianPrefix_represents_partial (st : EvmState)
             simp [memoryLimbs]
           _ = (Limbs.limbDigits (Limbs.limbCount length)
                 (partialValue input offset length i))[limb]'hdidx := by
-            have hopt := congrArg (fun xs : List Nat => xs[limb]?) hbefore.2
+            have hbeforeDigits : memoryLimbs before.memory dst
+                (Limbs.limbCount length) =
+                Limbs.limbDigits (Limbs.limbCount length)
+                  (partialValue input offset length i) := by
+              simpa [Limbs.limbDigits, Limbs.radix,
+                Challenge.YulProof.Limbs.limbDigits,
+                Challenge.YulProof.Limbs.radix] using hbefore.2
+            have hopt := congrArg (fun xs : List Nat => xs[limb]?)
+              hbeforeDigits
             rw [List.getElem?_eq_getElem hidx,
               List.getElem?_eq_getElem hdidx] at hopt
             exact Option.some.inj hopt
@@ -663,7 +671,8 @@ theorem modulusOrValue_eq_zero_iff (st : EvmState) (input : ByteArray)
     simpa using hvalue.symm
   · intro hvalue
     rw [hvalue] at hrep
-    simpa [Limbs.limbDigits, Nat.digitsAppend] using hrep.2
+    simpa [Limbs.limbDigits, Challenge.YulProof.Limbs.limbDigits,
+      Nat.digitsAppend] using hrep.2
 
 /-! ## Nonzero scratch prelude -/
 
@@ -845,7 +854,8 @@ theorem scratchOneState_invariants (st : EvmState) (input : ByteArray)
       clearWordsState_represents_zero scanned 3072 count (by omega)
   have hloadZero : (loadWord cleared.memory 3072).toNat = 0 := by
     have hget := congrArg (fun xs : List Nat => xs[0]?) hclearedScratch.2
-    simpa [memoryLimbs, hcountPos, Limbs.limbDigits, Nat.digitsAppend] using hget
+    simpa [memoryLimbs, hcountPos, Limbs.limbDigits,
+      Challenge.YulProof.Limbs.limbDigits, Nat.digitsAppend] using hget
   have hscratchValue := value_memoryLimbs_store_add cleared 3072 count 0 1
     hcountPos (by omega) (by rw [hloadZero]; omega)
   rw [value_of_represents hclearedScratch, hloadZero] at hscratchValue

@@ -1,4 +1,5 @@
 import Challenge.Modexp.Reference.Proofs.Yul.Program
+import Challenge.YulProof.EvmState
 
 set_option warningAsError true
 
@@ -14,9 +15,7 @@ proof's distinct `UInt256` wrapper.  This keeps the relational contracts in
 namespace Challenge.Modexp.Reference.Proofs.Yul.StateModel
 
 open YulSemantics.EVM
-
-private def storeWordAt (st : EvmState) (p v : U256) : EvmState :=
-  { touchMemory st p.toNat 32 with memory := storeWord st.memory p.toNat v }
+open Challenge.YulProof.EvmState
 
 /-- The value returned by the source helper `calldataByte`. -/
 def calldataByteValue (st : EvmState) (off : U256) : U256 :=

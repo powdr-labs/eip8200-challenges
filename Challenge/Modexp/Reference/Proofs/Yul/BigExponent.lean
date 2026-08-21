@@ -61,7 +61,6 @@ theorem selectLimbPrefix_zero_memory (st : EvmState) (count : Nat)
           wordOffset 2048 count := by
         apply BitVec.eq_of_toNat_eq
         simp [wordOffset, BitVec.toNat_add, BitVec.toNat_mul]
-        omega
       rw [hdst]
       simp
 
@@ -80,12 +79,10 @@ theorem selectLimbPrefix_one_memory (st : EvmState) (count : Nat)
           wordOffset 2048 count := by
         apply BitVec.eq_of_toNat_eq
         simp [wordOffset, BitVec.toNat_add, BitVec.toNat_mul]
-        omega
       have hsrc : 3072 + BitVec.ofNat 256 count * 32 =
           wordOffset 3072 count := by
         apply BitVec.eq_of_toNat_eq
         simp [wordOffset, BitVec.toNat_add, BitVec.toNat_mul]
-        omega
       rw [hdst, hsrc]
       congr 1
       exact Challenge.YulProof.Word.select_one _ _

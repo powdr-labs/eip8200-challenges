@@ -23,9 +23,6 @@ open Challenge.YulProof.Interpreter
 
 private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 
-def limbAddr (base : U256) (i : Nat) : U256 :=
-  base + BitVec.ofNat 256 i * 32
-
 /-- One bit of the little-endian multiplier limb, as selected by the Yul. -/
 def multiplierBit (word : U256) (j : Nat) : U256 :=
   (word >>> (BitVec.ofNat 256 j).toNat) &&& 1
@@ -43,7 +40,7 @@ def mulBitPrefix (out modulus n word : U256) : Nat → EvmState → EvmState
       (mulBitPrefix out modulus n word j st)
 
 def mulLimbStep (b out modulus n : U256) (i : Nat) (st : EvmState) : EvmState :=
-  let address := limbAddr b i
+  let address := wordOffset b i
   let word := loadWord st.memory address.toNat
   let loaded := touchMemory st address.toNat 32
   mulBitPrefix out modulus n word 256 loaded
@@ -228,7 +225,7 @@ private theorem exec_outerBody {funs : FunEnv D} (st : EvmState)
       lookupFun verifiedFunctions "addMaskedMod") :
     ExecStmt D funs (outerEnv a b out modulus n i) st (.block outerBody)
       (outerEnv a b out modulus n i) (mulLimbStep b out modulus n i st) .normal := by
-  let address := limbAddr b i
+  let address := wordOffset b i
   let word := loadWord st.memory address.toNat
   let loaded := touchMemory st address.toNat 32
   let bodyFuns := hoist D outerBody :: funs
