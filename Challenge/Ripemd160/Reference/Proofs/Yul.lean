@@ -1,6 +1,7 @@
 import Challenge.Ripemd160.ProofSupport.Yul
 import Challenge.Ripemd160.Reference.Source
 import Challenge.Ripemd160.Reference.Bytecode
+import Challenge.Ripemd160.Reference.Proofs.Yul.Execution
 import YulEvmCompiler.Optimizer.Implementation.Pipeline
 
 set_option warningAsError true
@@ -11,14 +12,14 @@ set_option maxHeartbeats 2000000
 # Verified source/compiler bridge for the reference RIPEMD-160 program
 
 This file pins the complete concrete path from `reference.yul` to the frozen
-artifact. The only remaining functional obligation on this route is
-`ComputesDigest referenceParsedBlock`: a big-step proof that the parsed Yul
-implements RIPEMD-160. Normalization and optimization preserve that property
-by the verified optimizer's unconditional `RunEquivBlock` theorem.
+artifact. The direct big-step proof establishes that the parsed Yul implements
+RIPEMD-160. Normalization and optimization preserve that property by the
+verified optimizer's unconditional `RunEquivBlock` theorem.
 
 The `native_decide` uses below establish finite, concrete artifact facts: the
 result of parsing and compiling this fixed source. No universal semantic claim
-is discharged by native evaluation.
+is discharged by native evaluation; the direct functional theorem has a
+separately guarded kernel axiom footprint.
 -/
 
 namespace Challenge.Ripemd160.Reference.Proofs.Yul
@@ -44,7 +45,7 @@ def referenceNormalizedBlock : Block Op :=
 def referenceOptimizedBlock : Block Op :=
   (Optimizer.optimizerPipeline
     (calls := ExternalCalls.none) (creates := ExternalCreates.none)
-    (gasOracle := ExternalGas.any)).run
+    (gasOracle := ExternalGas.none)).run
       referenceNormalizedBlock
 
 /-- The concrete instruction list accepted by the verified backend. -/
@@ -74,6 +75,22 @@ theorem referenceComputesDigest_iff :
     cases hblock
     exact h
 
+theorem referenceParsedBlock_eq_verifiedProgram :
+    referenceParsedBlock = verifiedProgram := by
+  apply YulSemantics.SyntaxEq.stmtsBeq_eq
+  native_decide
+
+/-- The parser returns exactly the readable AST used by the direct source
+proof. This is a finite fact about the checked-in source text. -/
+theorem referenceBlock?_eq_verifiedProgram :
+    referenceBlock? = some verifiedProgram := by
+  rw [referenceBlock?_eq, referenceParsedBlock_eq_verifiedProgram]
+
+/-- Functional correctness of the actual parsed reference source. -/
+theorem referenceComputesDigest : ReferenceComputesDigest := by
+  rw [referenceComputesDigest_iff, referenceParsedBlock_eq_verifiedProgram]
+  exact Execution.verifiedProgram_computesDigest
+
 /-- The production source entry point reproduces the frozen bytes. -/
 theorem referenceBytecode?_eq : referenceBytecode? = some referenceBytecode := by
   native_decide
@@ -98,7 +115,7 @@ theorem reference_runEquiv :
     Optimizer.optimizerPipeline] using
     (Optimizer.normalize_optimizerPipelineRounds_runEquiv
       (calls := ExternalCalls.none) (creates := ExternalCreates.none)
-      (gasOracle := ExternalGas.any)
+      (gasOracle := ExternalGas.none)
       Optimizer.pipelineRounds referenceParsedBlock)
 
 /-- Hence the functional digest obligation can be proved against either the
@@ -107,12 +124,12 @@ theorem computesDigest_optimized_iff :
     ComputesDigest referenceOptimizedBlock ↔
       ComputesDigest referenceParsedBlock := by
   constructor
-  · intro h yst hmem hhalted
-    obtain ⟨V, yst', hrun, hresult⟩ := h yst hmem hhalted
-    exact ⟨V, yst', (reference_runEquiv _ _ _ _).mpr hrun, hresult⟩
-  · intro h yst hmem hhalted
-    obtain ⟨V, yst', hrun, hresult⟩ := h yst hmem hhalted
-    exact ⟨V, yst', (reference_runEquiv _ _ _ _).mp hrun, hresult⟩
+  · intro h
+    exact h.map_program (fun initial finalEnv final outcome hrun =>
+      (reference_runEquiv initial finalEnv final outcome).mpr hrun)
+  · intro h
+    exact h.map_program (fun initial finalEnv final outcome hrun =>
+      (reference_runEquiv initial finalEnv final outcome).mp hrun)
 
 /-- End-to-end verified-compiler route for the frozen reference. The source
 semantics and initial-frame abstraction are explicit hypotheses; parsing,
