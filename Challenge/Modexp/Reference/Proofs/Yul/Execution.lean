@@ -681,4 +681,44 @@ theorem zeroModulusReturnedState_result (st : EvmState) (input : ByteArray)
     Challenge.EvmProof.Memory.natToBytesPadded_eq_natToBE, natToBE_zero]
   rw [YulEvmCompiler.ByteArray.toList_eq_data]
 
+/-- Assemble the complete source contract once the nonzero big branch supplies
+its exact execution-and-result endpoint.  Keeping this theorem here makes the
+remaining dependency explicit while all other top-level cases stay closed. -/
+theorem verifiedProgram_computesResult_of_big
+    (hbig : ∀ st input, st.memory = (fun _ => 0) →
+      st.env.calldata = input.toList → ValidInput input →
+      32 < modulusSize input →
+      ∃ final, Run D verifiedProgram st [] final .halt ∧
+        final.halted = some (HaltKind.ret, (spec input).toList)) :
+    ComputesResult verifiedProgram := by
+  intro st hpre
+  obtain ⟨hmem, _hnotHalted, input, hcd, hvalid⟩ := hpre
+  by_cases hsize : modulusSize input = 0
+  · refine ⟨[], emptyReturnedState st, .halt,
+      run_verifiedProgram_zeroSize st input hcd hvalid hsize, rfl, ?_⟩
+    simpa [resultBytes, hcd, mkCode_toList] using
+      emptyReturnedState_result st input hsize
+  by_cases hword : modulusSize input ≤ 32
+  · have hpos : 0 < modulusSize input := Nat.pos_of_ne_zero hsize
+    by_cases hmodulus : modulusNat input = 0
+    · have hsource := sourceModulus_zero_of_modulusNat_zero st input hcd hvalid
+        hword hmodulus
+      refine ⟨[], zeroModulusReturnedState st
+          (BitVec.ofNat 256 (modulusSize input)), .halt,
+        run_verifiedProgram_word_zero st input hcd hvalid hpos hword hsource,
+        rfl, ?_⟩
+      simpa [resultBytes, hcd, mkCode_toList] using
+        zeroModulusReturnedState_result st input hmem hpos hmodulus
+    · have hsource := sourceModulus_nonzero st input hcd hvalid hword hmodulus
+      refine ⟨[], wordReturnedState st (BitVec.ofNat 256 (modulusSize input))
+          (sourceWordResult st input), .halt,
+        run_verifiedProgram_word_nonzero st input hcd hvalid hpos hword hsource,
+        rfl, ?_⟩
+      simpa [resultBytes, hcd, mkCode_toList] using
+        wordReturnedState_result st input hmem hcd hvalid hpos hword hmodulus
+  · have hlarge : 32 < modulusSize input := by omega
+    obtain ⟨final, hrun, hresult⟩ := hbig st input hmem hcd hvalid hlarge
+    refine ⟨[], final, .halt, hrun, rfl, ?_⟩
+    simpa [resultBytes, hcd, mkCode_toList] using hresult
+
 end Challenge.Modexp.Reference.Proofs.Yul.Execution
