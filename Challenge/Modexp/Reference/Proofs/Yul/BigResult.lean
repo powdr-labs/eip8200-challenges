@@ -120,4 +120,136 @@ theorem serializedByte_correct (memory : Nat → UInt8) (m k value : Nat)
   simpa [limb, rem, reverse, Limbs.radix_eq, hrecompose] using
     Challenge.YulProof.NatDigits.extractedWordByte value limb rem hrem
 
+theorem outputAddress_toNat (i : Nat) (hi : i ≤ 1024) :
+    ((0x1800 : U256) + BitVec.ofNat 256 i).toNat = 0x1800 + i := by
+  rw [BitVec.toNat_add, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (by omega : i < 2 ^ 256)]
+  change (6144 + i) % 2 ^ 256 = 6144 + i
+  rw [Nat.mod_eq_of_lt (by omega)]
+
+theorem serializeStep_preserves_represents (st : EvmState)
+    (m i count value : Nat) (hm : m ≤ 1024) (hi : i < m)
+    (hcount : count ≤ 32) (hrep : Represents st.memory 0x0800 count value) :
+    Represents (serializeStep st (BitVec.ofNat 256 m) i).memory
+      0x0800 count value := by
+  refine ⟨hrep.1, ?_⟩
+  rw [← hrep.2]
+  unfold memoryLimbs
+  apply List.map_congr_left
+  intro j hj
+  have hj' : j < count := by simpa using hj
+  let src := serializeLimbAddress (BitVec.ofNat 256 m) i
+  let loaded := touchMemory st src.toNat 32
+  let v := (loadWord st.memory src.toNat >>>
+    serializeByteShift (BitVec.ofNat 256 m) i) &&& 0xff
+  let dst : U256 := 0x1800 + BitVec.ofNat 256 i
+  have hdst : dst.toNat = 0x1800 + i := outputAddress_toNat i (by omega)
+  have hread : (BitVec.ofNat 256 (0x0800 + 32 * j)).toNat =
+      0x0800 + 32 * j := by
+    rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)]
+  have hpreserve := Challenge.YulProof.EvmState.loadWord_storeByteAt_other
+    loaded dst (BitVec.ofNat 256 (0x0800 + 32 * j)) v (by
+      right
+      rw [hdst, hread]
+      omega)
+  have hpreserve' : loadWord (Challenge.YulProof.EvmState.storeByteAt loaded dst v).memory
+      (BitVec.ofNat 256 (0x0800 + 32 * j)).toNat =
+      loadWord st.memory (BitVec.ofNat 256 (0x0800 + 32 * j)).toNat := by
+    simpa only [show loaded.memory = st.memory by rfl] using hpreserve
+  change (loadWord (serializeStep st (BitVec.ofNat 256 m) i).memory
+    (0x0800 + 32 * j)).toNat = _
+  simpa [serializeStep, src, loaded, v, dst,
+    Challenge.YulProof.EvmState.storeByteAt, hread] using congrArg BitVec.toNat hpreserve'
+
+theorem serializePrefix_preserves_represents (st : EvmState)
+    (m steps count value : Nat) (hm : m ≤ 1024) (hsteps : steps ≤ m)
+    (hcount : count ≤ 32) (hrep : Represents st.memory 0x0800 count value) :
+    Represents (serializePrefix (BitVec.ofNat 256 m) steps st).memory
+      0x0800 count value := by
+  induction steps with
+  | zero => simpa [serializePrefix] using hrep
+  | succ steps ih =>
+      rw [serializePrefix]
+      exact serializeStep_preserves_represents _ m steps count value hm (by omega)
+        hcount (ih (by omega))
+
+theorem serializePrefix_outputByte (st : EvmState) (m steps k value : Nat)
+    (hm : m ≤ 1024) (hsteps : steps ≤ m) (hk : k < steps)
+    (hrep : Represents st.memory 0x0800 (Limbs.limbCount m) value) :
+    (serializePrefix (BitVec.ofNat 256 m) steps st).memory (0x1800 + k) =
+      UInt8.ofNat (value / 256 ^ (m - 1 - k) % 256) := by
+  induction steps with
+  | zero => omega
+  | succ steps ih =>
+      let before := serializePrefix (BitVec.ofNat 256 m) steps st
+      let src := serializeLimbAddress (BitVec.ofNat 256 m) steps
+      let v := (loadWord before.memory src.toNat >>>
+        serializeByteShift (BitVec.ofNat 256 m) steps) &&& 0xff
+      let dst : U256 := 0x1800 + BitVec.ofNat 256 steps
+      have hsteps' : steps ≤ m := by omega
+      have hdst : dst.toNat = 0x1800 + steps := outputAddress_toNat steps (by omega)
+      rw [serializePrefix]
+      change (storeByte before.memory dst.toNat v) (0x1800 + k) = _
+      unfold storeByte
+      by_cases hlast : k = steps
+      · subst k
+        rw [if_pos (by omega)]
+        unfold byteAt
+        congr 1
+        have hbefore := serializePrefix_preserves_represents st m steps
+          (Limbs.limbCount m) value hm hsteps'
+          (Limbs.limbCount_le_32 m hm) hrep
+        simpa [before, src, v] using
+          serializedByte_correct before.memory m steps value hm (by omega) hbefore
+      · rw [if_neg (by omega)]
+        exact ih hsteps' (by omega)
+
+theorem readBytes_serializedResultState (st : EvmState) (m value : Nat)
+    (hm : m ≤ 1024)
+    (hrep : Represents st.memory 0x0800 (Limbs.limbCount m) value) :
+    readBytes (BigPath.serializedResultState st (BitVec.ofNat 256 m)).memory
+      0x1800 m = (Precompile.natToBytes value m).toList := by
+  unfold readBytes
+  apply List.ext_get
+  · rw [YulEvmCompiler.ByteArray.toList_eq_data]
+    simp [Precompile.natToBytes,
+      YulEvmCompiler.BytesLemmas.natToBytesPadded_size]
+  · intro k hleft hright
+    have hk : k < m := by simpa using hleft
+    have hkbytes : k < (Precompile.natToBytes value m).size := by
+      simpa [Precompile.natToBytes,
+        YulEvmCompiler.BytesLemmas.natToBytesPadded_size] using hk
+    simp only [List.get_eq_getElem, List.getElem_map, List.getElem_range]
+    have hrhs : (Precompile.natToBytes value m).toList[k] =
+        (Precompile.natToBytes value m)[k]'hkbytes := by
+      simpa only [YulEvmCompiler.ByteArray.toList_eq_data] using
+        (show (Precompile.natToBytes value m).data.toList[k] =
+            (Precompile.natToBytes value m).data[k] from Array.getElem_toList _).trans
+          (ByteArray.getElem_eq_data_getElem _ hkbytes).symm
+    rw [hrhs]
+    change (BigPath.serializedResultState st (BitVec.ofNat 256 m)).memory
+      (6144 + k) = (Precompile.natToBytes value m)[k]'hkbytes
+    rw [show BigPath.serializedResultState st (BitVec.ofNat 256 m) =
+      serializePrefix (BitVec.ofNat 256 m) m st by
+        unfold BigPath.serializedResultState
+        rw [BitVec.toNat_ofNat,
+          Nat.mod_eq_of_lt (by omega : m < 2 ^ 256)]]
+    rw [serializePrefix_outputByte st m m k value hm (by rfl) hk hrep]
+    rw [← Challenge.EvmProof.Memory.getD0_eq_getElem _ _ (by
+      simpa [Precompile.natToBytes,
+        YulEvmCompiler.BytesLemmas.natToBytesPadded_size] using hk),
+      Precompile.natToBytes,
+      YulEvmCompiler.BytesLemmas.natToBytesPadded_getElem?_getD value m k hk]
+
+theorem returnedResultState_result (st : EvmState) (m value : Nat)
+    (hm : m ≤ 1024)
+    (hrep : Represents st.memory 0x0800 (Limbs.limbCount m) value) :
+    (BigPath.returnedResultState st (BitVec.ofNat 256 m)).halted =
+      some (HaltKind.ret, (Precompile.natToBytes value m).toList) := by
+  change some (HaltKind.ret,
+    readBytes (BigPath.serializedResultState st (BitVec.ofNat 256 m)).memory
+      0x1800 (BitVec.ofNat 256 m).toNat) = _
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : m < 2 ^ 256),
+    readBytes_serializedResultState st m value hm hrep]
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigResult
