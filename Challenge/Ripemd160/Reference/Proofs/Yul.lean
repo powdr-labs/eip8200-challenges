@@ -1,6 +1,7 @@
 import Challenge.Ripemd160.ProofSupport.Yul
 import Challenge.Ripemd160.Reference.Source
 import Challenge.Ripemd160.Reference.Bytecode
+import Challenge.Ripemd160.Reference.Proofs.Yul.Algorithm
 import YulEvmCompiler.Optimizer.Implementation.Pipeline
 
 set_option warningAsError true
@@ -44,7 +45,7 @@ def referenceNormalizedBlock : Block Op :=
 def referenceOptimizedBlock : Block Op :=
   (Optimizer.optimizerPipeline
     (calls := ExternalCalls.none) (creates := ExternalCreates.none)
-    (gasOracle := ExternalGas.any)).run
+    (gasOracle := ExternalGas.none)).run
       referenceNormalizedBlock
 
 /-- The concrete instruction list accepted by the verified backend. -/
@@ -98,7 +99,7 @@ theorem reference_runEquiv :
     Optimizer.optimizerPipeline] using
     (Optimizer.normalize_optimizerPipelineRounds_runEquiv
       (calls := ExternalCalls.none) (creates := ExternalCreates.none)
-      (gasOracle := ExternalGas.any)
+      (gasOracle := ExternalGas.none)
       Optimizer.pipelineRounds referenceParsedBlock)
 
 /-- Hence the functional digest obligation can be proved against either the

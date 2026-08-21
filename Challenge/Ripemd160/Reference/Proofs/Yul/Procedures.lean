@@ -1342,4 +1342,24 @@ theorem eval_initTables (st : EvmState) :
   refine Step.seqCons (Step.exprStmt (mstoreLiteral _ _ _ 0x740 0x00000000)) ?_
   exact Step.seqNil
 
+private def initHDecl : FDecl localDialect where
+  params := []
+  rets := []
+  body := yul% {
+    hSet(0, 0x67452301)
+    hSet(1, 0xefcdab89)
+    hSet(2, 0x98badcfe)
+    hSet(3, 0x10325476)
+    hSet(4, 0xc3d2e1f0)
+  }
+
+private theorem lookup_initH :
+    lookupFun verifiedFunctions "initH" = some (initHDecl, verifiedFunctions) := by rfl
+
+/-- Exact source-level execution of the five-word RIPEMD initial state. -/
+theorem eval_initHCall (st : EvmState) :
+    EvalExpr localDialect verifiedFunctions [] st (.call "initH" [])
+      (.vals [] (initHState st)) := by
+  exact evalExpr_of_interp (Interpreter.eval_initH 0 st)
+
 end Challenge.Ripemd160.Reference.Proofs.Yul.Procedures
