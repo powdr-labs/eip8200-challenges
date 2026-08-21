@@ -111,7 +111,7 @@ private def loadBody : Block Op := yul% {
   mstore(dstAt, or(mload(dstAt), shl(shift, calldataByte(add(off, i)))))
 }
 
-private def incrementI : Block Op := yul% { i := add(i, 1) }
+def incrementI : Block Op := yul% { i := add(i, 1) }
 
 private theorem ofNat_succ (i : Nat) :
     BitVec.ofNat 256 i + 1 = BitVec.ofNat 256 (i + 1) := by
@@ -333,11 +333,11 @@ def modulusOrPrefix : Nat → EvmState → U256
       modulusOrPrefix i st |||
         loadWord before.memory (BitVec.ofNat 256 i * (32 : U256)).toNat
 
-private def modulusScanBody : Block Op := yul% {
+def modulusScanBody : Block Op := yul% {
   modulusOr := or(modulusOr, mload(mul(i, 32)))
 }
 
-private def scanEnv (n : U256) (tail : VEnv D) (i : Nat) (acc : U256) : VEnv D :=
+def scanEnv (n : U256) (tail : VEnv D) (i : Nat) (acc : U256) : VEnv D :=
   [("i", BitVec.ofNat 256 i), ("modulusOr", acc), ("n", n)] ++ tail
 
 private theorem exec_modulusScanBody {funs : FunEnv D} (tail : VEnv D)
