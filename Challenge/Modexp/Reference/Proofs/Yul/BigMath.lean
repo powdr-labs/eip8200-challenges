@@ -1440,4 +1440,134 @@ theorem mulLimbPrefix_represents (st : EvmState)
       exact ⟨hwordProgress'.1, hwordProgress'.2.1, hwordB',
         hwordProgress'.2.2⟩
 
+theorem mulLimbPrefix_preserves (st : EvmState) (bPtr : U256)
+    (count steps ptr value : Nat) (hcount : count ≤ 32)
+    (hptrOut : 3072 + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ 3072)
+    (hptrAddend : 4096 + 32 * count ≤ ptr ∨ ptr + 32 * count ≤ 4096)
+    (hptrCandidate : 5120 + 32 * count ≤ ptr ∨
+      ptr + 32 * count ≤ 5120)
+    (hrep : Represents st.memory ptr count value) :
+    Represents
+      (BigMul.mulLimbPrefix bPtr 3072 0 (BitVec.ofNat 256 count)
+        steps st).memory
+      ptr count value := by
+  induction steps with
+  | zero => simpa [BigMul.mulLimbPrefix] using hrep
+  | succ steps ih =>
+      let before := BigMul.mulLimbPrefix bPtr 3072 0
+        (BitVec.ofNat 256 count) steps st
+      let address := BigMul.limbAddr bPtr steps
+      let word := loadWord before.memory address.toNat
+      let loaded := touchMemory before address.toNat 32
+      have hbefore : Represents before.memory ptr count value := by
+        simpa only [before] using ih
+      have hloaded : Represents loaded.memory ptr count value := by
+        simpa [loaded, YulSemantics.EVM.touchMemory] using hbefore
+      have hafter := mulBitPrefix_preserves loaded word 256 count ptr value
+        (by omega) hcount hptrOut hptrAddend hptrCandidate hloaded
+      have hn : (BitVec.ofNat 256 count).toNat = count := by
+        rw [BitVec.toNat_ofNat,
+          Nat.mod_eq_of_lt (hcount.trans_lt (by norm_num : 32 < 2 ^ 256))]
+      change Represents
+        (BigMul.mulLimbStep bPtr 3072 0 (BitVec.ofNat 256 count)
+          steps before).memory ptr count value
+      simpa only [BigMul.mulLimbStep, hn, address, word, loaded] using hafter
+
+/-- Mathematical state contract for the fixed-memory `mulModBig` calls used
+by `modexpBig`.  The multiplier may alias the multiplicand at `0x0800`
+(squaring) or occupy the preceding `0x0400` region. -/
+theorem mulModBigState_represents (st : EvmState)
+    (bPtr count aValue bValue m : Nat) (hcount : count ≤ 32)
+    (hbPtr : bPtr + 32 * count ≤ 3072) (hmpos : 0 < m)
+    (ha : Represents st.memory 2048 count aValue)
+    (hb : Represents st.memory bPtr count bValue)
+    (hmodulus : Represents st.memory 0 count m)
+    (haReduced : aValue < m) :
+    let after := BigMul.mulModBigState st 2048 (BitVec.ofNat 256 bPtr)
+      3072 0 (BitVec.ofNat 256 count)
+    Represents after.memory 3072 count ((aValue * bValue) % m) ∧
+      Represents after.memory 2048 count aValue ∧
+      Represents after.memory bPtr count bValue ∧
+      Represents after.memory 0 count m := by
+  let cleared := clearWordsState st 3072 count
+  let copied := copyWordsState cleared 4096 2048 count
+  have hclearedOut : Represents cleared.memory 3072 count 0 := by
+    exact clearWordsState_represents_zero st 3072 count (by omega)
+  have hclearedA : Represents cleared.memory 2048 count aValue := by
+    exact clearWordsState_preserves st 3072 2048 count aValue (by omega)
+      (by right; omega) ha
+  have hclearedB : Represents cleared.memory bPtr count bValue := by
+    exact clearWordsState_preserves st 3072 bPtr count bValue (by omega)
+      (by right; omega) hb
+  have hclearedModulus : Represents cleared.memory 0 count m := by
+    exact clearWordsState_preserves st 3072 0 count m (by omega)
+      (by right; omega) hmodulus
+  have hcopiedOut : Represents copied.memory 3072 count 0 := by
+    exact copyWordsState_preserves cleared 4096 2048 3072 count 0
+      (by omega) (by right; omega) hclearedOut
+  have hcopiedAddend : Represents copied.memory 4096 count aValue := by
+    exact copyWordsState_represents cleared 4096 2048 count aValue
+      (by omega) (by omega) (by right; omega) hclearedA
+  have hcopiedA : Represents copied.memory 2048 count aValue := by
+    exact copyWordsState_preserves cleared 4096 2048 2048 count aValue
+      (by omega) (by right; omega) hclearedA
+  have hcopiedB : Represents copied.memory bPtr count bValue := by
+    exact copyWordsState_preserves cleared 4096 2048 bPtr count bValue
+      (by omega) (by right; omega) hclearedB
+  have hcopiedModulus : Represents copied.memory 0 count m := by
+    exact copyWordsState_preserves cleared 4096 2048 0 count m
+      (by omega) (by right; omega) hclearedModulus
+  let progress := BigMul.mulLimbPrefix (BitVec.ofNat 256 bPtr) 3072 0
+    (BitVec.ofNat 256 count) count copied
+  let result := Algorithm.mulBits m 0 aValue
+    (limbBits copied.memory bPtr count)
+  have hprogress := mulLimbPrefix_represents copied bPtr count count 0
+    aValue bValue m (by omega) hcount hbPtr hmpos hcopiedOut
+    hcopiedAddend hcopiedB hcopiedModulus (by omega) haReduced
+  have hprogressA := mulLimbPrefix_preserves copied
+    (BitVec.ofNat 256 bPtr) count count 2048 aValue hcount
+    (by right; omega) (by right; omega) (by right; omega) hcopiedA
+  have hresultLt := Algorithm.mulBits_lt (modulus := m) (acc := 0)
+    (addend := aValue) (limbBits copied.memory bPtr count) hmpos
+    (by omega) haReduced
+  have hvalue := Algorithm.mulBits_fst m 0 aValue
+    (limbBits copied.memory bPtr count)
+  rw [Nat.mod_eq_of_lt hresultLt.1, value_limbBits,
+    value_of_represents hcopiedB] at hvalue
+  have hprogress' :
+      Represents progress.memory 3072 count result.1 ∧
+        Represents progress.memory 4096 count result.2 ∧
+        Represents progress.memory bPtr count bValue ∧
+        Represents progress.memory 0 count m := by
+    simpa only [progress, result] using hprogress
+  have hn : (BitVec.ofNat 256 count).toNat = count := by
+    rw [BitVec.toNat_ofNat,
+      Nat.mod_eq_of_lt (hcount.trans_lt (by norm_num : 32 < 2 ^ 256))]
+  have hstate : BigMul.mulModBigState st 2048 (BitVec.ofNat 256 bPtr)
+      3072 0 (BitVec.ofNat 256 count) = progress := by
+    simp only [BigMul.mulModBigState, hn]
+    rfl
+  change Represents
+      (BigMul.mulModBigState st 2048 (BitVec.ofNat 256 bPtr) 3072 0
+        (BitVec.ofNat 256 count)).memory
+      3072 count ((aValue * bValue) % m) ∧
+    Represents
+      (BigMul.mulModBigState st 2048 (BitVec.ofNat 256 bPtr) 3072 0
+        (BitVec.ofNat 256 count)).memory
+      2048 count aValue ∧
+    Represents
+      (BigMul.mulModBigState st 2048 (BitVec.ofNat 256 bPtr) 3072 0
+        (BitVec.ofNat 256 count)).memory
+      bPtr count bValue ∧
+    Represents
+      (BigMul.mulModBigState st 2048 (BitVec.ofNat 256 bPtr) 3072 0
+        (BitVec.ofNat 256 count)).memory
+      0 count m
+  rw [hstate]
+  have hresultValue : result.1 = (aValue * bValue) % m := by
+    simpa only [result, Nat.zero_add] using hvalue
+  rw [← hresultValue]
+  exact ⟨hprogress'.1, hprogressA, hprogress'.2.2.1,
+    hprogress'.2.2.2⟩
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigMath
