@@ -1257,4 +1257,77 @@ theorem exec_exponentAndReturn (st : EvmState)
         exponentiatedState, exponentBytePrefix, n, initial, hoist] using hexp
   simpa using htail
 
+private theorem execStmts_append_normal {funs : FunEnv D}
+    {V V1 V2 : VEnv D} {st st1 st2 : EvmState}
+    {first second : Block Op} {o : Outcome}
+    (hfirst : ExecStmts D funs V st first V1 st1 .normal)
+    (hsecond : ExecStmts D funs V1 st1 second V2 st2 o) :
+    ExecStmts D funs V st (first ++ second) V2 st2 o := by
+  induction first generalizing V V1 st st1 with
+  | nil =>
+      cases hfirst
+      simpa using hsecond
+  | cons stmt rest ih =>
+      cases hfirst with
+      | seqCons hstmt hrest =>
+          simpa using Step.seqCons hstmt (ih hrest hsecond)
+      | seqStop _ hne => exact (hne rfl).elim
+
+/-- Exact nonzero suffix, from the already scanned modulus through base
+conversion, exponentiation, serialization, and return. -/
+theorem exec_nonzeroSuffix (st : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff : U256)
+    (hnonzero : modulusOrValue st modulusSize modOff ≠ 0) :
+    let n := limbCount modulusSize
+    let modulusOr := modulusOrValue st modulusSize modOff
+    let V := ("modulusOr", modulusOr) :: ("n", n) ::
+      paramsEnv bsize esize modulusSize baseOff expOff modOff
+    ExecStmts D verifiedFunctions V (scannedModulusState st modulusSize modOff)
+      (yul% {
+        clearLimbs(0x0c00, n)
+        mstore(0x0c00, 1)
+        for { let i := 0 } lt(i, bsize) { i := add(i, 1) } {
+          let w := calldataByte(add(baseOff, i))
+          for { let j := 0 } lt(j, 8) { j := add(j, 1) } {
+            addMaskedMod(0x0400, 0x0400, 1, 0x0000, n)
+            addMaskedMod(0x0400, 0x0c00,
+              and(shr(sub(7, j), w), 1), 0x0000, n)
+          }
+        }
+        addMaskedMod(0x0800, 0x0c00, 1, 0x0000, n)
+        for { let i := 0 } lt(i, esize) { i := add(i, 1) } {
+          let w := calldataByte(add(expOff, i))
+          for { let j := 0 } lt(j, 8) { j := add(j, 1) } {
+            let bit := and(shr(sub(7, j), w), 1)
+            mulModBig(0x0800, 0x0800, 0x0c00, 0x0000, n)
+            copyLimbs(0x0800, 0x0c00, n)
+            mulModBig(0x0800, 0x0400, 0x0c00, 0x0000, n)
+            let mask := sub(0, bit)
+            for { let k := 0 } lt(k, n) { k := add(k, 1) } {
+              let off := mul(k, 32)
+              let square := mload(add(0x0800, off))
+              let product := mload(add(0x0c00, off))
+              mstore(add(0x0800, off),
+                xor(square, and(xor(square, product), mask)))
+            }
+          }
+        }
+        for { let i := 0 } lt(i, modulusSize) { i := add(i, 1) } {
+          let reverse := sub(sub(modulusSize, 1), i)
+          let limb := div(reverse, 32)
+          let shift := mul(mod(reverse, 32), 8)
+          mstore8(add(0x1800, i),
+            and(shr(shift, mload(add(0x0800, mul(limb, 32)))), 0xff))
+        }
+        return(0x1800, modulusSize)
+      }) V (returnedResultState
+        (exponentiatedState st bsize esize modulusSize baseOff expOff modOff)
+        modulusSize) .halt := by
+  dsimp only
+  have hpre := exec_nonzeroPrelude st bsize esize modulusSize baseOff expOff
+    modOff hnonzero
+  have htail := exec_exponentAndReturn st bsize esize modulusSize baseOff expOff
+    modOff
+  simpa using execStmts_append_normal hpre htail
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigPath
