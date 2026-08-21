@@ -1,6 +1,7 @@
 import Challenge.Modexp.Reference.Proofs.Yul.Procedures
 import Challenge.Modexp.Reference.Proofs.Yul.BigArithmetic
 import Challenge.Modexp.Reference.Proofs.Yul.BigDriver
+import Challenge.Modexp.Reference.Proofs.Yul.BigMul
 import Challenge.YulProof.Interpreter
 
 set_option warningAsError true
@@ -30,6 +31,28 @@ open Challenge.Modexp.Reference.Proofs.Yul.Procedures
 private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 
 private theorem dialect_zero : D.zero = (0 : U256) := rfl
+
+private def calldataByteDecl : FDecl D where
+  params := ["off"]
+  rets := ["b"]
+  body := yul% { b := byte(0, calldataload(off)) }
+
+private theorem exec_calldataByteBody (st : EvmState) (off : U256) :
+    ExecStmt D verifiedFunctions [("off", off), ("b", 0)] st
+      (.block calldataByteDecl.body)
+      [("off", off), ("b", StateModel.calldataByteValue st off)] st .normal := by
+  apply execStmt_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 50)
+  rfl
+
+private theorem eval_calldataByte {funs : FunEnv D} {V : VEnv D}
+    {st st1 : EvmState} {arg : Expr Op} (off : U256)
+    (hlookup : lookupFun funs "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions))
+    (harg : EvalExpr D funs V st arg (.vals [off] st1)) :
+    EvalExpr D funs V st (.call "calldataByte" [arg])
+      (.vals [StateModel.calldataByteValue st1 off] st1) := by
+  exact Step.callOk (D := D) (Step.argsCons Step.argsNil harg) hlookup rfl
+    (exec_calldataByteBody st1 off) (Or.inl rfl)
 
 private def modexpBigDecl : FDecl D where
   params := ["bsize", "esize", "modulusSize", "baseOff", "expOff", "modOff"]
@@ -482,5 +505,175 @@ private theorem exec_baseInnerLoop {funs : FunEnv D} (initial : EvmState)
         rw [Nat.mod_eq_of_lt hjM]
         exact hj8
       · simpa [baseBitPrefix] using ih (j + 1) (by omega)
+
+private theorem exec_baseOuterBody {funs : FunEnv D} (current : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr : U256)
+    (i : Nat)
+    (hadd : lookupFun funs "addMaskedMod" =
+      lookupFun verifiedFunctions "addMaskedMod")
+    (hbyte : lookupFun (hoist D baseOuterBody :: funs) "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions)) :
+    ExecStmt D funs
+      (baseOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i)
+      current (.block baseOuterBody)
+      (baseOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i)
+      (baseByteStep baseOff n i current) .normal := by
+  let V := baseOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i
+  let off := baseOff + BitVec.ofNat 256 i
+  let word := StateModel.calldataByteValue current off
+  let bodyFuns : FunEnv D := hoist D baseOuterBody :: funs
+  let loopFuns : FunEnv D := [] :: bodyFuns
+  have hoff : EvalExpr D bodyFuns V current (yulE% add(baseOff, i))
+      (.vals [off] current) := by
+    apply evalExpr_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
+    rfl
+  have hw : EvalExpr D bodyFuns V current
+      (yulE% calldataByte(add(baseOff, i))) (.vals [word] current) := by
+    simpa [bodyFuns, word, off, mkCall, parse] using
+      (eval_calldataByte off hbyte hoff)
+  have hadd' : lookupFun loopFuns "addMaskedMod" =
+      lookupFun verifiedFunctions "addMaskedMod" := by
+    simpa [loopFuns, bodyFuns, baseOuterBody, hoist, lookupFun] using hadd
+  refine Step.block (D := D)
+    (Vb := ("w", word) ::
+      baseOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i) ?_
+  refine Step.seqCons (Step.letVal hw rfl) ?_
+  refine Step.seqCons ?_ Step.seqNil
+  refine Step.forLoop (D := D)
+    (Vinit := baseInnerEnv bsize esize modulusSize baseOff expOff modOff n
+      modulusOr word i 0) (stinit := current)
+    (Vend := baseInnerEnv bsize esize modulusSize baseOff expOff modOff n
+      modulusOr word i 8) ?_ ?_
+  · exact Step.seqCons (Step.letVal Step.lit rfl) Step.seqNil
+  · simpa [loopFuns, bodyFuns, baseOuterBody, baseInnerBody, incrementJ,
+      baseByteStep, baseBitPrefix, word, off, hoist] using
+      exec_baseInnerLoop (funs := loopFuns) current bsize esize modulusSize
+        baseOff expOff modOff n modulusOr word i hadd' 8 0 (by omega)
+
+private theorem exec_baseOuterLoop {funs : FunEnv D} (initial : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff n modulusOr : U256)
+    (hadd : lookupFun funs "addMaskedMod" =
+      lookupFun verifiedFunctions "addMaskedMod")
+    (hbyte : lookupFun funs "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions)) :
+    ∀ (k i : Nat), i + k = bsize.toNat →
+      ExecLoop D funs
+        (baseOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr i)
+        (baseBytePrefix baseOff n i initial)
+        (yulE% lt(i, bsize)) incrementI baseOuterBody
+        (baseOuterEnv bsize esize modulusSize baseOff expOff modOff n modulusOr
+          bsize.toNat)
+        (baseBytePrefix baseOff n bsize.toNat initial) .normal := by
+  intro k
+  induction k with
+  | zero =>
+      intro i hi
+      have : i = bsize.toNat := by omega
+      subst i
+      refine Step.loopDone
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) (Step.var rfl))
+          rfl) ?_
+      simp [D, Challenge.YulProof.ClosedEvm.dialect,
+        YulSemantics.EVM.evmWithExternal, dialect_zero,
+        YulSemantics.EVM.b2w, BitVec.ult]
+  | succ k ih =>
+      intro i hi
+      have hib : i < bsize.toNat := by omega
+      have hbyte' : lookupFun (hoist D baseOuterBody :: funs) "calldataByte" =
+          some (calldataByteDecl, verifiedFunctions) := by
+        simpa [baseOuterBody, hoist, lookupFun] using hbyte
+      refine Step.loopStep
+        (Step.builtinOk
+          (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) (Step.var rfl))
+          rfl) ?_
+        (exec_baseOuterBody (baseBytePrefix baseOff n i initial)
+          bsize esize modulusSize baseOff expOff modOff n modulusOr i hadd hbyte')
+        (Or.inl rfl)
+        (exec_incrementI (baseBytePrefix baseOff n (i + 1) initial)
+          bsize esize modulusSize baseOff expOff modOff n modulusOr i) ?_
+      · rw [dialect_zero]
+        simp [D, Challenge.YulProof.ClosedEvm.dialect,
+          YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.b2w, BitVec.ult]
+        rw [Nat.mod_eq_of_lt (hib.trans bsize.isLt)]
+        exact hib
+      · simpa [baseBytePrefix] using ih (i + 1) (by omega)
+
+/-- Exact source execution of the nonzero big-path prelude: scratch setup,
+base conversion, and accumulator initialization. -/
+theorem exec_nonzeroPrelude (st : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff : U256)
+    (_hnonzero : modulusOrValue st modulusSize modOff ≠ 0) :
+    let n := limbCount modulusSize
+    let V := ("modulusOr", modulusOrValue st modulusSize modOff) ::
+      ("n", n) :: paramsEnv bsize esize modulusSize baseOff expOff modOff
+    ExecStmts D verifiedFunctions V (scannedModulusState st modulusSize modOff)
+      (yul% {
+        clearLimbs(0x0c00, n)
+        mstore(0x0c00, 1)
+        for { let i := 0 } lt(i, bsize) { i := add(i, 1) } {
+          let w := calldataByte(add(baseOff, i))
+          for { let j := 0 } lt(j, 8) { j := add(j, 1) } {
+            addMaskedMod(0x0400, 0x0400, 1, 0x0000, n)
+            addMaskedMod(0x0400, 0x0c00,
+              and(shr(sub(7, j), w), 1), 0x0000, n)
+          }
+        }
+        addMaskedMod(0x0800, 0x0c00, 1, 0x0000, n)
+      }) V (initializedAccumulatorState st bsize modulusSize baseOff modOff)
+      .normal := by
+  dsimp only
+  let n := limbCount modulusSize
+  let modulusOr := modulusOrValue st modulusSize modOff
+  let V := ("modulusOr", modulusOr) :: ("n", n) ::
+    paramsEnv bsize esize modulusSize baseOff expOff modOff
+  let scanned := scannedModulusState st modulusSize modOff
+  let cleared := scratchClearedState st modulusSize modOff
+  let one := scratchOneState st modulusSize modOff
+  let converted := convertedBaseState st bsize modulusSize baseOff modOff
+  let initialized := initializedAccumulatorState st bsize modulusSize baseOff modOff
+  let loopFuns : FunEnv D := [] :: verifiedFunctions
+  have hclearArgs : EvalArgs D verifiedFunctions V scanned
+      [yulE% 0x0c00, yulE% n] (.vals [0x0c00, n] scanned) := by
+    apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
+    rfl
+  have hclear : EvalExpr D verifiedFunctions V scanned
+      (yulE% clearLimbs(0x0c00, n)) (.vals [] cleared) := by
+    simpa [cleared, scratchClearedState, scanned, n, mkCall, parse] using
+      (eval_clearLimbs (funs := verifiedFunctions) (V := V) (st := scanned)
+        (0x0c00 : U256) n (by rfl) hclearArgs)
+  have hone : EvalExpr D verifiedFunctions V cleared (yulE% mstore(0x0c00, 1))
+      (.vals [] one) := by
+    apply evalExpr_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
+    rfl
+  have hadd : lookupFun loopFuns "addMaskedMod" =
+      lookupFun verifiedFunctions "addMaskedMod" := by rfl
+  have hbyte : lookupFun loopFuns "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions) := by rfl
+  have hbase := exec_baseOuterLoop (funs := loopFuns) one bsize esize
+    modulusSize baseOff expOff modOff n modulusOr hadd hbyte bsize.toNat 0 (by omega)
+  have haccArgs : EvalArgs D verifiedFunctions V converted
+      [yulE% 0x0800, yulE% 0x0c00, yulE% 1, yulE% 0x0000, yulE% n]
+      (.vals [0x0800, 0x0c00, 1, 0x0000, n] converted) := by
+    apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 60)
+    rfl
+  have hacc : EvalExpr D verifiedFunctions V converted
+      (yulE% addMaskedMod(0x0800, 0x0c00, 1, 0x0000, n))
+      (.vals [] initialized) := by
+    simpa [initialized, initializedAccumulatorState, converted, n, mkCall, parse]
+      using (BigArithmetic.eval_addMaskedMod (funs := verifiedFunctions) (V := V)
+        (st := converted) (0x0800 : U256) 0x0c00 1 0x0000 n (by rfl) haccArgs)
+  refine Step.seqCons (Step.exprStmt hclear) ?_
+  refine Step.seqCons (Step.exprStmt hone) ?_
+  refine Step.seqCons (V1 := V) (st1 := converted) ?_ ?_
+  · refine Step.forLoop (D := D)
+      (Vinit := baseOuterEnv bsize esize modulusSize baseOff expOff modOff n
+        modulusOr 0) (stinit := one)
+      (Vend := baseOuterEnv bsize esize modulusSize baseOff expOff modOff n
+        modulusOr bsize.toNat) ?_ ?_
+    · exact Step.seqCons (Step.letVal Step.lit rfl) Step.seqNil
+    · simpa [loopFuns, baseOuterEnv, baseOuterBody, incrementI, converted,
+        convertedBaseState, baseBytePrefix, n, one, hoist] using hbase
+  exact Step.seqCons (Step.exprStmt hacc) Step.seqNil
 
 end Challenge.Modexp.Reference.Proofs.Yul.BigPath
