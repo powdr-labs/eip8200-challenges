@@ -46,12 +46,12 @@ theorem referenceParseSucceeded : referenceBlock?.isSome := by
 def referenceParsedBlock : Block Op :=
   referenceBlock?.get referenceParseSucceeded
 
-/-- The normalized reference block used by the production source compiler. -/
+/-- The normalized reference block used by the proof-side compiler route. -/
 def referenceNormalizedBlock : Block Op :=
   @Optimizer.Normalize.normalize dialect referenceParsedBlock
 
-/-- The first successful verified optimizer candidate used by
-`YulParser.compileSource` for this source. -/
+/-- The verified optimizer candidate used by the proof-side compiler route.
+The production `compileSource` result is pinned independently below. -/
 def referenceOptimizedBlock : Block Op :=
   (Optimizer.optimizerPipeline
     (calls := ExternalCalls.none) (creates := ExternalCreates.none)
@@ -158,5 +158,13 @@ theorem reference_correct_of_yul
   · exact habs
   · exact computesResult_optimized_iff.mpr
       (referenceComputesResult_iff.mp hyul)
+
+/-- The completed direct source proof discharges the functional premise of
+the verified-compiler route; only the generic initial-state representation
+premise remains explicit. -/
+theorem reference_correct_via_yul
+    (habs : AbstractsInitialState referenceBytecode) :
+    Correct referenceBytecode :=
+  reference_correct_of_yul referenceComputesResult habs
 
 end Challenge.Modexp.Reference.Proofs.Yul
