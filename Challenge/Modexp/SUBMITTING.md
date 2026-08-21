@@ -11,6 +11,21 @@ Challenge.Modexp.Correct bytecode
 `Correct` is defined in [`Spec.lean`](Spec.lean). It covers every Osaka-valid
 EIP-198 tuple, including missing operand bytes interpreted as trailing zeroes.
 
+For a source-Yul candidate `program`, the corresponding auditor-facing
+functional obligation is defined in [`YulSpec.lean`](YulSpec.lean):
+
+```lean
+theorem yulCorrect : Challenge.Modexp.Yul.Correct program := by
+  -- direct relational Yul proof
+```
+
+This theorem is independent of parsing, optimization, compilation, and the
+reference AST. A compiled submission still exposes concrete `bytecode` and a
+`Challenge.Modexp.Correct bytecode` theorem for the artifact-facing checks;
+the verified compiler bridge in [`ProofSupport/Yul.lean`](ProofSupport/Yul.lean)
+transports the source obligation once its compiler and initial-state premises
+are supplied.
+
 ## Directory and names
 
 Choose an UpperCamelCase name such as `FastModexp` and add:

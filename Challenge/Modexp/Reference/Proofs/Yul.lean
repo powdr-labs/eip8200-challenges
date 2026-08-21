@@ -24,8 +24,8 @@ set_option maxHeartbeats 2000000
 
 This file pins the concrete path from `reference.yul` through parsing,
 normalization, optimization, verified compilation, and assembly to the frozen
-artifact. The semantic proof can be supplied independently as a proof of
-`ComputesResult verifiedProgram`.
+artifact. The semantic proof can be supplied independently as a proof of the
+public `Challenge.Modexp.Yul.Correct verifiedProgram` predicate.
 
 The `native_decide` uses below prove only finite facts about this fixed source
 and artifact. The optimizer equivalence is the verified pipeline theorem.
@@ -70,12 +70,17 @@ def referenceInstructions : List Instr :=
 theorem referenceBlock?_eq : referenceBlock? = some referenceParsedBlock := by
   exact Option.eq_some_of_isSome referenceParseSucceeded
 
-/-- Source-text-facing functional obligation for the MODEXP reference. -/
-def ReferenceComputesResult : Prop :=
-  ∀ block, referenceBlock? = some block → ComputesResult block
+/-- Source-text-facing functional obligation for the MODEXP reference. This
+pins the parsed source while keeping its target the public Yul challenge. -/
+def ReferenceCorrect : Prop :=
+  ∀ block, referenceBlock? = some block → Challenge.Modexp.Yul.Correct block
+
+/-- Compatibility name retained for downstream users of the original direct
+proof API. -/
+abbrev ReferenceComputesResult := ReferenceCorrect
 
 theorem referenceComputesResult_iff :
-    ReferenceComputesResult ↔ ComputesResult referenceParsedBlock := by
+    ReferenceCorrect ↔ Challenge.Modexp.Yul.Correct referenceParsedBlock := by
   constructor
   · intro h
     exact h referenceParsedBlock referenceBlock?_eq
@@ -96,14 +101,23 @@ theorem referenceBlock?_eq_verifiedProgram :
 
 /-- A direct proof of the readable AST discharges the source-text obligation. -/
 theorem referenceComputesResult_of_verifiedProgram
-    (h : ComputesResult verifiedProgram) : ReferenceComputesResult := by
+    (h : Challenge.Modexp.Yul.Correct verifiedProgram) : ReferenceCorrect := by
   rw [referenceComputesResult_iff, referenceParsedBlock_eq_verifiedProgram]
   exact h
 
-/-- Functional correctness of the actual parsed MODEXP reference source. -/
-theorem referenceComputesResult : ReferenceComputesResult := by
+/-- Functional correctness of the actual parsed MODEXP reference source
+against the public, auditor-facing Yul specification. -/
+theorem referenceCorrect : ReferenceCorrect := by
   exact referenceComputesResult_of_verifiedProgram
     Execution.verifiedProgram_computesResult
+
+/-- The parsed reference block directly satisfies the public Yul challenge. -/
+theorem referenceParsedBlock_correct :
+    Challenge.Modexp.Yul.Correct referenceParsedBlock :=
+  referenceComputesResult_iff.mp referenceCorrect
+
+/-- Compatibility theorem for the original proof-facing name. -/
+theorem referenceComputesResult : ReferenceComputesResult := referenceCorrect
 
 /-- The production source entry point reproduces the frozen bytes. -/
 theorem referenceBytecode?_eq : referenceBytecode? = some referenceBytecode := by
@@ -134,8 +148,8 @@ theorem reference_runEquiv :
 /-- The MODEXP obligation may therefore be proved against either the readable
 parsed source or the exact optimized block accepted by the backend. -/
 theorem computesResult_optimized_iff :
-    ComputesResult referenceOptimizedBlock ↔
-      ComputesResult referenceParsedBlock := by
+    Challenge.Modexp.Yul.Correct referenceOptimizedBlock ↔
+      Challenge.Modexp.Yul.Correct referenceParsedBlock := by
   constructor
   · intro h
     exact h.map_program (fun initial finalEnv final outcome hrun =>
@@ -148,7 +162,7 @@ theorem computesResult_optimized_iff :
 optimization, backend compilation, and assembly are proved above; the direct
 Yul semantics and initial-state abstraction remain explicit hypotheses. -/
 theorem reference_correct_of_yul
-    (hyul : ReferenceComputesResult)
+    (hyul : ReferenceCorrect)
     (habs : AbstractsInitialState referenceBytecode) :
     Correct referenceBytecode := by
   rw [← referenceInstructions_assemble] at habs ⊢
@@ -165,6 +179,6 @@ premise remains explicit. -/
 theorem reference_correct_via_yul
     (habs : AbstractsInitialState referenceBytecode) :
     Correct referenceBytecode :=
-  reference_correct_of_yul referenceComputesResult habs
+  reference_correct_of_yul referenceCorrect habs
 
 end Challenge.Modexp.Reference.Proofs.Yul

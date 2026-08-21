@@ -1,3 +1,4 @@
+import Challenge.YulProof.ClosedEvmDialect
 import YulEvmCompiler.ContractCorrectness
 
 set_option warningAsError true
@@ -19,9 +20,6 @@ open YulEvmCompiler
 /-- The closed external model used by local source programs. -/
 @[reducible] def model : ExternalModel :=
   { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.none }
-
-/-- Gas-free EVM source dialect with no external calls or creations. -/
-abbrev dialect := evmWithExternal ExternalCalls.none ExternalCreates.none ExternalGas.none
 
 /-- Executable builtins for the closed dialect.  Static-context violations are
 resolved locally; unavailable external effects and `gas()` remain absent. -/

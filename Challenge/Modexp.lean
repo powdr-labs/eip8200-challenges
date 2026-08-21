@@ -1,4 +1,5 @@
 import Challenge.Modexp.Spec
+import Challenge.Modexp.YulSpec
 import Challenge.Modexp.AdditionalGoals
 import Challenge.Modexp.ProofSupport
 import Challenge.Modexp.Reference

@@ -1,4 +1,6 @@
+import Challenge.YulProof.Bytes
 import Challenge.YulProof.ClosedEvm
+import Challenge.YulProof.ClosedEvmDialect
 import Challenge.YulProof.EvmState
 import Challenge.YulProof.Interpreter
 import Challenge.YulProof.Limbs
