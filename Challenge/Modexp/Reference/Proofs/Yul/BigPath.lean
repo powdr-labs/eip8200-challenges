@@ -676,4 +676,106 @@ theorem exec_nonzeroPrelude (st : EvmState)
         convertedBaseState, baseBytePrefix, n, one, hoist] using hbase
   exact Step.seqCons (Step.exprStmt hacc) Step.seqNil
 
+/-! ## Big square-and-multiply state model -/
+
+def selectLimbStep (mask : U256) (k : Nat) (current : EvmState) : EvmState :=
+  let off := BitVec.ofNat 256 k * 32
+  let squareAt : U256 := 0x0800 + off
+  let productAt : U256 := 0x0c00 + off
+  let square := loadWord current.memory squareAt.toNat
+  let afterSquare := touchMemory current squareAt.toNat 32
+  let product := loadWord afterSquare.memory productAt.toNat
+  let afterProduct := touchMemory afterSquare productAt.toNat 32
+  storeWordAt afterProduct squareAt
+    (square ^^^ ((square ^^^ product) &&& mask))
+
+def selectLimbPrefix (mask : U256) : Nat → EvmState → EvmState
+  | 0, current => current
+  | k + 1, current => selectLimbStep mask k (selectLimbPrefix mask k current)
+
+def exponentBitStep (n word : U256) (j : Nat) (current : EvmState) : EvmState :=
+  let bit := baseBit word j
+  let squared := BigMul.mulModBigState current 0x0800 0x0800 0x0c00 0x0000 n
+  let copied := copyWordsState squared 0x0800 0x0c00 n.toNat
+  let product := BigMul.mulModBigState copied 0x0800 0x0400 0x0c00 0x0000 n
+  selectLimbPrefix (0 - bit) n.toNat product
+
+def exponentBitPrefix (n word : U256) : Nat → EvmState → EvmState
+  | 0, current => current
+  | j + 1, current => exponentBitStep n word j
+      (exponentBitPrefix n word j current)
+
+def exponentByteStep (expOff n : U256) (i : Nat)
+    (current : EvmState) : EvmState :=
+  let word := StateModel.calldataByteValue current
+    (expOff + BitVec.ofNat 256 i)
+  exponentBitPrefix n word 8 current
+
+def exponentBytePrefix (expOff n : U256) : Nat → EvmState → EvmState
+  | 0, current => current
+  | i + 1, current => exponentByteStep expOff n i
+      (exponentBytePrefix expOff n i current)
+
+def exponentiatedState (st : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff : U256) : EvmState :=
+  exponentBytePrefix expOff (limbCount modulusSize) esize.toNat
+    (initializedAccumulatorState st bsize modulusSize baseOff modOff)
+
+def serializedResultState (st : EvmState) (modulusSize : U256) : EvmState :=
+  serializePrefix modulusSize modulusSize.toNat st
+
+def returnedResultState (st : EvmState) (modulusSize : U256) : EvmState :=
+  let serialized := serializedResultState st modulusSize
+  { touchMemory serialized 0x1800 modulusSize.toNat with
+    halted := some (.ret,
+      readBytes serialized.memory 0x1800 modulusSize.toNat) }
+
+/-- Once the big exponent loop has established its exact result state, the
+source serializer and return compose without any arithmetic assumptions. -/
+theorem exec_serializeReturn (V : VEnv D) (st : EvmState)
+    (modulusSize : U256)
+    (hmodulus : VEnv.get V "modulusSize" = some modulusSize)
+    (_hi : VEnv.get V "i" = none) :
+    ExecStmts D verifiedFunctions V st
+      (yul% {
+        for { let i := 0 } lt(i, modulusSize) { i := add(i, 1) } {
+          let reverse := sub(sub(modulusSize, 1), i)
+          let limb := div(reverse, 32)
+          let shift := mul(mod(reverse, 32), 8)
+          mstore8(add(0x1800, i),
+            and(shr(shift, mload(add(0x0800, mul(limb, 32)))), 0xff))
+        }
+        return(0x1800, modulusSize)
+      }) V (returnedResultState st modulusSize) .halt := by
+  let serialized := serializedResultState st modulusSize
+  let loopFuns : FunEnv D := [] :: verifiedFunctions
+  have hloop := exec_serializeLoop (funs := loopFuns) V st modulusSize hmodulus
+  have hret : EvalExpr D verifiedFunctions V serialized
+      (mkCall "return" [.lit (.number 0x1800), .var "modulusSize"])
+      (.halt (returnedResultState st modulusSize)) := by
+    apply Step.builtinHalt (D := D)
+      (Step.argsCons (Step.argsCons Step.argsNil (Step.var hmodulus)) Step.lit)
+    simp [D, Challenge.YulProof.ClosedEvm.dialect,
+      YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.builtinWithExternal,
+      YulSemantics.EVM.stepOp, YulSemantics.EVM.litValue,
+      returnedResultState, serialized]
+  refine Step.seqCons (D := D) (V1 := V) (st1 := serialized) ?_ ?_
+  · have hfor : ExecStmt D verifiedFunctions V st
+        (.forLoop (yul% { let i := 0 }) (yulE% lt(i, modulusSize))
+          Challenge.Modexp.Reference.Proofs.Yul.incrementI
+          Challenge.Modexp.Reference.Proofs.Yul.serializeBody)
+        (restore V (("i", BitVec.ofNat 256 modulusSize.toNat) :: V))
+        serialized .normal := by
+      refine Step.forLoop (D := D)
+        (Vinit := ("i", 0) :: V) (stinit := st)
+        (Vend := ("i", BitVec.ofNat 256 modulusSize.toNat) :: V) ?_ ?_
+      · exact Step.seqCons (Step.letVal Step.lit rfl) Step.seqNil
+      · simpa [loopFuns, serialized, serializedResultState, hoist] using hloop
+    have hrestore : restore V (("i", BitVec.ofNat 256 modulusSize.toNat) :: V) = V := by
+      simp [restore, _hi]
+    rw [hrestore] at hfor
+    simpa [Challenge.Modexp.Reference.Proofs.Yul.incrementI,
+      Challenge.Modexp.Reference.Proofs.Yul.serializeBody] using hfor
+  exact Step.seqStop (Step.exprStmtHalt hret) (by decide)
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigPath
