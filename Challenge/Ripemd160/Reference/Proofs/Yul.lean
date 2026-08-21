@@ -1,7 +1,7 @@
 import Challenge.Ripemd160.ProofSupport.Yul
 import Challenge.Ripemd160.Reference.Source
 import Challenge.Ripemd160.Reference.Bytecode
-import Challenge.Ripemd160.Reference.Proofs.Yul.Algorithm
+import Challenge.Ripemd160.Reference.Proofs.Yul.Execution
 import YulEvmCompiler.Optimizer.Implementation.Pipeline
 
 set_option warningAsError true
@@ -12,10 +12,9 @@ set_option maxHeartbeats 2000000
 # Verified source/compiler bridge for the reference RIPEMD-160 program
 
 This file pins the complete concrete path from `reference.yul` to the frozen
-artifact. The only remaining functional obligation on this route is
-`ComputesDigest referenceParsedBlock`: a big-step proof that the parsed Yul
-implements RIPEMD-160. Normalization and optimization preserve that property
-by the verified optimizer's unconditional `RunEquivBlock` theorem.
+artifact. The direct big-step proof establishes that the parsed Yul implements
+RIPEMD-160. Normalization and optimization preserve that property by the
+verified optimizer's unconditional `RunEquivBlock` theorem.
 
 The `native_decide` uses below establish finite, concrete artifact facts: the
 result of parsing and compiling this fixed source. No universal semantic claim
@@ -74,6 +73,22 @@ theorem referenceComputesDigest_iff :
     rw [referenceBlock?_eq] at hblock
     cases hblock
     exact h
+
+theorem referenceParsedBlock_eq_verifiedProgram :
+    referenceParsedBlock = verifiedProgram := by
+  apply YulSemantics.SyntaxEq.stmtsBeq_eq
+  native_decide
+
+/-- The parser returns exactly the readable AST used by the direct source
+proof. This is a finite fact about the checked-in source text. -/
+theorem referenceBlock?_eq_verifiedProgram :
+    referenceBlock? = some verifiedProgram := by
+  rw [referenceBlock?_eq, referenceParsedBlock_eq_verifiedProgram]
+
+/-- Functional correctness of the actual parsed reference source. -/
+theorem referenceComputesDigest : ReferenceComputesDigest := by
+  rw [referenceComputesDigest_iff, referenceParsedBlock_eq_verifiedProgram]
+  exact Execution.verifiedProgram_computesDigest
 
 /-- The production source entry point reproduces the frozen bytes. -/
 theorem referenceBytecode?_eq : referenceBytecode? = some referenceBytecode := by

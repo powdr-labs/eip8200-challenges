@@ -16,14 +16,14 @@ defaultTargets = ["Challenge"]
 [[require]]
 name = "yul-evm-compiler"
 git = "https://github.com/powdr-labs/yul-compiler"
-rev = "e02dfacdb26fb5590ab691523309ff2f2657fa1c"
+rev = "a4d5b330b61fc1bbd4106ea876a162084f466a92"
 
 # Pin the source semantics explicitly because it is part of the proof and
 # submission trust boundary, rather than relying on the compiler transitively.
 [[require]]
 name = "yul-semantics"
 git = "https://github.com/powdr-labs/yul-semantics"
-rev = "69961aa4b77846d9f8e71d0539a3a8abea99c18c"
+rev = "6bf28503435b4ac9a3b44baf578efb36c5bb5211"
 
 # The EVM semantics. This is where the *specification* lives: a challenge is
 # equality with `EvmSemantics.Crypto.Sha256.hash`, the function
