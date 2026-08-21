@@ -502,7 +502,7 @@ def serializePrefix (modulusSize : U256) : Nat → EvmState → EvmState
   | 0, st => st
   | i + 1, st => serializeStep (serializePrefix modulusSize i st) modulusSize i
 
-private def serializeBody : Block Op := yul% {
+def serializeBody : Block Op := yul% {
   let reverse := sub(sub(modulusSize, 1), i)
   let limb := div(reverse, 32)
   let shift := mul(mod(reverse, 32), 8)
