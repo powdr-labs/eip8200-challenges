@@ -295,4 +295,597 @@ theorem addPhase_matches_nat (st : EvmState)
             (show x.toNat + y.toNat + before.carry.toNat <
                 2 * 2 ^ 256 by omega)
 
+/-! ## Subtraction candidate -/
+
+theorem sub_toNat (x y : U256) :
+    (x - y).toNat = if x.toNat < y.toNat then
+      Limbs.radix + x.toNat - y.toNat else x.toNat - y.toNat := by
+  simp only [BitVec.toNat_sub]
+  rw [show Limbs.radix = 2 ^ 256 by rfl]
+  split_ifs with h
+  · rw [Nat.mod_eq_of_lt (by omega)]
+    omega
+  · have hyx : y.toNat ≤ x.toNat := by omega
+    rw [show 2 ^ 256 - y.toNat + x.toNat =
+        2 ^ 256 + (x.toNat - y.toNat) by omega, Nat.add_mod,
+      Nat.mod_self, Nat.zero_add, Nat.mod_eq_of_lt (by omega)]
+    rw [Nat.mod_eq_of_lt]
+    omega
+
+theorem loadWord_subPhase_region (st : EvmState) (dst modulus : U256)
+    (ptr total count j : Nat) (hcount : count ≤ total) (hj : j < total)
+    (hfit : 5120 + 32 * count < 2 ^ 256)
+    (hdisjoint : 5120 + 32 * total ≤ ptr ∨ ptr + 32 * total ≤ 5120) :
+    loadWord (BigArithmetic.subPhase st dst modulus count).state.memory
+        (ptr + 32 * j) = loadWord st.memory (ptr + 32 * j) := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [BigArithmetic.subPhase]
+      simp only [BigArithmetic.subStep, storeWordAt]
+      rw [show (5120 : U256) = BitVec.ofNat 256 5120 by rfl]
+      rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
+      · exact ih (by omega) (by omega)
+      · rw [limbAddr_ofNat 5120 count (by omega)]
+        rcases hdisjoint with hafter | hbefore
+        · left; omega
+        · right; omega
+
+theorem loadWord_subPhase_future (st : EvmState) (dst modulus : U256)
+    (count j : Nat) (hcount : count ≤ j)
+    (hfit : 5120 + 32 * j < 2 ^ 256) :
+    loadWord (BigArithmetic.subPhase st dst modulus count).state.memory
+        (5120 + 32 * j) = loadWord st.memory (5120 + 32 * j) := by
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [BigArithmetic.subPhase]
+      simp only [BigArithmetic.subStep, storeWordAt]
+      rw [show (5120 : U256) = BitVec.ofNat 256 5120 by rfl]
+      rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
+      · exact ih (by omega)
+      · left
+        rw [limbAddr_ofNat 5120 count (by omega)]
+        omega
+
+structure SubNatPhase where
+  digits : List Nat
+  borrow : Nat
+
+def subNatPhase (memory : Nat → UInt8) (dst modulus : Nat) :
+    Nat → SubNatPhase
+  | 0 => ⟨[], 0⟩
+  | i + 1 =>
+      let before := subNatPhase memory dst modulus i
+      let x := (loadWord memory (dst + 32 * i)).toNat
+      let y := (loadWord memory (modulus + 32 * i)).toNat
+      let nextBorrow := if x < y + before.borrow then 1 else 0
+      ⟨before.digits ++
+        [x + Limbs.radix * nextBorrow - y - before.borrow], nextBorrow⟩
+
+theorem subNatPhase_eq_subDigitLists (memory : Nat → UInt8)
+    (dst modulus count : Nat) :
+    let natural := subNatPhase memory dst modulus count
+    let result := Limbs.subDigitLists (memoryLimbs memory dst count)
+      (memoryLimbs memory modulus count) 0
+    natural.digits = result.1 ∧ natural.borrow = result.2 := by
+  induction count with
+  | zero => simp [subNatPhase, memoryLimbs, Limbs.subDigitLists]
+  | succ count ih =>
+      rw [subNatPhase, memoryLimbs_succ, memoryLimbs_succ,
+        Limbs.subDigitLists_append_single (by simp)]
+      rcases ih with ⟨hdigits, hborrow⟩
+      simp only
+      rw [hdigits, hborrow]
+      exact ⟨rfl, rfl⟩
+
+theorem subPhase_matches_nat (st : EvmState)
+    (dstPtr modulusPtr total count : Nat) (hcount : count ≤ total)
+    (hdstfit : dstPtr + 32 * total < 2 ^ 256)
+    (hmodfit : modulusPtr + 32 * total < 2 ^ 256)
+    (hcandidateFit : 5120 + 32 * total < 2 ^ 256)
+    (hdstDisjoint : 5120 + 32 * total ≤ dstPtr ∨
+      dstPtr + 32 * total ≤ 5120)
+    (hmodDisjoint : 5120 + 32 * total ≤ modulusPtr ∨
+      modulusPtr + 32 * total ≤ 5120) :
+    let phase := BigArithmetic.subPhase st (BitVec.ofNat 256 dstPtr)
+      (BitVec.ofNat 256 modulusPtr) count
+    let natural := subNatPhase st.memory dstPtr modulusPtr count
+    memoryLimbs phase.state.memory 5120 count = natural.digits ∧
+      phase.borrow.toNat = natural.borrow ∧ natural.borrow ≤ 1 := by
+  induction count with
+  | zero => simp [BigArithmetic.subPhase, subNatPhase, memoryLimbs]
+  | succ count ih =>
+      have hi : count < total := by omega
+      have hbefore := ih (by omega)
+      let before := BigArithmetic.subPhase st (BitVec.ofNat 256 dstPtr)
+        (BitVec.ofNat 256 modulusPtr) count
+      let naturalBefore := subNatPhase st.memory dstPtr modulusPtr count
+      let x := loadWord before.state.memory (dstPtr + 32 * count)
+      let y := loadWord before.state.memory (modulusPtr + 32 * count)
+      let difference := x - y
+      let z := difference - before.borrow
+      have hx : x = loadWord st.memory (dstPtr + 32 * count) :=
+        loadWord_subPhase_region st _ _ dstPtr total count count (by omega) hi
+          (by omega) hdstDisjoint
+      have hy : y = loadWord st.memory (modulusPtr + 32 * count) :=
+        loadWord_subPhase_region st _ _ modulusPtr total count count (by omega) hi
+          (by omega) hmodDisjoint
+      have hbeforeBorrow : before.borrow.toNat = naturalBefore.borrow :=
+        hbefore.2.1
+      have hborrowLe : before.borrow.toNat ≤ 1 :=
+        hbeforeBorrow.trans_le hbefore.2.2
+      have hstep := Limbs.subLimbBits x.isLt y.isLt hborrowLe
+      have hz : z.toNat = x.toNat + Limbs.radix *
+          (if x.toNat < y.toNat + before.borrow.toNat then 1 else 0) -
+          y.toNat - before.borrow.toNat := by
+        rw [show z = difference - before.borrow by rfl,
+          sub_toNat difference before.borrow,
+          show difference.toNat =
+            (if x.toNat < y.toNat then Limbs.radix + x.toNat - y.toNat
+             else x.toNat - y.toNat) by exact sub_toNat x y]
+        exact hstep.1
+      have hdstAddr := limbAddr_ofNat dstPtr count (by omega)
+      have hmodAddr := limbAddr_ofNat modulusPtr count (by omega)
+      have hcandAddr := limbAddr_ofNat 5120 count (by omega)
+      let loadedDst := touchMemory before.state (dstPtr + 32 * count) 32
+      let loadedMod := touchMemory loadedDst (modulusPtr + 32 * count) 32
+      have hstore := memoryLimbs_store_next loadedMod 5120 count z (by omega)
+      simp only [BigArithmetic.subPhase, BigArithmetic.subStep]
+      rw [show (5120 : U256) = BitVec.ofNat 256 5120 by rfl]
+      rw [hdstAddr, hmodAddr]
+      change
+        memoryLimbs (storeWordAt loadedMod
+            (BigArithmetic.limbAddr (BitVec.ofNat 256 5120) count) z).memory
+            5120 (count + 1) =
+              (subNatPhase st.memory dstPtr modulusPtr (count + 1)).digits ∧
+          (BigArithmetic.carryWord x y |||
+              BigArithmetic.carryWord difference before.borrow).toNat =
+              (subNatPhase st.memory dstPtr modulusPtr (count + 1)).borrow ∧
+          (subNatPhase st.memory dstPtr modulusPtr (count + 1)).borrow ≤ 1
+      rw [hstore]
+      constructor
+      · rw [show loadedMod.memory = before.state.memory by rfl, hbefore.1]
+        rw [hz]
+        simp [subNatPhase, naturalBefore, hx, hy, hbeforeBorrow]
+      · constructor
+        · simp only [BitVec.toNat_or, carryWord_toNat]
+          rw [show difference.toNat =
+              (if x.toNat < y.toNat then Limbs.radix + x.toNat - y.toNat
+               else x.toNat - y.toNat) by exact sub_toNat x y]
+          rw [hstep.2]
+          simp [subNatPhase, naturalBefore, hx, hy, hbeforeBorrow]
+        · simp only [subNatPhase]
+          split <;> omega
+
+theorem addPhase_value_carry (st : EvmState)
+    (dst src count take x y : Nat) (htake : take ≤ 1)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hsrcfit : src + 32 * count < 2 ^ 256)
+    (halias : dst = src ∨ dst + 32 * count ≤ src ∨
+      src + 32 * count ≤ dst)
+    (hdst : Represents st.memory dst count x)
+    (hsrc : Represents st.memory src count y) :
+    let phase := BigArithmetic.addPhase st (BitVec.ofNat 256 dst)
+      (BitVec.ofNat 256 src) (0 - BitVec.ofNat 256 take) count
+    Nat.ofDigits Limbs.radix (memoryLimbs phase.state.memory dst count) +
+        Limbs.radix ^ count * phase.carry.toNat = x + take * y ∧
+      phase.carry.toNat ≤ 1 := by
+  let phase := BigArithmetic.addPhase st (BitVec.ofNat 256 dst)
+    (BitVec.ofNat 256 src) (0 - BitVec.ofNat 256 take) count
+  let natural := addNatPhase st.memory dst src take count
+  have hmatch := addPhase_matches_nat st dst src count count take (by omega)
+    htake hdstfit hsrcfit halias
+  have hcanonical := addNatPhase_eq_addDigitLists st.memory dst src take count
+  have hlength : (memoryLimbs st.memory dst count).length =
+      ((memoryLimbs st.memory src count).map (take * ·)).length := by simp
+  have hvalue := Limbs.addDigitLists_value (carry := 0) hlength
+  rw [Limbs.ofDigits_map_mul, Nat.add_zero, value_of_represents hdst,
+    value_of_represents hsrc] at hvalue
+  dsimp only [phase, natural] at hmatch hcanonical ⊢
+  rw [hmatch.1, hcanonical.1, hmatch.2.1, hcanonical.2]
+  refine ⟨by simpa using hvalue, ?_⟩
+  exact Limbs.addDigitLists_masked_carry_le_one (by simp)
+    (fun digit hdigit => memoryLimb_lt _ _ _ hdigit)
+    (fun digit hdigit => memoryLimb_lt _ _ _ hdigit) htake
+
+theorem addPhase_represents_wrapped (st : EvmState)
+    (dst src count take x y : Nat) (htake : take ≤ 1)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hsrcfit : src + 32 * count < 2 ^ 256)
+    (halias : dst = src ∨ dst + 32 * count ≤ src ∨
+      src + 32 * count ≤ dst)
+    (hdst : Represents st.memory dst count x)
+    (hsrc : Represents st.memory src count y) :
+    Represents
+      (BigArithmetic.addPhase st (BitVec.ofNat 256 dst)
+        (BitVec.ofNat 256 src) (0 - BitVec.ofNat 256 take) count).state.memory
+      dst count ((x + take * y) % Limbs.radix ^ count) := by
+  have hmatch := addPhase_matches_nat st dst src count count take (by omega)
+    htake hdstfit hsrcfit halias
+  have hcanonical := addNatPhase_eq_addDigitLists st.memory dst src take count
+  have hmod := Limbs.addDigitLists_masked_value_mod
+    (xs := memoryLimbs st.memory dst count)
+    (ys := memoryLimbs st.memory src count) (take := take) (by simp)
+  rw [value_of_represents hdst, value_of_represents hsrc] at hmod
+  rw [represents_iff_value (Nat.mod_lt _ (pow_pos Limbs.radix_pos _))]
+  rw [hmatch.1, hcanonical.1]
+  simpa using hmod
+
+theorem subPhase_value_borrow (st : EvmState)
+    (dst modulus count x m : Nat)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hmodfit : modulus + 32 * count < 2 ^ 256)
+    (hdstDisjoint : 5120 + 32 * count ≤ dst ∨
+      dst + 32 * count ≤ 5120)
+    (hmodDisjoint : 5120 + 32 * count ≤ modulus ∨
+      modulus + 32 * count ≤ 5120)
+    (hdst : Represents st.memory dst count x)
+    (hmodulus : Represents st.memory modulus count m) :
+    let phase := BigArithmetic.subPhase st (BitVec.ofNat 256 dst)
+      (BitVec.ofNat 256 modulus) count
+    Nat.ofDigits Limbs.radix (memoryLimbs phase.state.memory 5120 count) + m =
+        x + Limbs.radix ^ count * phase.borrow.toNat ∧
+      phase.borrow.toNat ≤ 1 := by
+  let phase := BigArithmetic.subPhase st (BitVec.ofNat 256 dst)
+    (BitVec.ofNat 256 modulus) count
+  let natural := subNatPhase st.memory dst modulus count
+  have hmatch := subPhase_matches_nat st dst modulus count count (by omega)
+    hdstfit hmodfit (by omega) hdstDisjoint hmodDisjoint
+  have hcanonical := subNatPhase_eq_subDigitLists st.memory dst modulus count
+  have hlength : (memoryLimbs st.memory dst count).length =
+      (memoryLimbs st.memory modulus count).length := by simp
+  have hvalue := Limbs.subDigitLists_value (borrow := 0) hlength
+    (fun digit hdigit => memoryLimb_lt _ _ _ hdigit)
+    (fun digit hdigit => memoryLimb_lt _ _ _ hdigit) (by omega)
+  rw [value_of_represents hdst, value_of_represents hmodulus,
+    Nat.add_zero] at hvalue
+  dsimp only [phase, natural] at hmatch hcanonical ⊢
+  rw [hmatch.1, hcanonical.1, hmatch.2.1, hcanonical.2]
+  refine ⟨by simpa using hvalue, ?_⟩
+  exact Limbs.subDigitLists_borrow_le_one (by simp) (by omega)
+
+/-! ## Final conditional selection -/
+
+theorem selectWord_eq (sum reduced useSub : U256) (huse : useSub.toNat ≤ 1) :
+    (reduced &&& (0 - useSub)) ||| (sum &&& ~~~(0 - useSub)) =
+      if useSub = 0 then sum else reduced := by
+  have hcases : useSub.toNat = 0 ∨ useSub.toNat = 1 := by omega
+  rcases hcases with hzero | hone
+  · have : useSub = 0 := BitVec.eq_of_toNat_eq hzero
+    subst useSub
+    change (reduced &&& (0 : U256)) ||| (sum &&& BitVec.allOnes 256) = sum
+    have hz : reduced &&& (0 : U256) = 0 := by
+      apply BitVec.eq_of_toNat_eq
+      simp [BitVec.toNat_and]
+    rw [hz, BitVec.and_allOnes]
+    apply BitVec.eq_of_toNat_eq
+    simp [BitVec.toNat_or]
+  · have : useSub = 1 := BitVec.eq_of_toNat_eq hone
+    subst useSub
+    change (reduced &&& BitVec.allOnes 256) ||| (sum &&& (0 : U256)) = reduced
+    have hz : sum &&& (0 : U256) = 0 := by
+      apply BitVec.eq_of_toNat_eq
+      simp [BitVec.toNat_and]
+    rw [BitVec.and_allOnes, hz]
+    apply BitVec.eq_of_toNat_eq
+    simp [BitVec.toNat_or]
+
+theorem loadWord_selectPhase_future (st : EvmState) (dst mask : U256)
+    (dstPtr count j : Nat) (hdst : dst = BitVec.ofNat 256 dstPtr)
+    (hcount : count ≤ j) (hfit : dstPtr + 32 * j < 2 ^ 256) :
+    loadWord (BigArithmetic.selectPhase st dst mask count).memory
+        (dstPtr + 32 * j) = loadWord st.memory (dstPtr + 32 * j) := by
+  subst dst
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [BigArithmetic.selectPhase]
+      simp only [BigArithmetic.selectStep, storeWordAt]
+      rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
+      · exact ih (by omega)
+      · left
+        rw [limbAddr_ofNat dstPtr count (by omega)]
+        omega
+
+theorem loadWord_selectPhase_candidate (st : EvmState) (dst mask : U256)
+    (dstPtr total count j : Nat) (hdst : dst = BitVec.ofNat 256 dstPtr)
+    (hcount : count ≤ total) (hj : j < total)
+    (hdstfit : dstPtr + 32 * total < 2 ^ 256)
+    (hdisjoint : dstPtr + 32 * total ≤ 5120 ∨
+      5120 + 32 * total ≤ dstPtr) :
+    loadWord (BigArithmetic.selectPhase st dst mask count).memory
+        (5120 + 32 * j) = loadWord st.memory (5120 + 32 * j) := by
+  subst dst
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [BigArithmetic.selectPhase]
+      simp only [BigArithmetic.selectStep, storeWordAt]
+      rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other]
+      · exact ih (by omega)
+      · rw [limbAddr_ofNat dstPtr count (by omega)]
+        rcases hdisjoint with hbefore | hafter
+        · left; omega
+        · right; omega
+
+theorem selectPhase_memoryLimbs (st : EvmState)
+    (dst count : Nat) (useSub : U256) (huse : useSub.toNat ≤ 1)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hdisjoint : dst + 32 * count ≤ 5120 ∨
+      5120 + 32 * count ≤ dst) :
+    memoryLimbs
+        (BigArithmetic.selectPhase st (BitVec.ofNat 256 dst)
+          (0 - useSub) count).memory dst count =
+      if useSub = 0 then memoryLimbs st.memory dst count
+      else memoryLimbs st.memory 5120 count := by
+  induction count with
+  | zero => simp [BigArithmetic.selectPhase, memoryLimbs]
+  | succ count ih =>
+      have hi : count < count + 1 := by omega
+      let before := BigArithmetic.selectPhase st (BitVec.ofNat 256 dst)
+        (0 - useSub) count
+      let sum := loadWord before.memory (dst + 32 * count)
+      let reduced := loadWord before.memory (5120 + 32 * count)
+      let loadedSum := touchMemory before (dst + 32 * count) 32
+      let loadedReduced := touchMemory loadedSum (5120 + 32 * count) 32
+      let chosen := (reduced &&& (0 - useSub)) |||
+        (sum &&& ~~~(0 - useSub))
+      have hsum : sum = loadWord st.memory (dst + 32 * count) :=
+        loadWord_selectPhase_future st _ _ dst count count rfl (by omega)
+          (by omega)
+      have hreduced : reduced = loadWord st.memory (5120 + 32 * count) :=
+        loadWord_selectPhase_candidate st _ _ dst (count + 1) count count rfl
+          (by omega) hi (by omega) hdisjoint
+      have hchosen : chosen = if useSub = 0 then sum else reduced :=
+        selectWord_eq sum reduced useSub huse
+      have hstore := memoryLimbs_store_next loadedReduced dst count chosen
+        (by omega)
+      simp only [BigArithmetic.selectPhase, BigArithmetic.selectStep]
+      rw [limbAddr_ofNat dst count (by omega)]
+      rw [show (5120 : U256) = BitVec.ofNat 256 5120 by rfl,
+        limbAddr_ofNat 5120 count (by omega)]
+      change memoryLimbs
+          (storeWordAt loadedReduced
+            (BigArithmetic.limbAddr (BitVec.ofNat 256 dst) count) chosen).memory
+            dst (count + 1) = _
+      rw [hstore, show loadedReduced.memory = before.memory by rfl,
+        ih (by omega) (by rcases hdisjoint with h | h <;> omega)]
+      rw [memoryLimbs_succ, memoryLimbs_succ, hchosen, hsum, hreduced]
+      split <;> rfl
+
+theorem memoryLimbs_addPhase_disjoint (st : EvmState) (dst src mask : U256)
+    (dstPtr ptr total count : Nat) (hdst : dst = BitVec.ofNat 256 dstPtr)
+    (hcount : count ≤ total) (hdstfit : dstPtr + 32 * total < 2 ^ 256)
+    (hdisjoint : dstPtr + 32 * total ≤ ptr ∨
+      ptr + 32 * total ≤ dstPtr) :
+    memoryLimbs (BigArithmetic.addPhase st dst src mask count).state.memory
+        ptr total = memoryLimbs st.memory ptr total := by
+  subst dst
+  induction count with
+  | zero => rfl
+  | succ count ih =>
+      rw [BigArithmetic.addPhase]
+      simp only [BigArithmetic.addStep]
+      rw [memoryLimbs_store_disjoint]
+      · exact ih (by omega)
+      · rw [limbAddr_ofNat dstPtr count (by omega)]
+        rcases hdisjoint with hbefore | hafter
+        · left; omega
+        · right; omega
+
+theorem memoryLimbs_subPhase_region (st : EvmState) (dst modulus : U256)
+    (ptr total count : Nat) (hcount : count ≤ total)
+    (hfit : 5120 + 32 * count < 2 ^ 256)
+    (hdisjoint : 5120 + 32 * total ≤ ptr ∨
+      ptr + 32 * total ≤ 5120) :
+    memoryLimbs (BigArithmetic.subPhase st dst modulus count).state.memory
+        ptr total = memoryLimbs st.memory ptr total := by
+  unfold memoryLimbs
+  apply List.map_congr_left
+  intro j hj
+  rw [loadWord_subPhase_region st dst modulus ptr total count j hcount
+    (by simpa using hj) hfit hdisjoint]
+
+/-- The exact mathematical contract needed by both modular multiplication
+and the big-path base conversion.  Aliasing `dst = src` is explicitly
+supported (the doubling used by `mulModBig`). -/
+theorem addMaskedModState_represents (st : EvmState)
+    (dst src modulus count take x y m : Nat) (hcount : count ≤ 32)
+    (htake : take ≤ 1) (hmpos : 0 < m)
+    (hx : x < m) (hy : y ≤ m)
+    (hdstfit : dst + 32 * count < 2 ^ 256)
+    (hsrcfit : src + 32 * count < 2 ^ 256)
+    (hmodfit : modulus + 32 * count < 2 ^ 256)
+    (hdst : Represents st.memory dst count x)
+    (hsrc : Represents st.memory src count y)
+    (hmodulus : Represents st.memory modulus count m)
+    (halias : dst = src ∨ dst + 32 * count ≤ src ∨
+      src + 32 * count ≤ dst)
+    (hdstCandidate : dst + 32 * count ≤ 5120 ∨
+      5120 + 32 * count ≤ dst)
+    (hmodCandidate : modulus + 32 * count ≤ 5120 ∨
+      5120 + 32 * count ≤ modulus)
+    (hdstModulus : dst + 32 * count ≤ modulus ∨
+      modulus + 32 * count ≤ dst) :
+    Represents
+      (BigArithmetic.addMaskedModState st (BitVec.ofNat 256 dst)
+        (BitVec.ofNat 256 src) (BitVec.ofNat 256 take)
+        (BitVec.ofNat 256 modulus) count).memory
+      dst count ((x + take * y) % m) := by
+  let bound := Limbs.radix ^ count
+  let total := x + take * y
+  let added := BigArithmetic.addPhase st (BitVec.ofNat 256 dst)
+    (BitVec.ofNat 256 src) (0 - BitVec.ofNat 256 take) count
+  let subtracted := BigArithmetic.subPhase added.state
+    (BitVec.ofNat 256 dst) (BitVec.ofNat 256 modulus) count
+  let useSub := added.carry ||| YulSemantics.EVM.b2w (subtracted.borrow = 0)
+  have hcandfit : 5120 + 32 * count < 2 ^ 256 := by omega
+  have haddValue := addPhase_value_carry st dst src count take x y htake
+    hdstfit hsrcfit halias hdst hsrc
+  have haddRep := addPhase_represents_wrapped st dst src count take x y htake
+    hdstfit hsrcfit halias hdst hsrc
+  have haddModulus : Represents added.state.memory modulus count m := by
+    refine ⟨hmodulus.1, ?_⟩
+    exact (memoryLimbs_addPhase_disjoint st _ _ _ dst modulus count count rfl
+      (by omega) hdstfit hdstModulus).trans hmodulus.2
+  have hsubValue := subPhase_value_borrow added.state dst modulus count
+    ((x + take * y) % bound) m hdstfit hmodfit
+    (by rcases hdstCandidate with h | h <;> simp_all [bound])
+    (by rcases hmodCandidate with h | h <;> simp_all [bound])
+    (by simpa [added, bound] using haddRep) haddModulus
+  have hsubDst : memoryLimbs subtracted.state.memory dst count =
+      memoryLimbs added.state.memory dst count := by
+    exact memoryLimbs_subPhase_region added.state _ _ dst count count (by omega)
+      hcandfit (by rcases hdstCandidate with h | h <;> omega)
+  have hboundPos : 0 < bound := pow_pos Limbs.radix_pos count
+  have hwrappedLt : total % bound < bound := Nat.mod_lt _ hboundPos
+  have haddEq : Nat.ofDigits Limbs.radix
+        (memoryLimbs added.state.memory dst count) +
+      bound * added.carry.toNat = total := by
+    simpa [added, bound, total] using haddValue.1
+  have hsubEq : Nat.ofDigits Limbs.radix
+        (memoryLimbs subtracted.state.memory 5120 count) + m =
+      total % bound + bound * subtracted.borrow.toNat := by
+    simpa [subtracted, bound, total] using hsubValue.1
+  have haddedValue : Nat.ofDigits Limbs.radix
+      (memoryLimbs added.state.memory dst count) = total % bound := by
+    simpa [added, total, bound] using value_of_represents haddRep
+  have hcandidateLt : Nat.ofDigits Limbs.radix
+      (memoryLimbs subtracted.state.memory 5120 count) < bound := by
+    have h := Nat.ofDigits_lt_base_pow_length Limbs.radix_gt_one
+      (fun digit hdigit => memoryLimb_lt subtracted.state.memory 5120 count hdigit)
+    simpa [bound] using h
+  have hcarryLe : added.carry.toNat ≤ 1 := by
+    simpa [added] using haddValue.2
+  have hborrowLe : subtracted.borrow.toNat ≤ 1 := by
+    simpa [subtracted] using hsubValue.2
+  have hb2wLe : (YulSemantics.EVM.b2w (subtracted.borrow = 0)).toNat ≤ 1 := by
+    simp only [YulSemantics.EVM.b2w]
+    split <;> simp
+  have huseLe : useSub.toNat ≤ 1 := by
+    simp only [useSub, BitVec.toNat_or]
+    interval_cases added.carry.toNat <;>
+      interval_cases (YulSemantics.EVM.b2w (subtracted.borrow = 0)).toNat <;>
+      norm_num
+  have hselect := selectPhase_memoryLimbs subtracted.state dst count useSub
+    huseLe hdstfit hdstCandidate
+  simp only [BigArithmetic.addMaskedModState]
+  rw [represents_iff_value ((Nat.mod_lt _ hmpos).trans hmodulus.1)]
+  change Nat.ofDigits Limbs.radix
+      (memoryLimbs
+        (BigArithmetic.selectPhase subtracted.state (BitVec.ofNat 256 dst)
+          (0 - useSub) count).memory dst count) = total % m
+  rw [hselect]
+  have htotalLt : total < 2 * m :=
+    Limbs.masked_sum_lt_twice_of_le hx hy htake
+  rw [Limbs.mod_eq_cond_sub htotalLt]
+  split_ifs with huseZero htotalSmall
+  · have hcarryZero : added.carry.toNat = 0 := by
+      by_contra hne
+      have : added.carry.toNat = 1 := by omega
+      have hu : useSub.toNat ≠ 0 := by
+        simp [useSub, BitVec.toNat_or, this]
+      exact hu (congrArg BitVec.toNat huseZero)
+    have hborrowNe : subtracted.borrow ≠ 0 := by
+      intro hb
+      have : useSub.toNat ≠ 0 := by
+        simp [useSub, hb, YulSemantics.EVM.b2w]
+      exact this (congrArg BitVec.toNat huseZero)
+    have hborrowOne : subtracted.borrow.toNat = 1 := by
+      have : subtracted.borrow.toNat ≠ 0 := by
+        intro h
+        exact hborrowNe (BitVec.eq_of_toNat_eq h)
+      omega
+    have haddDigits : Nat.ofDigits Limbs.radix
+        (memoryLimbs added.state.memory dst count) = total := by
+      simpa [hcarryZero] using haddEq
+    rw [hsubDst, haddDigits]
+  · exfalso
+    have hcarryZero : added.carry.toNat = 0 := by
+      by_contra hne
+      have : added.carry.toNat = 1 := by omega
+      have hu : useSub.toNat ≠ 0 := by
+        simp [useSub, BitVec.toNat_or, this]
+      exact hu (congrArg BitVec.toNat huseZero)
+    have hborrowNe : subtracted.borrow ≠ 0 := by
+      intro hb
+      have hu : useSub.toNat ≠ 0 := by
+        simp [useSub, hb, YulSemantics.EVM.b2w]
+      exact hu (congrArg BitVec.toNat huseZero)
+    have hborrowOne : subtracted.borrow.toNat = 1 := by
+      have : subtracted.borrow.toNat ≠ 0 := by
+        intro h
+        exact hborrowNe (BitVec.eq_of_toNat_eq h)
+      omega
+    simp [hcarryZero, hborrowOne] at haddEq hsubEq
+    omega
+  · have huseNonzero : useSub.toNat ≠ 0 := by
+      intro h
+      exact huseZero (BitVec.eq_of_toNat_eq h)
+    have hcarryOrBorrow : added.carry.toNat = 1 ∨
+        subtracted.borrow.toNat = 0 := by
+      by_cases hb : subtracted.borrow.toNat = 0
+      · right; exact hb
+      · left
+        have hb2wZero : (YulSemantics.EVM.b2w
+            (subtracted.borrow = 0)).toNat = 0 := by
+          simp only [YulSemantics.EVM.b2w]
+          split
+          · rename_i htrue
+            have hword : subtracted.borrow = 0 := by
+              exact of_decide_eq_true htrue
+            exact (hb (by simpa using congrArg BitVec.toNat hword)).elim
+          · rfl
+        have hcNonzero : added.carry.toNat ≠ 0 := by
+          change (added.carry ||| YulSemantics.EVM.b2w
+            (subtracted.borrow = 0)).toNat ≠ 0 at huseNonzero
+          rw [BitVec.toNat_or, hb2wZero, Nat.or_zero] at huseNonzero
+          exact huseNonzero
+        omega
+    rcases hcarryOrBorrow with hcarry | hborrow
+    · simp [hcarry] at haddEq
+      have hmBound := hmodulus.1
+      omega
+    · simp [hborrow] at hsubEq
+      have hmBound := hmodulus.1
+      have htotalBound : total < bound := by omega
+      rw [Nat.mod_eq_of_lt htotalBound] at hsubEq
+      omega
+  · have huseNonzero : useSub.toNat ≠ 0 := by
+      intro h
+      exact huseZero (BitVec.eq_of_toNat_eq h)
+    have hcarryOrBorrow : added.carry.toNat = 1 ∨
+        subtracted.borrow.toNat = 0 := by
+      simp only [useSub, BitVec.toNat_or] at huseNonzero
+      by_cases hb : subtracted.borrow.toNat = 0
+      · right; exact hb
+      · left
+        have hb2wZero : (YulSemantics.EVM.b2w
+            (subtracted.borrow = 0)).toNat = 0 := by
+          simp only [YulSemantics.EVM.b2w]
+          split
+          · rename_i htrue
+            have hword : subtracted.borrow = 0 := by
+              exact of_decide_eq_true htrue
+            exact (hb (by simpa using congrArg BitVec.toNat hword)).elim
+          · rfl
+        have hcNonzero : added.carry.toNat ≠ 0 := by
+          rw [hb2wZero, Nat.or_zero] at huseNonzero
+          exact huseNonzero
+        omega
+    rcases hcarryOrBorrow with hcarry | hborrow
+    · have hmBound : m < bound := by simpa [bound] using hmodulus.1
+      interval_cases hb : subtracted.borrow.toNat
+      · simp [hcarry, hb] at haddEq hsubEq
+        omega
+      · simp [hcarry, hb] at haddEq hsubEq
+        omega
+    · have hmBound : m < bound := by simpa [bound] using hmodulus.1
+      interval_cases hc : added.carry.toNat
+      · simp [hborrow, hc] at haddEq hsubEq
+        omega
+      · simp [hborrow, hc] at haddEq hsubEq
+        omega
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigMath
