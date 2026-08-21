@@ -665,4 +665,206 @@ theorem modulusOrValue_eq_zero_iff (st : EvmState) (input : ByteArray)
     rw [hvalue] at hrep
     simpa [Limbs.limbDigits, Nat.digitsAppend] using hrep.2
 
+/-! ## Nonzero scratch prelude -/
+
+theorem storeWordAt_preserves (st : EvmState) (write : U256)
+    (ptr count value : Nat) (v : U256)
+    (hdisjoint : write.toNat + 32 ≤ ptr ∨ ptr + 32 * count ≤ write.toNat)
+    (hrep : Represents st.memory ptr count value) :
+    Represents (storeWordAt st write v).memory ptr count value :=
+  ⟨hrep.1, (memoryLimbs_store_disjoint st write ptr count v hdisjoint).trans
+    hrep.2⟩
+
+/-- Loading one operand preserves any limb region disjoint from its complete
+destination array. -/
+theorem loadBigEndianPrefix_preserves (st : EvmState) (off len dst : Nat)
+    (steps ptr count value : Nat) (hsteps : steps ≤ len)
+    (hlen : len < 2 ^ 256)
+    (hfit : dst + 32 * Limbs.limbCount len < 2 ^ 256)
+    (hdisjoint : dst + 32 * Limbs.limbCount len ≤ ptr ∨
+      ptr + 32 * count ≤ dst)
+    (hrep : Represents st.memory ptr count value) :
+    Represents (loadBigEndianPrefix st (BitVec.ofNat 256 off)
+      (BitVec.ofNat 256 len) (BitVec.ofNat 256 dst) steps).memory
+      ptr count value := by
+  induction steps with
+  | zero => exact hrep
+  | succ steps ih =>
+      have hstep : steps < len := by omega
+      let before := loadBigEndianPrefix st (BitVec.ofNat 256 off)
+        (BitVec.ofNat 256 len) (BitVec.ofNat 256 dst) steps
+      let p := loadLimbAddress (BitVec.ofNat 256 len)
+        (BitVec.ofNat 256 dst) steps
+      let byte :=
+        (wordFrom before.env.calldata
+          (BitVec.ofNat 256 off + BitVec.ofNat 256 steps).toNat >>> 248) &&& 0xff
+      let v := loadWord before.memory p.toNat |||
+        (byte <<< loadByteShift (BitVec.ofNat 256 len) steps)
+      have hbefore := ih (by omega)
+      have hp := loadLimbAddress_toNat len dst steps hlen hstep hfit
+      have hpDisjoint : p.toNat + 32 ≤ ptr ∨ ptr + 32 * count ≤ p.toNat := by
+        rw [hp]
+        rcases hdisjoint with hafter | hbeforeRegion
+        · left
+          have hlimb : (len - 1 - steps) / 32 < Limbs.limbCount len := by
+            unfold Limbs.limbCount
+            omega
+          omega
+        · right; omega
+      have hpreserved := storeWordAt_preserves
+        (touchMemory before p.toNat 32) p ptr count value v hpDisjoint
+        (by simpa [YulSemantics.EVM.touchMemory] using hbefore)
+      simpa [loadBigEndianPrefix, loadBigEndianStep, before, p, byte, v,
+        storeWordAt, YulSemantics.EVM.touchMemory] using hpreserved
+
+theorem clearedOutput_base_zero (st : EvmState) (m : Nat) (hm : m ≤ 1024) :
+    Represents
+      (BigPath.clearedOutputState st (BitVec.ofNat 256 m)).memory 1024
+      (Limbs.limbCount m) 0 := by
+  let count := Limbs.limbCount m
+  have hcount : count ≤ 32 := Limbs.limbCount_le_32 m hm
+  have hn := limbCount_toNat m hm
+  have hbase : Represents
+      (BigPath.clearedBaseState st (BitVec.ofNat 256 m)).memory 1024 count 0 := by
+    simpa [BigPath.clearedBaseState, hn] using
+      clearWordsState_represents_zero
+        (BigPath.clearedModulusState st (BitVec.ofNat 256 m)) 1024 count
+        (by omega)
+  have hacc : Represents
+      (BigPath.clearedAccumulatorState st (BitVec.ofNat 256 m)).memory
+      1024 count 0 := by
+    simpa [BigPath.clearedAccumulatorState, hn] using
+      clearWordsState_preserves
+        (BigPath.clearedBaseState st (BitVec.ofNat 256 m)) 2048 1024 count 0
+        (by omega) (Or.inr (by omega)) hbase
+  simpa [BigPath.clearedOutputState, hn] using
+    clearWordsState_preserves
+      (BigPath.clearedAccumulatorState st (BitVec.ofNat 256 m)) 6144 1024
+      count 0 (by omega) (Or.inr (by omega)) hacc
+
+theorem clearedOutput_accumulator_zero (st : EvmState) (m : Nat)
+    (hm : m ≤ 1024) :
+    Represents
+      (BigPath.clearedOutputState st (BitVec.ofNat 256 m)).memory 2048
+      (Limbs.limbCount m) 0 := by
+  let count := Limbs.limbCount m
+  have hcount : count ≤ 32 := Limbs.limbCount_le_32 m hm
+  have hn := limbCount_toNat m hm
+  have hacc : Represents
+      (BigPath.clearedAccumulatorState st (BitVec.ofNat 256 m)).memory
+      2048 count 0 := by
+    simpa [BigPath.clearedAccumulatorState, hn] using
+      clearWordsState_represents_zero
+        (BigPath.clearedBaseState st (BitVec.ofNat 256 m)) 2048 count
+        (by omega)
+  simpa [BigPath.clearedOutputState, hn] using
+    clearWordsState_preserves
+      (BigPath.clearedAccumulatorState st (BitVec.ofNat 256 m)) 6144 2048
+      count 0 (by omega) (Or.inr (by omega)) hacc
+
+/-- The complete nonzero prelude establishes the four mathematical arrays
+used by base conversion: modulus, zero base, zero accumulator, and scratch
+one. -/
+theorem scratchOneState_invariants (st : EvmState) (input : ByteArray)
+    (hcalldata : st.env.calldata = input.toList) (hvalid : ValidInput input)
+    (hbig : 32 < modulusSize input) :
+    let count := Limbs.limbCount (modulusSize input)
+    let scratch := BigPath.scratchOneState st
+      (BitVec.ofNat 256 (modulusSize input))
+      (BitVec.ofNat 256 (modulusOffset input))
+    Represents scratch.memory 0 count (modulusNat input) ∧
+      Represents scratch.memory 1024 count 0 ∧
+      Represents scratch.memory 2048 count 0 ∧
+      Represents scratch.memory 3072 count 1 := by
+  let m := modulusSize input
+  let off := modulusOffset input
+  let count := Limbs.limbCount m
+  let loaded := BigPath.loadedModulusState st (BitVec.ofNat 256 m)
+    (BitVec.ofNat 256 off)
+  let scanned := BigPath.scannedModulusState st (BitVec.ofNat 256 m)
+    (BitVec.ofNat 256 off)
+  let cleared := BigPath.scratchClearedState st (BitVec.ofNat 256 m)
+    (BitVec.ofNat 256 off)
+  let scratch := BigPath.scratchOneState st (BitVec.ofNat 256 m)
+    (BitVec.ofNat 256 off)
+  have hm : m ≤ 1024 := hvalid.2.2.2
+  have hcount : count ≤ 32 := Limbs.limbCount_le_32 m hm
+  have hcountPos : 0 < count := Limbs.limbCount_pos (by dsimp [m]; omega)
+  have hn := limbCount_toNat m hm
+  have hloadedMod : Represents loaded.memory 0 count (modulusNat input) := by
+    simpa [loaded, m, off] using loadedModulus_represents st input hcalldata hvalid
+  have hloadedBase : Represents loaded.memory 1024 count 0 := by
+    dsimp [loaded, BigPath.loadedModulusState]
+    rw [show (BitVec.ofNat 256 m).toNat = m by
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : m < 2 ^ 256)]]
+    apply loadBigEndianPrefix_preserves
+      (BigPath.clearedOutputState st (BitVec.ofNat 256 m))
+      off m 0 m 1024 count 0
+    · omega
+    · omega
+    · simpa using (show 32 * count < 2 ^ 256 by omega)
+    · left
+      simpa using (show 32 * count ≤ 1024 by omega)
+    · exact clearedOutput_base_zero st m hm
+  have hloadedAcc : Represents loaded.memory 2048 count 0 := by
+    dsimp [loaded, BigPath.loadedModulusState]
+    rw [show (BitVec.ofNat 256 m).toNat = m by
+      rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega : m < 2 ^ 256)]]
+    apply loadBigEndianPrefix_preserves
+      (BigPath.clearedOutputState st (BitVec.ofNat 256 m))
+      off m 0 m 2048 count 0
+    · omega
+    · omega
+    · simpa using (show 32 * count < 2 ^ 256 by omega)
+    · left
+      simpa using (show 32 * count ≤ 2048 by omega)
+    · exact clearedOutput_accumulator_zero st m hm
+  have hscannedMod : Represents scanned.memory 0 count (modulusNat input) := by
+    simpa [scanned, BigPath.scannedModulusState, hn,
+      modulusScanPrefix_memory] using hloadedMod
+  have hscannedBase : Represents scanned.memory 1024 count 0 := by
+    simpa [scanned, BigPath.scannedModulusState, hn,
+      modulusScanPrefix_memory] using hloadedBase
+  have hscannedAcc : Represents scanned.memory 2048 count 0 := by
+    simpa [scanned, BigPath.scannedModulusState, hn,
+      modulusScanPrefix_memory] using hloadedAcc
+  have hclearedMod : Represents cleared.memory 0 count (modulusNat input) := by
+    simpa [cleared, BigPath.scratchClearedState, hn] using
+      clearWordsState_preserves scanned 3072 0 count (modulusNat input)
+        (by omega) (Or.inr (by omega)) hscannedMod
+  have hclearedBase : Represents cleared.memory 1024 count 0 := by
+    simpa [cleared, BigPath.scratchClearedState, hn] using
+      clearWordsState_preserves scanned 3072 1024 count 0
+        (by omega) (Or.inr (by omega)) hscannedBase
+  have hclearedAcc : Represents cleared.memory 2048 count 0 := by
+    simpa [cleared, BigPath.scratchClearedState, hn] using
+      clearWordsState_preserves scanned 3072 2048 count 0
+        (by omega) (Or.inr (by omega)) hscannedAcc
+  have hclearedScratch : Represents cleared.memory 3072 count 0 := by
+    simpa [cleared, BigPath.scratchClearedState, hn] using
+      clearWordsState_represents_zero scanned 3072 count (by omega)
+  have hloadZero : (loadWord cleared.memory 3072).toNat = 0 := by
+    have hget := congrArg (fun xs : List Nat => xs[0]?) hclearedScratch.2
+    simpa [memoryLimbs, hcountPos, Limbs.limbDigits, Nat.digitsAppend] using hget
+  have hscratchValue := value_memoryLimbs_store_add cleared 3072 count 0 1
+    hcountPos (by omega) (by rw [hloadZero]; omega)
+  rw [value_of_represents hclearedScratch, hloadZero] at hscratchValue
+  have hscratchOne : Represents scratch.memory 3072 count 1 := by
+    apply (represents_iff_value
+      (Nat.one_lt_pow hcountPos.ne' Limbs.radix_gt_one)).2
+    simpa [scratch, BigPath.scratchOneState, cleared] using hscratchValue
+  have hscratchMod : Represents scratch.memory 0 count (modulusNat input) := by
+    simpa [scratch, BigPath.scratchOneState, cleared] using
+      storeWordAt_preserves cleared 3072 0 count (modulusNat input) 1
+        (Or.inr (by change 0 + 32 * count ≤ 3072; omega)) hclearedMod
+  have hscratchBase : Represents scratch.memory 1024 count 0 := by
+    simpa [scratch, BigPath.scratchOneState, cleared] using
+      storeWordAt_preserves cleared 3072 1024 count 0 1
+        (Or.inr (by change 1024 + 32 * count ≤ 3072; omega)) hclearedBase
+  have hscratchAcc : Represents scratch.memory 2048 count 0 := by
+    simpa [scratch, BigPath.scratchOneState, cleared] using
+      storeWordAt_preserves cleared 3072 2048 count 0 1
+        (Or.inr (by change 2048 + 32 * count ≤ 3072; omega)) hclearedAcc
+  exact ⟨hscratchMod, hscratchBase, hscratchAcc, hscratchOne⟩
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigSetup
