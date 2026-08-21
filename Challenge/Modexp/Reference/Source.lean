@@ -16,6 +16,6 @@ def referenceBlock? : Option (Block Op) :=
   | _ => none
 
 def referenceBytecode? : Option ByteArray :=
-  YulParser.compileSource referenceSource
+  YulParser.compileSourceWithBackend referenceSource [] .classic
 
 end Challenge.Modexp

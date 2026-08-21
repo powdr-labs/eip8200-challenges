@@ -39,7 +39,7 @@ def main (args : List String) : IO UInt32 := do
         | some code => pure (path, code)
     | none, yulPath => do
         let path := yulPath.getD referenceSourcePath
-        match YulParser.compileSource (← IO.FS.readFile path) with
+        match YulParser.compileSourceWithBackend (← IO.FS.readFile path) [] .classic with
         | none => do IO.eprintln s!"{path}: compiler rejected source"; return 2
         | some code => pure (path, code)
   if csv then IO.println "vector,bytes,frame,status,gas"
