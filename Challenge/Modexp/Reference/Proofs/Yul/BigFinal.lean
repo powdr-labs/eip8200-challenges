@@ -112,4 +112,29 @@ theorem returnedResultState_spec (st : EvmState) (input : ByteArray)
   rw [if_neg (by omega : modulusSize input ≠ 0)]
   rfl
 
+/-- Exact-state wrapper used to compose the forthcoming complete exponent
+certificate with `BigPath`'s nonzero execution endpoint. -/
+theorem returnedResultState_nonzero_spec (st : EvmState) (input : ByteArray)
+    (hvalid : ValidInput input) (hbig : 32 < modulusSize input)
+    (hexponent : Represents
+      (BigPath.exponentiatedState st
+        (BitVec.ofNat 256 (baseSize input))
+        (BitVec.ofNat 256 (exponentSize input))
+        (BitVec.ofNat 256 (modulusSize input)) 96
+        (BitVec.ofNat 256 (exponentOffset input))
+        (BitVec.ofNat 256 (BigSetup.modulusOffset input))).memory
+      0x0800 (Limbs.limbCount (modulusSize input))
+      (Precompile.modPow (baseNat input) (exponentNat input)
+        (BigSetup.modulusNat input))) :
+    (BigPath.returnedResultState
+      (BigPath.exponentiatedState st
+        (BitVec.ofNat 256 (baseSize input))
+        (BitVec.ofNat 256 (exponentSize input))
+        (BitVec.ofNat 256 (modulusSize input)) 96
+        (BitVec.ofNat 256 (exponentOffset input))
+        (BitVec.ofNat 256 (BigSetup.modulusOffset input)))
+      (BitVec.ofNat 256 (modulusSize input))).halted =
+      some (HaltKind.ret, (spec input).toList) :=
+  returnedResultState_spec _ input hvalid hbig hexponent
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigFinal
