@@ -1,6 +1,7 @@
 import Challenge.Modexp.Reference.Proofs.Yul.BigMath
 import Challenge.Modexp.Reference.Proofs.Yul.BigFold
 import Challenge.Modexp.Reference.Proofs.Yul.BigPath
+import Challenge.Modexp.Reference.Proofs.Yul.BigSetup
 import Challenge.Modexp.Reference.Proofs.Yul.WordMath
 import Challenge.YulProof.NatDigits
 
