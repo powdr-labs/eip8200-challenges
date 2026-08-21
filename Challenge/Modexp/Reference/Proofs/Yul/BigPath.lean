@@ -1334,4 +1334,146 @@ theorem exec_nonzeroSuffix (st : EvmState)
     modOff
   simpa using execStmts_append_normal hpre htail
 
+private theorem exec_modexpBigBody_nonzero (st : EvmState)
+    (bsize esize modulusSize baseOff expOff modOff : U256)
+    (hnonzero : modulusOrValue st modulusSize modOff ≠ 0) :
+    ExecStmt D verifiedFunctions
+      (paramsEnv bsize esize modulusSize baseOff expOff modOff) st
+      (.block modexpBigDecl.body)
+      (paramsEnv bsize esize modulusSize baseOff expOff modOff)
+      (returnedResultState
+        (exponentiatedState st bsize esize modulusSize baseOff expOff modOff)
+        modulusSize) .halt := by
+  let n := limbCount modulusSize
+  let Vparams := paramsEnv bsize esize modulusSize baseOff expOff modOff
+  let Vn : VEnv D := ("n", n) :: Vparams
+  let Vscan : VEnv D :=
+    ("modulusOr", modulusOrValue st modulusSize modOff) :: Vn
+  let s0 := clearedModulusState st modulusSize
+  let s1 := clearedBaseState st modulusSize
+  let s2 := clearedAccumulatorState st modulusSize
+  let s3 := clearedOutputState st modulusSize
+  let s4 := loadedModulusState st modulusSize modOff
+  let s5 := scannedModulusState st modulusSize modOff
+  let bodyFuns : FunEnv D := hoist D modexpBigDecl.body :: verifiedFunctions
+  let scanFuns : FunEnv D := [] :: bodyFuns
+  have hn : EvalExpr D bodyFuns Vparams st
+      (yulE% div(add(modulusSize, 31), 32)) (.vals [n] st) := by
+    apply evalExpr_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 40)
+    rfl
+  have hclear0 : EvalExpr D bodyFuns Vn st (yulE% clearLimbs(0x0000, n))
+      (.vals [] s0) := by
+    simpa [bodyFuns, Vn, s0, clearedModulusState, n, limbCount, mkCall, parse] using
+      (eval_clearLimbs (funs := bodyFuns) (V := Vn) (st := st)
+        (ptr := (0x0000 : U256)) n (by rfl)
+        (by
+          apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful
+            (fuel := 20)
+          rfl))
+  have hclear1 : EvalExpr D bodyFuns Vn s0 (yulE% clearLimbs(0x0400, n))
+      (.vals [] s1) := by
+    simpa [bodyFuns, Vn, s0, s1, clearedBaseState, n, mkCall, parse] using
+      (eval_clearLimbs (funs := bodyFuns) (V := Vn) (st := s0)
+        (ptr := (0x0400 : U256)) n (by rfl)
+        (by
+          apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful
+            (fuel := 20)
+          rfl))
+  have hclear2 : EvalExpr D bodyFuns Vn s1 (yulE% clearLimbs(0x0800, n))
+      (.vals [] s2) := by
+    simpa [bodyFuns, Vn, s1, s2, clearedAccumulatorState, n, mkCall, parse] using
+      (eval_clearLimbs (funs := bodyFuns) (V := Vn) (st := s1)
+        (ptr := (0x0800 : U256)) n (by rfl)
+        (by
+          apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful
+            (fuel := 20)
+          rfl))
+  have hclear3 : EvalExpr D bodyFuns Vn s2 (yulE% clearLimbs(0x1800, n))
+      (.vals [] s3) := by
+    simpa [bodyFuns, Vn, s2, s3, clearedOutputState, n, mkCall, parse] using
+      (eval_clearLimbs (funs := bodyFuns) (V := Vn) (st := s2)
+        (ptr := (0x1800 : U256)) n (by rfl)
+        (by
+          apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful
+            (fuel := 20)
+          rfl))
+  have hload : EvalExpr D bodyFuns Vn s3
+      (yulE% loadBigEndian(modOff, modulusSize, 0x0000)) (.vals [] s4) := by
+    simpa [bodyFuns, Vn, s3, s4, loadedModulusState, mkCall, parse] using
+      (eval_loadBigEndian (funs := bodyFuns) (V := Vn) (st := s3)
+        modOff modulusSize (0x0000 : U256) (by rfl)
+        (by
+          apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful
+            (fuel := 30)
+          rfl))
+  have hscan := exec_modulusScanLoop (funs := scanFuns) Vparams s4 n
+  have hcond : EvalExpr D bodyFuns Vscan s5 (yulE% iszero(modulusOr))
+      (.vals [(0 : U256)] s5) := by
+    apply Step.builtinOk (D := D) (Step.argsCons Step.argsNil (Step.var rfl))
+    simp [D, Challenge.YulProof.ClosedEvm.dialect,
+      YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.builtinWithExternal,
+      YulSemantics.EVM.stepOp, YulSemantics.EVM.un, YulSemantics.EVM.b2w,
+      Vscan, hnonzero]
+    exact hnonzero
+  have hif : ExecStmt D bodyFuns Vscan s5
+      (.cond (yulE% iszero(modulusOr))
+        (yul% { return(0x1800, modulusSize) })) Vscan s5 .normal :=
+    Step.ifFalse (D := D) hcond rfl
+  have htail := exec_nonzeroSuffix st bsize esize modulusSize baseOff expOff
+    modOff hnonzero
+  simp only [modexpBigDecl]
+  refine Step.block (D := D) (Vb := Vscan) ?_
+  refine Step.seqCons (D := D) (Step.letVal hn rfl) ?_
+  refine Step.seqCons (Step.exprStmt hclear0) ?_
+  refine Step.seqCons (Step.exprStmt hclear1) ?_
+  refine Step.seqCons (Step.exprStmt hclear2) ?_
+  refine Step.seqCons (Step.exprStmt hclear3) ?_
+  refine Step.seqCons (Step.exprStmt hload) ?_
+  refine Step.seqCons (Step.letVal Step.lit rfl) ?_
+  refine Step.seqCons (D := D) (V1 := Vscan) (st1 := s5) ?_ ?_
+  · refine Step.forLoop (D := D)
+      (Vinit := Challenge.Modexp.Reference.Proofs.Yul.scanEnv n Vparams 0 0)
+      (stinit := s4)
+      (Vend := Challenge.Modexp.Reference.Proofs.Yul.scanEnv n Vparams n.toNat
+        (modulusOrValue st modulusSize modOff)) ?_ ?_
+    · exact Step.seqCons (Step.letVal Step.lit rfl) Step.seqNil
+    · simpa only [scanFuns, bodyFuns, modexpBigDecl, hoist, List.filterMap,
+        Challenge.Modexp.Reference.Proofs.Yul.incrementI,
+        Challenge.Modexp.Reference.Proofs.Yul.modulusScanBody,
+        Vscan, Vn, s4, s5, scannedModulusState, modulusOrValue, n] using hscan
+  refine Step.seqCons hif ?_
+  simpa [bodyFuns, modexpBigDecl, hoist] using htail
+
+/-- Complete relational contract for the nonzero source big path. -/
+theorem eval_modexpBig_nonzero {funs : FunEnv D} {V : VEnv D}
+    {st st1 : EvmState} {args : List (Expr Op)}
+    (bsize esize modulusSize baseOff expOff modOff : U256)
+    (hlookup : lookupFun funs "modexpBig" =
+      some (modexpBigDecl, verifiedFunctions))
+    (hargs : EvalArgs D funs V st args
+      (.vals [bsize, esize, modulusSize, baseOff, expOff, modOff] st1))
+    (hnonzero : modulusOrValue st1 modulusSize modOff ≠ 0) :
+    EvalExpr D funs V st (.call "modexpBig" args)
+      (.halt (returnedResultState
+        (exponentiatedState st1 bsize esize modulusSize baseOff expOff modOff)
+        modulusSize)) := by
+  exact Step.callHalt (D := D) hargs hlookup rfl
+    (exec_modexpBigBody_nonzero st1 bsize esize modulusSize baseOff expOff modOff
+      hnonzero)
+
+/-- Lookup-specialized nonzero contract for calls from the verified MODEXP
+program. -/
+theorem eval_modexpBig_nonzero_verified {V : VEnv D} {st st1 : EvmState}
+    {args : List (Expr Op)}
+    (bsize esize modulusSize baseOff expOff modOff : U256)
+    (hargs : EvalArgs D verifiedFunctions V st args
+      (.vals [bsize, esize, modulusSize, baseOff, expOff, modOff] st1))
+    (hnonzero : modulusOrValue st1 modulusSize modOff ≠ 0) :
+    EvalExpr D verifiedFunctions V st (.call "modexpBig" args)
+      (.halt (returnedResultState
+        (exponentiatedState st1 bsize esize modulusSize baseOff expOff modOff)
+        modulusSize)) := by
+  exact eval_modexpBig_nonzero bsize esize modulusSize baseOff expOff modOff
+    lookup_modexpBig hargs hnonzero
+
 end Challenge.Modexp.Reference.Proofs.Yul.BigPath
