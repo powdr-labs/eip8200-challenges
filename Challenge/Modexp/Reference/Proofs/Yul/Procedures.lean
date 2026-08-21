@@ -1,4 +1,4 @@
-import Challenge.Modexp.Reference.Proofs.Yul.Program
+import Challenge.Modexp.Reference.Proofs.Yul.StateModel
 import Challenge.YulProof.EvmState
 import Challenge.YulProof.Interpreter
 
@@ -22,11 +22,41 @@ open YulSemantics
 open YulSemantics.EVM
 open Challenge.YulProof.EvmState
 open Challenge.YulProof.Interpreter
+open Challenge.Modexp.Reference.Proofs.Yul.StateModel
 
 private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 private abbrev E := Challenge.YulProof.ClosedEvm.exec
 
 private theorem dialect_zero : D.zero = (0 : U256) := rfl
+
+/-- Proof-side declaration for the source `calldataByte` helper. -/
+def calldataByteDecl : FDecl D where
+  params := ["off"]
+  rets := ["b"]
+  body := yul% { b := byte(0, calldataload(off)) }
+
+theorem lookup_calldataByte :
+    lookupFun verifiedFunctions "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions) := by
+  rfl
+
+private theorem exec_calldataByteBody (st : EvmState) (off : U256) :
+    ExecStmt D verifiedFunctions [("off", off), ("b", 0)] st
+      (.block calldataByteDecl.body)
+      [("off", off), ("b", calldataByteValue st off)] st .normal := by
+  apply execStmt_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 50)
+  rfl
+
+/-- Direct relational contract for the source `calldataByte` helper. -/
+theorem eval_calldataByte {funs : FunEnv D} {V : VEnv D}
+    {st st1 : EvmState} {arg : Expr Op} (off : U256)
+    (hlookup : lookupFun funs "calldataByte" =
+      some (calldataByteDecl, verifiedFunctions))
+    (harg : EvalExpr D funs V st arg (.vals [off] st1)) :
+    EvalExpr D funs V st (.call "calldataByte" [arg])
+      (.vals [calldataByteValue st1 off] st1) := by
+  exact Step.callOk (D := D) (Step.argsCons Step.argsNil harg) hlookup rfl
+    (exec_calldataByteBody st1 off) (Or.inl rfl)
 
 private def clearLimbsDecl : FDecl D where
   params := ["ptr", "n"]

@@ -1,4 +1,4 @@
-import Challenge.Modexp.Reference.Proofs.Yul.StateModel
+import Challenge.Modexp.Reference.Proofs.Yul.Procedures
 import Challenge.YulProof.Interpreter
 
 set_option warningAsError true
@@ -21,15 +21,11 @@ namespace Challenge.Modexp.Reference.Proofs.Yul
 open YulSemantics
 open YulSemantics.EVM
 open StateModel
+open Procedures
 open Challenge.YulProof.Interpreter
 
 private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 private abbrev E := Challenge.YulProof.ClosedEvm.exec
-
-private def calldataByteDecl : FDecl D where
-  params := ["off"]
-  rets := ["b"]
-  body := yul% { b := byte(0, calldataload(off)) }
 
 private def modexpWordDecl : FDecl D where
   params := ["bsize", "esize", "modulusSize", "baseOff", "expOff", "modOff"]
@@ -60,49 +56,10 @@ private def modexpWordDecl : FDecl D where
     return(0x1800, modulusSize)
   }
 
-private theorem lookup_calldataByte :
-    lookupFun verifiedFunctions "calldataByte" =
-      some (calldataByteDecl, verifiedFunctions) := by
-  rfl
-
 private theorem lookup_modexpWord :
     lookupFun verifiedFunctions "modexpWord" =
       some (modexpWordDecl, verifiedFunctions) := by
   rfl
-
-private theorem exec_calldataByteBody (st : EvmState) (off : U256) :
-    ExecStmt D verifiedFunctions [("off", off), ("b", 0)] st
-      (.block calldataByteDecl.body)
-      [("off", off), ("b", calldataByteValue st off)] st .normal := by
-  let funs := hoist D calldataByteDecl.body :: verifiedFunctions
-  have hload : EvalExpr D funs [("off", off), ("b", 0)] st
-      (yulE% calldataload(off))
-      (.vals [wordFrom st.env.calldata off.toNat] st) :=
-    Step.builtinOk (D := D) (Step.argsCons Step.argsNil (Step.var rfl)) rfl
-  have hbyte : EvalExpr D funs [("off", off), ("b", 0)] st
-      (yulE% byte(0, calldataload(off)))
-      (.vals [calldataByteValue st off] st) := by
-    apply Step.builtinOk (D := D)
-      (Step.argsCons (Step.argsCons Step.argsNil hload) Step.lit)
-    simp [D, Challenge.YulProof.ClosedEvm.dialect,
-      YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.builtinWithExternal,
-      YulSemantics.EVM.stepOp, YulSemantics.EVM.bin,
-      YulSemantics.EVM.litValue, calldataByteValue]
-  exact Step.block (D := D)
-    (Step.seqCons (Step.assignVal (by
-      simpa [funs, calldataByteDecl] using hbyte) rfl) Step.seqNil)
-
-/-- Direct relational contract for the source `calldataByte` helper. -/
-theorem eval_calldataByte {funs : FunEnv D} {V : VEnv D}
-    {st st1 : EvmState} {arg : Expr Op} (off : U256)
-    (hlookup : lookupFun funs "calldataByte" =
-      some (calldataByteDecl, verifiedFunctions))
-    (harg : EvalExpr D funs V st arg (.vals [off] st1)) :
-    EvalExpr D funs V st (.call "calldataByte" [arg])
-      (.vals [calldataByteValue st1 off] st1) := by
-  refine Step.callOk (D := D)
-    (Step.argsCons Step.argsNil harg) hlookup rfl
-    (exec_calldataByteBody st1 off) (Or.inl rfl)
 
 private def baseBody : Block Op := yul% {
   base := addmod(mulmod(base, 256, modulus),

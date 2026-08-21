@@ -32,28 +32,6 @@ private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 
 private theorem dialect_zero : D.zero = (0 : U256) := rfl
 
-private def calldataByteDecl : FDecl D where
-  params := ["off"]
-  rets := ["b"]
-  body := yul% { b := byte(0, calldataload(off)) }
-
-private theorem exec_calldataByteBody (st : EvmState) (off : U256) :
-    ExecStmt D verifiedFunctions [("off", off), ("b", 0)] st
-      (.block calldataByteDecl.body)
-      [("off", off), ("b", StateModel.calldataByteValue st off)] st .normal := by
-  apply execStmt_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 50)
-  rfl
-
-private theorem eval_calldataByte {funs : FunEnv D} {V : VEnv D}
-    {st st1 : EvmState} {arg : Expr Op} (off : U256)
-    (hlookup : lookupFun funs "calldataByte" =
-      some (calldataByteDecl, verifiedFunctions))
-    (harg : EvalExpr D funs V st arg (.vals [off] st1)) :
-    EvalExpr D funs V st (.call "calldataByte" [arg])
-      (.vals [StateModel.calldataByteValue st1 off] st1) := by
-  exact Step.callOk (D := D) (Step.argsCons Step.argsNil harg) hlookup rfl
-    (exec_calldataByteBody st1 off) (Or.inl rfl)
-
 private def modexpBigDecl : FDecl D where
   params := ["bsize", "esize", "modulusSize", "baseOff", "expOff", "modOff"]
   rets := []
