@@ -1,5 +1,6 @@
-import Challenge.Ripemd160.Reference.Proofs.Yul.Interpreter
+import Challenge.Ripemd160.Reference.Proofs.Yul.StateModel
 import Challenge.Ripemd160.Reference.Proofs.Bytecode.CompressionCorrect
+import Challenge.YulProof.Interpreter
 import YulEvmCompiler.StateRel
 
 set_option warningAsError true
@@ -18,32 +19,9 @@ namespace Challenge.Ripemd160.Reference.Proofs.Yul.Procedures
 open YulSemantics
 open YulSemantics.EVM
 open YulEvmCompiler
-open Interpreter
-
-private theorem evalExpr_of_interp {fuel : Nat} {funs : FunEnv localDialect}
-    {V : VEnv localDialect} {st : EvmState} {e : Expr Op} {result}
-    (h : Interp.evalExpr localExec fuel funs V st e = .ok result) :
-    EvalExpr localDialect funs V st e result :=
-  (Interp.sound_all localExec_lawful fuel).1 _ _ _ _ _ h
-
-private theorem execStmt_of_interp {fuel : Nat} {funs : FunEnv localDialect}
-    {V V' : VEnv localDialect} {st st' : EvmState} {stmt : Stmt Op} {outcome}
-    (h : Interp.execStmt localExec fuel funs V st stmt = .ok (V', st', outcome)) :
-    ExecStmt localDialect funs V st stmt V' st' outcome :=
-  (Interp.sound_all localExec_lawful fuel).2.2.1 _ _ _ _ _ _ _ h
-
-private theorem execStmts_of_interp {fuel : Nat} {funs : FunEnv localDialect}
-    {V V' : VEnv localDialect} {st st' : EvmState} {stmts : Block Op} {outcome}
-    (h : Interp.execStmts localExec fuel funs V st stmts = .ok (V', st', outcome)) :
-    ExecStmts localDialect funs V st stmts V' st' outcome :=
-  (Interp.sound_all localExec_lawful fuel).2.2.2.1 _ _ _ _ _ _ _ h
-
-private theorem evalBuiltin {funs : FunEnv localDialect} {V : VEnv localDialect}
-    {st st1 st2 : EvmState} {op : Op} {args : List (Expr Op)} {values returns}
-    (hargs : EvalArgs localDialect funs V st args (.vals values st1))
-    (hfn : localBuiltinFn op values st1 = some (.ok returns st2)) :
-    EvalExpr localDialect funs V st (.builtin op args) (.vals returns st2) :=
-  Step.builtinOk hargs ((localExec_lawful op values st1 (.ok returns st2)).mpr hfn)
+open StateModel
+open Challenge.YulProof.EvmState
+open Challenge.YulProof.Interpreter
 
 private def scheduleBody : Block Op := yul% {
   xSet(i, readLE32(add(msgOff, mul(i, 4))))
@@ -91,13 +69,13 @@ private theorem exec_readLE32Body (st : EvmState) (off : U256) :
       (.block readLE32Decl.body)
       [("off", off), ("v", readLE32Value st.memory off)]
       (touchMemory st off.toNat 32) .normal := by
-  apply execStmt_of_interp (fuel := 100)
+  apply execStmt_of_interp localExec_lawful (fuel := 100)
   rfl
 
 private theorem exec_xSetBody (st : EvmState) (i v : U256) :
     ExecStmt localDialect verifiedFunctions [("i", i), ("v", v)] st
       (.block xSetDecl.body) [("i", i), ("v", v)] (xSetState st i v) .normal := by
-  apply execStmt_of_interp (fuel := 100)
+  apply execStmt_of_interp localExec_lawful (fuel := 100)
   rfl
 
 private theorem eval_readLE32 {funs : FunEnv localDialect} {V : VEnv localDialect}
@@ -125,7 +103,7 @@ private theorem eval_scheduleOffset (funs : FunEnv localDialect) (st : EvmState)
       [("i", BitVec.ofNat 256 i), ("msgOff", msgOff)] st
       (yulE% add(msgOff, mul(i, 4)))
       (.vals [msgOff + BitVec.ofNat 256 i * 4] st) := by
-  apply evalExpr_of_interp (fuel := 20)
+  apply evalExpr_of_interp localExec_lawful (fuel := 20)
   rfl
 
 private theorem eval_scheduleCond (st : EvmState) (msgOff : U256) (i : Nat) :
@@ -175,7 +153,7 @@ private theorem exec_schedulePost (st : EvmState) (msgOff : U256) (i : Nat) :
     ExecStmt localDialect ([] :: [] :: verifiedFunctions)
       [("i", BitVec.ofNat 256 i), ("msgOff", msgOff)] st (.block schedulePost)
       [("i", BitVec.ofNat 256 i + (1 : U256)), ("msgOff", msgOff)] st .normal := by
-  apply execStmt_of_interp (fuel := 30)
+  apply execStmt_of_interp localExec_lawful (fuel := 30)
   rfl
 
 private theorem exec_schedulePost_succ (st : EvmState) (msgOff : U256) (i : Nat) :
@@ -354,21 +332,21 @@ private theorem exec_stAtBody (st : EvmState) (base i : U256) :
       [("base", base), ("i", i), ("v", 0)] st (.block stAtDecl.body)
       [("base", base), ("i", i), ("v", loadWord st.memory (wordAddress base i).toNat)]
       (touchMemory st (wordAddress base i).toNat 32) .normal := by
-  apply execStmt_of_interp (fuel := 80)
+  apply execStmt_of_interp localExec_lawful (fuel := 80)
   rfl
 
 private theorem exec_stSetBody (st : EvmState) (base i v : U256) :
     ExecStmt localDialect verifiedFunctions [("base", base), ("i", i), ("v", v)] st
       (.block stSetDecl.body) [("base", base), ("i", i), ("v", v)]
       (storeWordAt st (wordAddress base i) (v &&& 0xffffffff)) .normal := by
-  apply execStmt_of_interp (fuel := 80)
+  apply execStmt_of_interp localExec_lawful (fuel := 80)
   rfl
 
 private theorem exec_xAtBody (st : EvmState) (i : U256) :
     ExecStmt localDialect verifiedFunctions [("i", i), ("v", 0)] st (.block xAtDecl.body)
       [("i", i), ("v", loadWord st.memory (wordAddress 0x2a0 i).toNat)]
       (touchMemory st (wordAddress 0x2a0 i).toNat 32) .normal := by
-  apply execStmt_of_interp (fuel := 80)
+  apply execStmt_of_interp localExec_lawful (fuel := 80)
   rfl
 
 private theorem exec_tableAtBody (st : EvmState) (base i : U256) :
@@ -376,13 +354,13 @@ private theorem exec_tableAtBody (st : EvmState) (base i : U256) :
       [("base", base), ("i", i), ("v", 0)] st (.block tableAtDecl.body)
       [("base", base), ("i", i), ("v", tableValue st.memory base i)]
       (touchMemory st (base + (i / 32) * 32).toNat 32) .normal := by
-  apply execStmt_of_interp (fuel := 100)
+  apply execStmt_of_interp localExec_lawful (fuel := 100)
   rfl
 
 private theorem exec_rotlBody (st : EvmState) (x n : U256) :
     ExecStmt localDialect verifiedFunctions [("x", x), ("n", n), ("r", 0)] st
       (.block rotlDecl.body) [("x", x), ("n", n), ("r", rotlValue x n)] st .normal := by
-  apply execStmt_of_interp (fuel := 100)
+  apply execStmt_of_interp localExec_lawful (fuel := 100)
   rfl
 
 private theorem exec_fBody (st : EvmState) (j : Nat) (hj : j < 5) (x y z : U256) :
@@ -392,7 +370,7 @@ private theorem exec_fBody (st : EvmState) (j : Nat) (hj : j < 5) (x y z : U256)
       [("j", BitVec.ofNat 256 j), ("x", x), ("y", y), ("z", z),
         ("v", fValue j x y z)]
       st .normal := by
-  interval_cases j <;> apply execStmt_of_interp (fuel := 100) <;> rfl
+  interval_cases j <;> apply execStmt_of_interp localExec_lawful (fuel := 100) <;> rfl
 
 private theorem eval_stAt {funs : FunEnv localDialect} {V : VEnv localDialect}
     {st st1 : EvmState} {args : List (Expr Op)} (base i : U256)
@@ -543,23 +521,23 @@ private theorem exec_roundBody (st : EvmState) (base : U256) (j : Nat) (hj : j <
     have haf : EvalExpr localDialect funs Vabcde sW
         (yulE% add(a, f(j, b, c, d)))
         (.vals [x.a + sourceF j x.b x.c x.d] sW) := by
-      exact evalBuiltin
+      exact evalBuiltin localExec_lawful
         (Step.argsCons (Step.argsCons Step.argsNil hfcall) (Step.var rfl)) rfl
     have hax : EvalExpr localDialect funs Vabcde sE
         (yulE% add(add(a, f(j, b, c, d)), xAt(wordIndex)))
         (.vals [x.a + sourceF j x.b x.c x.d + word] sW) := by
-      exact evalBuiltin
+      exact evalBuiltin localExec_lawful
         (Step.argsCons (Step.argsCons Step.argsNil hxcall) haf) rfl
     have hak : EvalExpr localDialect funs Vabcde sE
         (yulE% add(add(add(a, f(j, b, c, d)), xAt(wordIndex)), k))
         (.vals [x.a + sourceF j x.b x.c x.d + word + constant] sW) := by
-      exact evalBuiltin
+      exact evalBuiltin localExec_lawful
         (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) hax) rfl
     have hmask : EvalExpr localDialect funs Vabcde sE
         (yulE% and(add(add(add(a, f(j, b, c, d)), xAt(wordIndex)), k), 0xffffffff))
         (.vals [(x.a + sourceF j x.b x.c x.d + word + constant) &&& 0xffffffff]
           sW) := by
-      exact evalBuiltin
+      exact evalBuiltin localExec_lawful
         (Step.argsCons (Step.argsCons Step.argsNil Step.lit) hak) rfl
     simpa [t0, mask, fValue, rotlValue, mask_eq, localDialect,
       YulSemantics.EVM.evmWithExternal, YulSemantics.EVM.litValue] using hmask
@@ -575,12 +553,12 @@ private theorem exec_roundBody (st : EvmState) (base : U256) (j : Nat) (hj : j <
     have hadd : EvalExpr localDialect funs Vt sW
         (yulE% add(rotl(t, rotation), e))
         (.vals [sourceRotl t0 rotation + x.e] sW) := by
-      exact evalBuiltin
+      exact evalBuiltin localExec_lawful
         (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) hrotlcall) rfl
     have hmask : EvalExpr localDialect funs Vt sW
         (yulE% and(add(rotl(t, rotation), e), 0xffffffff))
         (.vals [(sourceRotl t0 rotation + x.e) &&& 0xffffffff] sW) := by
-      exact evalBuiltin
+      exact evalBuiltin localExec_lawful
         (Step.argsCons (Step.argsCons Step.argsNil Step.lit) hadd) rfl
     simpa [t, mask, mask_eq, localDialect, YulSemantics.EVM.evmWithExternal,
       YulSemantics.EVM.litValue] using hmask
@@ -688,10 +666,10 @@ private theorem exec_leftRoundBody (st : EvmState) (msgOff : U256) (i : Nat)
       change i % 2 ^ 256 / 16 = i / 16 % 2 ^ 256
       rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
     rw [hdiv] at hraw
-    exact evalExpr_of_interp hraw
+    exact evalExpr_of_interp localExec_lawful hraw
   have hk : EvalExpr localDialect funs Vj st
       (yulE% mload(add(0x620, mul(j, 32)))) (.vals [constant] sK) := by
-    apply evalExpr_of_interp (fuel := 40)
+    apply evalExpr_of_interp localExec_lawful (fuel := 40)
     rfl
   have hrot : EvalExpr localDialect funs Vj sK (yulE% tableAt(0x560, i))
       (.vals [rotation] sR) := by
@@ -751,7 +729,7 @@ private theorem exec_roundPost_succ (funs : FunEnv localDialect)
         some (.ok
           [BitVec.ofNat 256 i + localDialect.litValue (.number 1)] st) := by
       rfl
-    have hraw := evalBuiltin hargs hfn
+    have hraw := evalBuiltin localExec_lawful (op := .add) hargs hfn
     rw [hi] at hraw
     simpa [mkCall, parse] using hraw
   have hseq : Step localDialect innerFuns
@@ -963,10 +941,10 @@ private theorem exec_rightRoundBody (st : EvmState) (msgOff : U256) (i : Nat)
       change i % 2 ^ 256 / 16 = i / 16 % 2 ^ 256
       rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega)]
     rw [hdiv] at hraw
-    exact evalExpr_of_interp hraw
+    exact evalExpr_of_interp localExec_lawful hraw
   have hk : EvalExpr localDialect funs Vg st
       (yulE% mload(add(0x6c0, mul(j, 32)))) (.vals [constant] sK) := by
-    apply evalExpr_of_interp (fuel := 40)
+    apply evalExpr_of_interp localExec_lawful (fuel := 40)
     rfl
   have hrot : EvalExpr localDialect funs Vg sK (yulE% tableAt(0x5c0, i))
       (.vals [rotation] sR) := by
@@ -1003,7 +981,7 @@ private theorem exec_rightRoundBody (st : EvmState) (msgOff : U256) (i : Nat)
       change 4 - group = (4 - group) % 2 ^ 256
       rw [Nat.mod_eq_of_lt (by omega)]
     rw [hsub] at hraw
-    exact evalExpr_of_interp hraw
+    exact evalExpr_of_interp localExec_lawful hraw
   have hargs : EvalArgs localDialect funs Vg st
       [yulE% 0x160, yulE% sub(4, j), yulE% tableAt(0x500, i),
         yulE% tableAt(0x5c0, i), yulE% mload(add(0x6c0, mul(j, 32)))]
@@ -1089,7 +1067,7 @@ private theorem lookup_hSet :
 private theorem exec_hSetBody (st : EvmState) (i v : U256) :
     ExecStmt localDialect verifiedFunctions [("i", i), ("v", v)] st
       (.block hSetDecl.body) [("i", i), ("v", v)] (hSetState st i v) .normal := by
-  apply execStmt_of_interp (fuel := 80)
+  apply execStmt_of_interp localExec_lawful (fuel := 80)
   rfl
 
 private theorem eval_hSet {funs : FunEnv localDialect} {V : VEnv localDialect}
@@ -1114,7 +1092,7 @@ private theorem eval_addThreeMasked (funs : FunEnv localDialect)
         (litValue (.number r))).1]
         (addThreeMasked st (litValue (.number p)) (litValue (.number q))
           (litValue (.number r))).2) := by
-  apply evalExpr_of_interp (fuel := 100)
+  apply evalExpr_of_interp localExec_lawful (fuel := 100)
   rfl
 
 private theorem exec_compressionTail (st : EvmState) (msgOff : U256) :
@@ -1360,6 +1338,6 @@ private theorem lookup_initH :
 theorem eval_initHCall (st : EvmState) :
     EvalExpr localDialect verifiedFunctions [] st (.call "initH" [])
       (.vals [] (initHState st)) := by
-  exact evalExpr_of_interp (Interpreter.eval_initH 0 st)
+  exact evalExpr_of_interp localExec_lawful (StateModel.eval_initH 0 st)
 
 end Challenge.Ripemd160.Reference.Proofs.Yul.Procedures

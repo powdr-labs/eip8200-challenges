@@ -19,7 +19,8 @@ open YulSemantics.EVM
 open YulEvmCompiler
 open EvmSemantics
 open Challenge.EvmProof.Word
-open Interpreter
+open StateModel
+open Challenge.YulProof.EvmState
 open Challenge.Ripemd160.Reference.Proofs.Bytecode
 open YulEvmCompiler.Optimizer.MemorySpillStateSound
 
@@ -255,61 +256,25 @@ private theorem workingAt_storeWorking_0160 (st : EvmState) (x : SourceWorking) 
       loadWord_storeWord_other _ 416 480 _ (by omega),
       loadWord_storeWord_other _ 448 480 _ (by omega), loadWord_storeWord]
 
-/-- Agreement above the scratch working region.  This is the compact frame invariant used for
-the schedule, lookup tables, constants, and padded message while the two round lines run. -/
-def HighMemoryEq (before after : EvmState) : Prop :=
-  ∀ p, 0x200 ≤ p → after.memory p = before.memory p
-
-theorem HighMemoryEq.refl (st : EvmState) : HighMemoryEq st st := by
-  intro _ _
-  rfl
-
-theorem HighMemoryEq.trans {a b c : EvmState}
-    (hab : HighMemoryEq a b) (hbc : HighMemoryEq b c) : HighMemoryEq a c := by
-  intro p hp
-  rw [hbc p hp, hab p hp]
-
-theorem HighMemoryEq.loadWord {before after : EvmState}
-    (h : HighMemoryEq before after) (p : Nat) (hp : 0x200 ≤ p) :
-    YulSemantics.EVM.loadWord after.memory p =
-      YulSemantics.EVM.loadWord before.memory p := by
-  unfold YulSemantics.EVM.loadWord
-  apply List.foldl_ext _ _ 0
-  intro acc i hi
-  rw [h (p + i) (by omega)]
+/-- The generic frame relation specialized to the scratch working region. -/
+abbrev HighMemoryEq : EvmState → EvmState → Prop := MemoryEqFrom 0x200
 
 theorem HighMemoryEq.tableValue {before after : EvmState}
     (h : HighMemoryEq before after) (base i : U256)
     (hp : 0x200 ≤ (base + (i / 32) * 32).toNat) :
-    Interpreter.tableValue after.memory base i =
-      Interpreter.tableValue before.memory base i := by
-  unfold Interpreter.tableValue
-  rw [h.loadWord _ hp]
-
-private theorem highMemoryEq_touchMemory (st : EvmState) (offset size : Nat) :
-    HighMemoryEq st (touchMemory st offset size) := by
-  intro _ _
-  rfl
-
-private theorem highMemoryEq_storeWordAt {before after : EvmState}
-    (h : HighMemoryEq before after) (p v : U256) (hp : p.toNat + 32 ≤ 0x200) :
-    HighMemoryEq before (storeWordAt after p v) := by
-  intro q hq
-  unfold storeWordAt
-  simp only [storeWord]
-  split
-  · rename_i hwindow
-    omega
-  · exact h q hq
+    StateModel.tableValue after.memory base i =
+      StateModel.tableValue before.memory base i := by
+  unfold StateModel.tableValue
+  rw [MemoryEqFrom.loadWord h _ hp]
 
 private theorem highMemoryEq_storeWorking_0c0 (st : EvmState) (x : SourceWorking) :
     HighMemoryEq st (storeWorking st 0x0c0 x) := by
   unfold storeWorking
-  apply highMemoryEq_storeWordAt
-  · apply highMemoryEq_storeWordAt
-    · apply highMemoryEq_storeWordAt
-      · apply highMemoryEq_storeWordAt
-        · apply highMemoryEq_storeWordAt (HighMemoryEq.refl st)
+  apply MemoryEqFrom.storeWordAt
+  · apply MemoryEqFrom.storeWordAt
+    · apply MemoryEqFrom.storeWordAt
+      · apply MemoryEqFrom.storeWordAt
+        · apply MemoryEqFrom.storeWordAt (MemoryEqFrom.refl 0x200 st)
           decide
         · decide
       · decide
@@ -319,11 +284,11 @@ private theorem highMemoryEq_storeWorking_0c0 (st : EvmState) (x : SourceWorking
 private theorem highMemoryEq_storeWorking_0160 (st : EvmState) (x : SourceWorking) :
     HighMemoryEq st (storeWorking st 0x160 x) := by
   unfold storeWorking
-  apply highMemoryEq_storeWordAt
-  · apply highMemoryEq_storeWordAt
-    · apply highMemoryEq_storeWordAt
-      · apply highMemoryEq_storeWordAt
-        · apply highMemoryEq_storeWordAt (HighMemoryEq.refl st)
+  apply MemoryEqFrom.storeWordAt
+  · apply MemoryEqFrom.storeWordAt
+    · apply MemoryEqFrom.storeWordAt
+      · apply MemoryEqFrom.storeWordAt
+        · apply MemoryEqFrom.storeWordAt (MemoryEqFrom.refl 0x200 st)
           decide
         · decide
       · decide
@@ -356,9 +321,9 @@ private theorem highMemoryEq_leftRoundStep (st : EvmState) (i : Nat) :
   change HighMemoryEq st
     (roundState wordState 0x0c0 j (tableValue st.memory 0x4a0 iw)
       (tableValue st.memory 0x560 iw) (loadWord st.memory constantAddress.toNat))
-  exact (highMemoryEq_touchMemory st constantAddress.toNat 32).trans
-    ((highMemoryEq_touchMemory constantState rotationAddress 32).trans
-      ((highMemoryEq_touchMemory rotationState wordAddress 32).trans
+  exact (MemoryEqFrom.touch 0x200 st constantAddress.toNat 32).trans
+    ((MemoryEqFrom.touch 0x200 constantState rotationAddress 32).trans
+      ((MemoryEqFrom.touch 0x200 rotationState wordAddress 32).trans
         (highMemoryEq_roundState_0c0 wordState _ _ _ _)))
 
 private theorem highMemoryEq_rightRoundStep (st : EvmState) (i : Nat) :
@@ -376,22 +341,22 @@ private theorem highMemoryEq_rightRoundStep (st : EvmState) (i : Nat) :
   change HighMemoryEq st
     (roundState wordState 0x160 j (tableValue st.memory 0x500 iw)
       (tableValue st.memory 0x5c0 iw) (loadWord st.memory constantAddress.toNat))
-  exact (highMemoryEq_touchMemory st constantAddress.toNat 32).trans
-    ((highMemoryEq_touchMemory constantState rotationAddress 32).trans
-      ((highMemoryEq_touchMemory rotationState wordAddress 32).trans
+  exact (MemoryEqFrom.touch 0x200 st constantAddress.toNat 32).trans
+    ((MemoryEqFrom.touch 0x200 constantState rotationAddress 32).trans
+      ((MemoryEqFrom.touch 0x200 rotationState wordAddress 32).trans
         (highMemoryEq_roundState_0160 wordState _ _ _ _)))
 
 theorem highMemoryEq_leftRoundPrefix (st : EvmState) (count : Nat) :
     HighMemoryEq st (leftRoundPrefix count st) := by
   induction count with
-  | zero => exact HighMemoryEq.refl st
+  | zero => exact MemoryEqFrom.refl 0x200 st
   | succ i ih =>
       exact ih.trans (highMemoryEq_leftRoundStep _ i)
 
 theorem highMemoryEq_rightRoundPrefix (st : EvmState) (count : Nat) :
     HighMemoryEq st (rightRoundPrefix count st) := by
   induction count with
-  | zero => exact HighMemoryEq.refl st
+  | zero => exact MemoryEqFrom.refl 0x200 st
   | succ i ih =>
       exact ih.trans (highMemoryEq_rightRoundStep _ i)
 
@@ -602,19 +567,6 @@ theorem workingAt_rightRoundPrefix (st : EvmState) (word : Nat → UInt32)
         (currentLookup.rightConstant i (by omega))
         (currentLookup.schedule _ (rightIndex_lt i (by omega)))
 
-private theorem loadWord_copyWithin_window (memory : Nat → UInt8)
-    (dst src n k : Nat) (hk : k + 32 ≤ n) :
-    loadWord (copyWithin memory dst src n) (dst + k) =
-      loadWord memory (src + k) := by
-  unfold loadWord
-  apply List.foldl_ext _ _ 0
-  intro acc i hi
-  have hi32 : i < 32 := List.mem_range.mp hi
-  simp only [copyWithin]
-  rw [if_pos (by omega)]
-  have hoff : src + (dst + k + i - dst) = src + k + i := by omega
-  rw [hoff]
-
 private theorem workingAt_mcopy_0c0_020 (st : EvmState) :
     workingAt (mcopyState st 0x0c0 0x020 0x0a0).memory 0x0c0 =
       workingAt st.memory 0x020 := by
@@ -641,16 +593,6 @@ private theorem workingAt_mcopy_0c0_020 (st : EvmState) :
   constructor
   · exact loadWord_copyWithin_window st.memory 192 32 160 96 (by omega)
   · exact loadWord_copyWithin_window st.memory 192 32 160 128 (by omega)
-
-private theorem loadWord_copyWithin_other (memory : Nat → UInt8)
-    (dst src n p : Nat) (hdisjoint : p + 32 ≤ dst ∨ dst + n ≤ p) :
-    loadWord (copyWithin memory dst src n) p = loadWord memory p := by
-  unfold loadWord
-  apply List.foldl_ext _ _ 0
-  intro acc i hi
-  have hi32 : i < 32 := List.mem_range.mp hi
-  simp only [copyWithin]
-  rw [if_neg (by rcases hdisjoint with h | h <;> omega)]
 
 private theorem workingAt_mcopy_hash (st : EvmState) (dst src n : U256)
     (hdst : 0x0c0 ≤ dst.toNat) :
@@ -732,12 +674,6 @@ private theorem workingAt_mcopy_0200_020 (st : EvmState) :
   constructor
   · exact loadWord_copyWithin_window st.memory 512 32 160 96 (by omega)
   · exact loadWord_copyWithin_window st.memory 512 32 160 128 (by omega)
-
-private theorem loadWord_mcopyState_other (st : EvmState) (dst src n : U256)
-    (p : Nat) (hdisjoint : p + 32 ≤ dst.toNat ∨ dst.toNat + n.toNat ≤ p) :
-    loadWord (mcopyState st dst src n).memory p = loadWord st.memory p := by
-  unfold mcopyState
-  exact loadWord_copyWithin_other st.memory dst.toNat src.toNat n.toNat p hdisjoint
 
 theorem LookupCorrect.mcopy {word : Nat → UInt32} (st : EvmState)
     (lookup : LookupCorrect st.memory word) (dst src n : U256)
@@ -1114,26 +1050,8 @@ private theorem workingAt_compressionTailState_shape (st : EvmState) :
   rw [workingAt_addThreeMasked_state]
   rfl
 
-/-- Agreement on the data region read by the cross-combination. -/
-def DataMemoryEq (before after : EvmState) : Prop :=
-  ∀ p, 0x0c0 ≤ p → after.memory p = before.memory p
-
-theorem DataMemoryEq.refl (st : EvmState) : DataMemoryEq st st := by
-  intro _ _
-  rfl
-
-theorem DataMemoryEq.trans {a b c : EvmState}
-    (hab : DataMemoryEq a b) (hbc : DataMemoryEq b c) : DataMemoryEq a c := by
-  intro p hp
-  rw [hbc p hp, hab p hp]
-
-theorem DataMemoryEq.loadWord {before after : EvmState}
-    (h : DataMemoryEq before after) (p : Nat) (hp : 0x0c0 ≤ p) :
-    loadWord after.memory p = loadWord before.memory p := by
-  unfold YulSemantics.EVM.loadWord
-  apply List.foldl_ext _ _ 0
-  intro acc i hi
-  rw [h (p + i) (by omega)]
+/-- The generic frame relation specialized to the combination data region. -/
+abbrev DataMemoryEq : EvmState → EvmState → Prop := MemoryEqFrom 0x0c0
 
 private theorem dataMemoryEq_addThreeMasked (st : EvmState) (p q r : U256) :
     DataMemoryEq st (addThreeMasked st p q r).2 := by
@@ -1163,7 +1081,8 @@ private theorem addThreeMasked_value_of_dataMemoryEq {before after : EvmState}
     (hp : 0x0c0 ≤ p.toNat) (hq : 0x0c0 ≤ q.toNat) (hr : 0x0c0 ≤ r.toNat) :
     (addThreeMasked after p q r).1 = (addThreeMasked before p q r).1 := by
   unfold addThreeMasked
-  rw [h.loadWord p.toNat hp, h.loadWord q.toNat hq, h.loadWord r.toNat hr]
+  rw [MemoryEqFrom.loadWord h p.toNat hp, MemoryEqFrom.loadWord h q.toNat hq,
+    MemoryEqFrom.loadWord h r.toNat hr]
 
 def sourceCombine (saved left right : SourceWorking) : SourceWorking where
   a := (saved.b + left.c + right.d) &&& 0xffffffff

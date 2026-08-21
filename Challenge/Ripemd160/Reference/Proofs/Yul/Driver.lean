@@ -19,7 +19,8 @@ namespace Challenge.Ripemd160.Reference.Proofs.Yul.Driver
 open YulSemantics
 open YulSemantics.EVM
 open EvmSemantics
-open Interpreter
+open StateModel
+open Challenge.YulProof.EvmState
 open Algorithm
 open Challenge.Ripemd160.Reference.Proofs.Bytecode
 open YulEvmCompiler
@@ -203,60 +204,6 @@ theorem readLE32Value_eq_readLE32_of_bytes {memory : Nat → UInt8}
   norm_num at hall
   rw [Nat.mod_eq_of_lt hall]
 
-private def WordDisjoint (p q : U256) : Prop :=
-  p.toNat + 32 ≤ q.toNat ∨ q.toNat + 32 ≤ p.toNat
-
-private theorem loadWord_storeMany_preserved (st : EvmState)
-    (stores : List (U256 × U256)) (p v : U256)
-    (hload : loadWord st.memory p.toNat = v)
-    (hall : ∀ q w, (q, w) ∈ stores →
-      (q = p ∧ w = v) ∨ WordDisjoint q p) :
-    loadWord (storeMany st stores).memory p.toNat = v := by
-  induction stores generalizing st with
-  | nil => exact hload
-  | cons head rest ih =>
-      rcases head with ⟨q, w⟩
-      have hhead := hall q w (by simp)
-      have hrest : ∀ q' w', (q', w') ∈ rest →
-          (q' = p ∧ w' = v) ∨ WordDisjoint q' p := by
-        intro q' w' hm
-        exact hall q' w' (by simp [hm])
-      simp only [storeMany]
-      apply ih (st := storeWordAt st q w)
-      · rcases hhead with hsame | hdisjoint
-        · rw [hsame.1, hsame.2]
-          exact YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord
-            st.memory p.toNat v
-        · unfold storeWordAt
-          rw [YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord_other
-            st.memory q.toNat p.toNat w hdisjoint]
-          exact hload
-      · exact hrest
-
-private theorem loadWord_storeMany_member (st : EvmState)
-    (stores : List (U256 × U256)) (p v : U256)
-    (hmember : (p, v) ∈ stores)
-    (hall : ∀ q w, (q, w) ∈ stores →
-      (q = p ∧ w = v) ∨ WordDisjoint q p) :
-    loadWord (storeMany st stores).memory p.toNat = v := by
-  induction stores generalizing st with
-  | nil => simp at hmember
-  | cons head rest ih =>
-      rcases head with ⟨q, w⟩
-      have hrest : ∀ q' w', (q', w') ∈ rest →
-          (q' = p ∧ w' = v) ∨ WordDisjoint q' p := by
-        intro q' w' hm
-        exact hall q' w' (by simp [hm])
-      simp only [storeMany]
-      simp only [List.mem_cons] at hmember
-      rcases hmember with hsame | hmember
-      · cases hsame
-        apply loadWord_storeMany_preserved _ rest p v
-        · exact YulEvmCompiler.Optimizer.MemorySpillStateSound.loadWord_storeWord
-            st.memory p.toNat v
-        · exact hrest
-      · exact ih (storeWordAt st q w) hmember hrest
-
 /-- Every word installed by `initTables` can be read independently of the
 incoming memory. -/
 theorem loadWord_initTables (st : EvmState) (p v : U256)
@@ -431,53 +378,15 @@ theorem fixedLookup_initTables (st : EvmState) :
     initTables_leftRotation st, initTables_rightRotation st,
     initTables_leftConstant st, initTables_rightConstant st⟩
 
-/-- Pointwise memory agreement above a source-level scratch boundary. -/
-def MemoryEqAbove (cutoff : Nat) (before after : EvmState) : Prop :=
-  ∀ p, cutoff ≤ p → after.memory p = before.memory p
-
-private theorem MemoryEqAbove.refl (cutoff : Nat) (st : EvmState) :
-    MemoryEqAbove cutoff st st := by
-  intro _ _
-  rfl
-
-private theorem MemoryEqAbove.trans {cutoff : Nat} {a b c : EvmState}
-    (hab : MemoryEqAbove cutoff a b) (hbc : MemoryEqAbove cutoff b c) :
-    MemoryEqAbove cutoff a c := by
-  intro p hp
-  rw [hbc p hp, hab p hp]
-
-private theorem MemoryEqAbove.loadWord {cutoff : Nat} {before after : EvmState}
-    (h : MemoryEqAbove cutoff before after) (p : Nat) (hp : cutoff ≤ p) :
-    loadWord after.memory p = loadWord before.memory p := by
-  unfold YulSemantics.EVM.loadWord
-  apply List.foldl_ext _ _ 0
-  intro acc i hi
-  have hi' : i < 32 := List.mem_range.mp hi
-  rw [h (p + i) (by omega)]
-
-private theorem MemoryEqAbove.storeWordAt {cutoff : Nat}
-    {before after : EvmState} (h : MemoryEqAbove cutoff before after)
-    (p v : U256) (hp : p.toNat + 32 ≤ cutoff) :
-    MemoryEqAbove cutoff before (storeWordAt after p v) := by
-  intro q hq
-  unfold Interpreter.storeWordAt
-  simp only [storeWord]
-  split
-  · rename_i hwindow
-    omega
-  · exact h q hq
-
-private theorem MemoryEqAbove.touch {cutoff : Nat} (st : EvmState)
-    (offset size : Nat) : MemoryEqAbove cutoff st (touchMemory st offset size) := by
-  intro _ _
-  rfl
+/-- The generic upward frame relation, named for this driver's use. -/
+abbrev MemoryEqAbove := MemoryEqFrom
 
 private theorem scheduleStep_above (cutoff : Nat) (msgOff : U256)
     (st : EvmState) (i : Nat) (hi : i < 16) (hcutoff : 0x4a0 ≤ cutoff) :
     MemoryEqAbove cutoff st (scheduleStepState msgOff st i) := by
   unfold scheduleStepState xSetState
-  apply MemoryEqAbove.storeWordAt
-  · exact MemoryEqAbove.touch st _ _
+  apply MemoryEqFrom.storeWordAt
+  · exact MemoryEqFrom.touch cutoff st _ _
   · simp only [BitVec.toNat_add, BitVec.toNat_mul, BitVec.toNat_ofNat]
     have hbase : (0x2a0 : U256).toNat = 0x2a0 := by decide
     have h32 : (32 : U256).toNat = 32 := by decide
@@ -490,9 +399,9 @@ theorem schedulePrefix_above (cutoff : Nat) (msgOff : U256)
     (st : EvmState) (n : Nat) (hn : n ≤ 16) (hcutoff : 0x4a0 ≤ cutoff) :
     MemoryEqAbove cutoff st (schedulePrefix msgOff st n) := by
   induction n with
-  | zero => exact MemoryEqAbove.refl cutoff st
+  | zero => exact MemoryEqFrom.refl cutoff st
   | succ n ih =>
-      exact MemoryEqAbove.trans (ih (by omega))
+      exact MemoryEqFrom.trans (ih (by omega))
         (scheduleStep_above cutoff msgOff _ n (by omega) hcutoff)
 
 theorem FixedLookupCorrect.transport {before after : EvmState}
@@ -549,7 +458,7 @@ private theorem loadWord_hSetState_nat (st : EvmState) (i j : Nat) (v : U256)
     loadWord (hSetState st (BitVec.ofNat 256 i) v).memory (0x20 + j * 32) =
       if j = i then v &&& 0xffffffff else
         loadWord st.memory (0x20 + j * 32) := by
-  unfold hSetState Interpreter.storeWordAt
+  unfold hSetState Challenge.YulProof.EvmState.storeWordAt
   norm_num [BitVec.toNat_add, BitVec.toNat_mul]
   have h32 : (32 : U256).toNat = 32 := by decide
   simp only [h32]
@@ -607,7 +516,7 @@ private theorem hSetState_above (cutoff : Nat) (st : EvmState) (i v : U256)
     (hi : i.toNat < 5) (hcutoff : 0xc0 ≤ cutoff) :
     MemoryEqAbove cutoff st (hSetState st i v) := by
   unfold hSetState
-  apply MemoryEqAbove.storeWordAt (MemoryEqAbove.refl cutoff st)
+  apply MemoryEqFrom.storeWordAt (MemoryEqFrom.refl cutoff st)
   simp only [BitVec.toNat_add, BitVec.toNat_mul]
   have h20 : (0x20 : U256).toNat = 0x20 := by decide
   rw [h20, Nat.mod_eq_of_lt (by omega : i.toNat * 32 < 2 ^ 256),
@@ -617,13 +526,13 @@ private theorem hSetState_above (cutoff : Nat) (st : EvmState) (i v : U256)
 theorem initHState_above (cutoff : Nat) (st : EvmState) (hcutoff : 0xc0 ≤ cutoff) :
     MemoryEqAbove cutoff st (initHState st) := by
   unfold initHState
-  apply MemoryEqAbove.trans
+  apply MemoryEqFrom.trans
     (hSetState_above cutoff st 0 0x67452301 (by decide) hcutoff)
-  apply MemoryEqAbove.trans
+  apply MemoryEqFrom.trans
     (hSetState_above cutoff _ 1 0xefcdab89 (by decide) hcutoff)
-  apply MemoryEqAbove.trans
+  apply MemoryEqFrom.trans
     (hSetState_above cutoff _ 2 0x98badcfe (by decide) hcutoff)
-  apply MemoryEqAbove.trans
+  apply MemoryEqFrom.trans
     (hSetState_above cutoff _ 3 0x10325476 (by decide) hcutoff)
   exact hSetState_above cutoff _ 4 0xc3d2e1f0 (by decide) hcutoff
 
@@ -653,7 +562,7 @@ private theorem loadWord_scheduleStep_slot (st : EvmState) (msgOff : U256)
       if i = step then readLE32Value st.memory
           (msgOff + BitVec.ofNat 256 step * 4) &&& 0xffffffff
       else loadWord st.memory (0x2a0 + i * 32) := by
-  unfold scheduleStepState xSetState Interpreter.storeWordAt
+  unfold scheduleStepState xSetState Challenge.YulProof.EvmState.storeWordAt
   rw [xAddress_eq step hstep]
   by_cases his : i = step
   · subst i
@@ -738,46 +647,14 @@ theorem lookupCorrect_afterSchedule (st : EvmState) (msgBase blockOff : Nat)
     (schedulePrefix_above 0x4a0 (BitVec.ofNat 256 msgBase) st 16
       (by omega) (by omega))).rightConstant
 
-def MemoryEqBelow (cutoff : Nat) (before after : EvmState) : Prop :=
-  ∀ p, p < cutoff → after.memory p = before.memory p
-
-private theorem MemoryEqBelow.refl (cutoff : Nat) (st : EvmState) :
-    MemoryEqBelow cutoff st st := by
-  intro _ _
-  rfl
-
-private theorem MemoryEqBelow.trans {cutoff : Nat} {a b c : EvmState}
-    (hab : MemoryEqBelow cutoff a b) (hbc : MemoryEqBelow cutoff b c) :
-    MemoryEqBelow cutoff a c := by
-  intro p hp
-  rw [hbc p hp, hab p hp]
-
-private theorem MemoryEqBelow.loadWord {cutoff : Nat} {before after : EvmState}
-    (h : MemoryEqBelow cutoff before after) (p : Nat) (hp : p + 32 ≤ cutoff) :
-    loadWord after.memory p = loadWord before.memory p := by
-  unfold YulSemantics.EVM.loadWord
-  apply List.foldl_ext _ _ 0
-  intro acc i hi
-  have hi' : i < 32 := List.mem_range.mp hi
-  rw [h (p + i) (by omega)]
-
-private theorem MemoryEqBelow.storeWordAt {cutoff : Nat}
-    {before after : EvmState} (h : MemoryEqBelow cutoff before after)
-    (p v : U256) (hp : cutoff ≤ p.toNat) :
-    MemoryEqBelow cutoff before (storeWordAt after p v) := by
-  intro q hq
-  unfold Interpreter.storeWordAt
-  simp only [storeWord]
-  split
-  · rename_i hwindow
-    omega
-  · exact h q hq
+/-- The generic downward frame relation, named for this driver's use. -/
+abbrev MemoryEqBelow := MemoryEqBefore
 
 private theorem scheduleStep_below (cutoff : Nat) (msgOff : U256)
     (st : EvmState) (i : Nat) (hi : i < 16) (hcutoff : cutoff ≤ 0x2a0) :
     MemoryEqBelow cutoff st (scheduleStepState msgOff st i) := by
   unfold scheduleStepState xSetState
-  apply MemoryEqBelow.storeWordAt
+  apply MemoryEqBefore.storeWordAt
   · intro p hp
     rfl
   · rw [xAddress_eq i hi]
@@ -787,9 +664,9 @@ theorem schedulePrefix_below (cutoff : Nat) (msgOff : U256)
     (st : EvmState) (n : Nat) (hn : n ≤ 16) (hcutoff : cutoff ≤ 0x2a0) :
     MemoryEqBelow cutoff st (schedulePrefix msgOff st n) := by
   induction n with
-  | zero => exact MemoryEqBelow.refl cutoff st
+  | zero => exact MemoryEqBefore.refl cutoff st
   | succ n ih =>
-      exact MemoryEqBelow.trans (ih (by omega))
+      exact MemoryEqBefore.trans (ih (by omega))
         (scheduleStep_below cutoff msgOff _ n (by omega) hcutoff)
 
 theorem workingAt_scheduleState (st : EvmState) (msgOff : U256) :
@@ -821,14 +698,6 @@ theorem compressionState_refines (st : EvmState) (msgBase blockOff : Nat)
   · rw [workingAt_scheduleState]
     exact hhash
 
-private theorem mcopyState_above (cutoff : Nat) (st : EvmState)
-    (dst src n : U256) (hdst : dst.toNat + n.toNat ≤ cutoff) :
-    MemoryEqAbove cutoff st (mcopyState st dst src n) := by
-  intro p hp
-  unfold mcopyState copyWithin
-  simp only
-  rw [if_neg (by omega)]
-
 private theorem highMemoryEq_to_above {before after : EvmState}
     (h : HighMemoryEq before after) (cutoff : Nat) (hcutoff : 0x200 ≤ cutoff) :
     MemoryEqAbove cutoff before after := by
@@ -853,15 +722,15 @@ private theorem compressionTailState_above (cutoff : Nat) (st : EvmState)
   let p4 := addThreeMasked s3 0x200 0x0e0 0x1a0
   let s4 := hSetState p4.2 4 p4.1
   change MemoryEqAbove cutoff st (hSetState s4 0 t.1)
-  apply MemoryEqAbove.trans (addThreeMasked_above cutoff st _ _ _)
-  apply MemoryEqAbove.trans (addThreeMasked_above cutoff t.2 _ _ _)
-  apply MemoryEqAbove.trans (hSetState_above cutoff p1.2 1 p1.1 (by decide) hcutoff)
-  apply MemoryEqAbove.trans (addThreeMasked_above cutoff s1 _ _ _)
-  apply MemoryEqAbove.trans (hSetState_above cutoff p2.2 2 p2.1 (by decide) hcutoff)
-  apply MemoryEqAbove.trans (addThreeMasked_above cutoff s2 _ _ _)
-  apply MemoryEqAbove.trans (hSetState_above cutoff p3.2 3 p3.1 (by decide) hcutoff)
-  apply MemoryEqAbove.trans (addThreeMasked_above cutoff s3 _ _ _)
-  apply MemoryEqAbove.trans (hSetState_above cutoff p4.2 4 p4.1 (by decide) hcutoff)
+  apply MemoryEqFrom.trans (addThreeMasked_above cutoff st _ _ _)
+  apply MemoryEqFrom.trans (addThreeMasked_above cutoff t.2 _ _ _)
+  apply MemoryEqFrom.trans (hSetState_above cutoff p1.2 1 p1.1 (by decide) hcutoff)
+  apply MemoryEqFrom.trans (addThreeMasked_above cutoff s1 _ _ _)
+  apply MemoryEqFrom.trans (hSetState_above cutoff p2.2 2 p2.1 (by decide) hcutoff)
+  apply MemoryEqFrom.trans (addThreeMasked_above cutoff s2 _ _ _)
+  apply MemoryEqFrom.trans (hSetState_above cutoff p3.2 3 p3.1 (by decide) hcutoff)
+  apply MemoryEqFrom.trans (addThreeMasked_above cutoff s3 _ _ _)
+  apply MemoryEqFrom.trans (hSetState_above cutoff p4.2 4 p4.1 (by decide) hcutoff)
   exact hSetState_above cutoff s4 0 t.1 (by decide) hcutoff
 
 private theorem compressionWorkState_above (cutoff : Nat) (st : EvmState)
@@ -878,15 +747,15 @@ private theorem compressionWorkState_above (cutoff : Nat) (st : EvmState)
   have h200 : (0x200 : U256).toNat = 0x200 := by decide
   have h0a0 : (0x0a0 : U256).toNat = 0x0a0 := by decide
   change MemoryEqAbove cutoff st s5
-  apply MemoryEqAbove.trans
+  apply MemoryEqFrom.trans
     (schedulePrefix_above cutoff msgOff st 16 (by omega) hcutoff)
-  apply MemoryEqAbove.trans (mcopyState_above cutoff s0 0x0c0 0x020 0x0a0 (by
+  apply MemoryEqFrom.trans (MemoryEqFrom.mcopyState cutoff s0 0x0c0 0x020 0x0a0 (by
     rw [h0c0, h0a0]; omega))
-  apply MemoryEqAbove.trans (mcopyState_above cutoff s1 0x160 0x020 0x0a0 (by
+  apply MemoryEqFrom.trans (MemoryEqFrom.mcopyState cutoff s1 0x160 0x020 0x0a0 (by
     rw [h160, h0a0]; omega))
-  apply MemoryEqAbove.trans (mcopyState_above cutoff s2 0x200 0x020 0x0a0 (by
+  apply MemoryEqFrom.trans (MemoryEqFrom.mcopyState cutoff s2 0x200 0x020 0x0a0 (by
     rw [h200, h0a0]; omega))
-  apply MemoryEqAbove.trans
+  apply MemoryEqFrom.trans
     (highMemoryEq_to_above (highMemoryEq_leftRoundPrefix s3 80) cutoff (by omega))
   exact highMemoryEq_to_above (highMemoryEq_rightRoundPrefix s4 80) cutoff (by omega)
 
@@ -896,7 +765,7 @@ theorem compressionState_above (cutoff : Nat) (st : EvmState) (msgOff : U256)
     (hcutoff : 0x4a0 ≤ cutoff) :
     MemoryEqAbove cutoff st (compressionState st msgOff) := by
   unfold compressionState
-  exact MemoryEqAbove.trans (compressionWorkState_above cutoff st msgOff hcutoff)
+  exact MemoryEqFrom.trans (compressionWorkState_above cutoff st msgOff hcutoff)
     (compressionTailState_above cutoff _ (by omega))
 
 def PaddedBytesAt (memory : Nat → UInt8) (padded : ByteArray) : Prop :=

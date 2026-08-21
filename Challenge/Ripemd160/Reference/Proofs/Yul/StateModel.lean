@@ -1,18 +1,25 @@
 import Challenge.Ripemd160.ProofSupport.Yul
 import Challenge.Ripemd160.Reference.Proofs.Yul.Program
-import YulSemantics.Adequacy
+import Challenge.YulProof.EvmState
+import YulSemantics.Interp
 
 set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 2000000
 
-namespace Challenge.Ripemd160.Reference.Proofs.Yul.Interpreter
+/-!
+# Exact RIPEMD-160 source state model
+
+Executable state transformers mirroring this reference program's schedule,
+rounds, compression tail, and fixed tables.  Generic Yul interpreter and EVM
+memory machinery lives under `Challenge.YulProof`.
+-/
+
+namespace Challenge.Ripemd160.Reference.Proofs.Yul.StateModel
 
 open YulSemantics
 open YulSemantics.EVM
-
-def storeWordAt (st : EvmState) (p v : U256) : EvmState :=
-  { touchMemory st p.toNat 32 with memory := storeWord st.memory p.toNat v }
+open Challenge.YulProof.EvmState
 
 def hSetState (st : EvmState) (i v : U256) : EvmState :=
   storeWordAt st (0x20 + i * 32) (v &&& 0xffffffff)
@@ -46,19 +53,7 @@ def tableStores : List (U256 × U256) := [
   (0x6e0, 0x5c4dd124), (0x700, 0x6d703ef3), (0x720, 0x7a6d76e9),
   (0x740, 0x00000000)]
 
-def storeMany : EvmState → List (U256 × U256) → EvmState
-  | st, [] => st
-  | st, (p, v) :: rest => storeMany (storeWordAt st p v) rest
-
 def initTablesState (st : EvmState) : EvmState := storeMany st tableStores
-
-def readLE32Value (memory : Nat → UInt8) (off : U256) : U256 :=
-  let w := loadWord memory off.toNat
-  let a := (w >>> 248) &&& 0xff
-  let b := ((w >>> 240) &&& 0xff) <<< 8
-  let c := ((w >>> 232) &&& 0xff) <<< 16
-  let d := ((w >>> 224) &&& 0xff) <<< 24
-  (a ||| b) ||| (c ||| d)
 
 def xSetState (st : EvmState) (i v : U256) : EvmState :=
   storeWordAt st (0x2a0 + i * 32) (v &&& 0xffffffff)
@@ -169,10 +164,6 @@ def rightRoundPrefix : Nat → EvmState → EvmState
   | 0, st => st
   | i + 1, st => rightRoundStepState (rightRoundPrefix i st) i
 
-def mcopyState (st : EvmState) (dst src n : U256) : EvmState :=
-  { touchMemory2 st dst.toNat n.toNat src.toNat n.toNat with
-    memory := copyWithin st.memory dst.toNat src.toNat n.toNat }
-
 def compressionWorkState (st : EvmState) (msgOff : U256) : EvmState :=
   let st := scheduleState msgOff st
   let st := mcopyState st 0x0c0 0x020 0x0a0
@@ -218,4 +209,4 @@ theorem eval_initH (fuel : Nat) (st : EvmState) :
       .ok (.vals [] (initHState st)) := by
   rfl
 
-end Challenge.Ripemd160.Reference.Proofs.Yul.Interpreter
+end Challenge.Ripemd160.Reference.Proofs.Yul.StateModel
