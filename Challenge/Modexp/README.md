@@ -66,6 +66,13 @@ and every return branch into an unconditional source theorem.
 `Reference/Proofs/Yul.lean` separately pins parsing, normalization,
 optimization, compilation, and assembly to the frozen bytecode.
 
+The outward-facing theorem for the actual parsed source is:
+
+```lean
+referenceParsedBlock_correct :
+  Challenge.Modexp.Yul.Correct referenceParsedBlock
+```
+
 The direct source proof can be checked with:
 
 ```sh
