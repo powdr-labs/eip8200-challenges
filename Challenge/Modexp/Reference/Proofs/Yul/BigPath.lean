@@ -607,7 +607,7 @@ theorem exec_nonzeroPrelude (st : EvmState)
     let n := limbCount modulusSize
     let V := ("modulusOr", modulusOrValue st modulusSize modOff) ::
       ("n", n) :: paramsEnv bsize esize modulusSize baseOff expOff modOff
-    ExecStmts D verifiedFunctions V (scannedModulusState st modulusSize modOff)
+    ExecStmts D ([] :: verifiedFunctions) V (scannedModulusState st modulusSize modOff)
       (yul% {
         clearLimbs(0x0c00, n)
         mstore(0x0c00, 1)
@@ -632,17 +632,18 @@ theorem exec_nonzeroPrelude (st : EvmState)
   let one := scratchOneState st modulusSize modOff
   let converted := convertedBaseState st bsize modulusSize baseOff modOff
   let initialized := initializedAccumulatorState st bsize modulusSize baseOff modOff
-  let loopFuns : FunEnv D := [] :: verifiedFunctions
-  have hclearArgs : EvalArgs D verifiedFunctions V scanned
+  let bodyFuns : FunEnv D := [] :: verifiedFunctions
+  let loopFuns : FunEnv D := [] :: bodyFuns
+  have hclearArgs : EvalArgs D bodyFuns V scanned
       [yulE% 0x0c00, yulE% n] (.vals [0x0c00, n] scanned) := by
     apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
     rfl
-  have hclear : EvalExpr D verifiedFunctions V scanned
+  have hclear : EvalExpr D bodyFuns V scanned
       (yulE% clearLimbs(0x0c00, n)) (.vals [] cleared) := by
     simpa [cleared, scratchClearedState, scanned, n, mkCall, parse] using
-      (eval_clearLimbs (funs := verifiedFunctions) (V := V) (st := scanned)
+      (eval_clearLimbs (funs := bodyFuns) (V := V) (st := scanned)
         (0x0c00 : U256) n (by rfl) hclearArgs)
-  have hone : EvalExpr D verifiedFunctions V cleared (yulE% mstore(0x0c00, 1))
+  have hone : EvalExpr D bodyFuns V cleared (yulE% mstore(0x0c00, 1))
       (.vals [] one) := by
     apply evalExpr_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 30)
     rfl
@@ -652,16 +653,16 @@ theorem exec_nonzeroPrelude (st : EvmState)
       some (calldataByteDecl, verifiedFunctions) := by rfl
   have hbase := exec_baseOuterLoop (funs := loopFuns) one bsize esize
     modulusSize baseOff expOff modOff n modulusOr hadd hbyte bsize.toNat 0 (by omega)
-  have haccArgs : EvalArgs D verifiedFunctions V converted
+  have haccArgs : EvalArgs D bodyFuns V converted
       [yulE% 0x0800, yulE% 0x0c00, yulE% 1, yulE% 0x0000, yulE% n]
       (.vals [0x0800, 0x0c00, 1, 0x0000, n] converted) := by
     apply evalArgs_of_interp Challenge.YulProof.ClosedEvm.exec_lawful (fuel := 60)
     rfl
-  have hacc : EvalExpr D verifiedFunctions V converted
+  have hacc : EvalExpr D bodyFuns V converted
       (yulE% addMaskedMod(0x0800, 0x0c00, 1, 0x0000, n))
       (.vals [] initialized) := by
     simpa [initialized, initializedAccumulatorState, converted, n, mkCall, parse]
-      using (BigArithmetic.eval_addMaskedMod (funs := verifiedFunctions) (V := V)
+      using (BigArithmetic.eval_addMaskedMod (funs := bodyFuns) (V := V)
         (st := converted) (0x0800 : U256) 0x0c00 1 0x0000 n (by rfl) haccArgs)
   refine Step.seqCons (Step.exprStmt hclear) ?_
   refine Step.seqCons (Step.exprStmt hone) ?_
@@ -1142,11 +1143,11 @@ def returnedResultState (st : EvmState) (modulusSize : U256) : EvmState :=
 
 /-- Once the big exponent loop has established its exact result state, the
 source serializer and return compose without any arithmetic assumptions. -/
-theorem exec_serializeReturn (V : VEnv D) (st : EvmState)
+theorem exec_serializeReturn (funs : FunEnv D) (V : VEnv D) (st : EvmState)
     (modulusSize : U256)
     (hmodulus : VEnv.get V "modulusSize" = some modulusSize)
     (_hi : VEnv.get V "i" = none) :
-    ExecStmts D verifiedFunctions V st
+    ExecStmts D funs V st
       (yul% {
         for { let i := 0 } lt(i, modulusSize) { i := add(i, 1) } {
           let reverse := sub(sub(modulusSize, 1), i)
@@ -1158,9 +1159,9 @@ theorem exec_serializeReturn (V : VEnv D) (st : EvmState)
         return(0x1800, modulusSize)
       }) V (returnedResultState st modulusSize) .halt := by
   let serialized := serializedResultState st modulusSize
-  let loopFuns : FunEnv D := [] :: verifiedFunctions
+  let loopFuns : FunEnv D := [] :: funs
   have hloop := exec_serializeLoop (funs := loopFuns) V st modulusSize hmodulus
-  have hret : EvalExpr D verifiedFunctions V serialized
+  have hret : EvalExpr D funs V serialized
       (mkCall "return" [.lit (.number 0x1800), .var "modulusSize"])
       (.halt (returnedResultState st modulusSize)) := by
     apply Step.builtinHalt (D := D)
@@ -1170,7 +1171,7 @@ theorem exec_serializeReturn (V : VEnv D) (st : EvmState)
       YulSemantics.EVM.stepOp, YulSemantics.EVM.litValue,
       returnedResultState, serialized]
   refine Step.seqCons (D := D) (V1 := V) (st1 := serialized) ?_ ?_
-  · have hfor : ExecStmt D verifiedFunctions V st
+  · have hfor : ExecStmt D funs V st
         (.forLoop (yul% { let i := 0 }) (yulE% lt(i, modulusSize))
           Challenge.Modexp.Reference.Proofs.Yul.incrementI
           Challenge.Modexp.Reference.Proofs.Yul.serializeBody)
@@ -1199,7 +1200,7 @@ theorem exec_exponentAndReturn (st : EvmState)
     let initial := initializedAccumulatorState st bsize modulusSize baseOff modOff
     let exponentiated := exponentiatedState st bsize esize modulusSize baseOff
       expOff modOff
-    ExecStmts D verifiedFunctions V initial
+    ExecStmts D ([] :: verifiedFunctions) V initial
       (yul% {
         for { let i := 0 } lt(i, esize) { i := add(i, 1) } {
           let w := calldataByte(add(expOff, i))
@@ -1235,7 +1236,8 @@ theorem exec_exponentAndReturn (st : EvmState)
   let initial := initializedAccumulatorState st bsize modulusSize baseOff modOff
   let exponentiated := exponentiatedState st bsize esize modulusSize baseOff
     expOff modOff
-  let loopFuns : FunEnv D := [] :: verifiedFunctions
+  let bodyFuns : FunEnv D := [] :: verifiedFunctions
+  let loopFuns : FunEnv D := [] :: bodyFuns
   have hmul : lookupFun loopFuns "mulModBig" =
       lookupFun verifiedFunctions "mulModBig" := by rfl
   have hcopy : lookupFun loopFuns "copyLimbs" =
@@ -1245,7 +1247,8 @@ theorem exec_exponentAndReturn (st : EvmState)
   have hexp := exec_exponentLoop (funs := loopFuns) initial bsize esize
     modulusSize baseOff expOff modOff n modulusOr hmul hcopy hbyte
     esize.toNat 0 (by omega)
-  have htail := exec_serializeReturn V exponentiated modulusSize (by rfl) (by rfl)
+  have htail := exec_serializeReturn bodyFuns V exponentiated modulusSize
+    (by rfl) (by rfl)
   refine Step.seqCons (D := D) (V1 := V) (st1 := exponentiated) ?_ ?_
   · refine Step.forLoop (D := D)
       (Vinit := expOuterEnv bsize esize modulusSize baseOff expOff modOff n
@@ -1282,7 +1285,8 @@ theorem exec_nonzeroSuffix (st : EvmState)
     let modulusOr := modulusOrValue st modulusSize modOff
     let V := ("modulusOr", modulusOr) :: ("n", n) ::
       paramsEnv bsize esize modulusSize baseOff expOff modOff
-    ExecStmts D verifiedFunctions V (scannedModulusState st modulusSize modOff)
+    ExecStmts D ([] :: verifiedFunctions) V
+      (scannedModulusState st modulusSize modOff)
       (yul% {
         clearLimbs(0x0c00, n)
         mstore(0x0c00, 1)
