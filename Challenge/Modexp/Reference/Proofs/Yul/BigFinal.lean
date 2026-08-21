@@ -1,5 +1,6 @@
 import Challenge.Modexp.Reference.Proofs.Yul.BigSetup
 import Challenge.Modexp.Reference.Proofs.Yul.BigResult
+import Challenge.Modexp.Reference.Proofs.Yul.BigExponent
 
 set_option warningAsError true
 set_option maxRecDepth 20000
@@ -90,6 +91,55 @@ theorem initializedAccumulatorState_represents (st : EvmState)
   rw [hbWord] at hresult
   simpa [b, m, off, count, modulus, baseNat] using hresult
 
+theorem initializedAccumulatorState_calldata (st : EvmState)
+    (bsize modulusSize baseOff modOff : U256) :
+    (BigPath.initializedAccumulatorState st bsize modulusSize baseOff modOff).env.calldata =
+      st.env.calldata := by
+  simp [BigPath.initializedAccumulatorState, BigPath.convertedBaseState,
+    BigResult.addMaskedModState_calldata,
+    BigResult.baseBytePrefix_calldata, scratchOneState_calldata]
+
+/-- Complete mathematical certificate for the exact state at the end of the
+source exponent loop. -/
+theorem exponentiatedState_represents (st : EvmState) (input : ByteArray)
+    (hcalldata : st.env.calldata = input.toList) (hvalid : ValidInput input)
+    (hbig : 32 < modulusSize input)
+    (hmodulus : BigSetup.modulusNat input ≠ 0) :
+    Represents
+      (BigPath.exponentiatedState st
+        (BitVec.ofNat 256 (baseSize input))
+        (BitVec.ofNat 256 (exponentSize input))
+        (BitVec.ofNat 256 (modulusSize input)) 96
+        (BitVec.ofNat 256 (exponentOffset input))
+        (BitVec.ofNat 256 (BigSetup.modulusOffset input))).memory
+      0x0800 (Limbs.limbCount (modulusSize input))
+      (Precompile.modPow (baseNat input) (exponentNat input)
+        (BigSetup.modulusNat input)) := by
+  let b := baseSize input
+  let e := exponentSize input
+  let m := modulusSize input
+  let modOff := BigSetup.modulusOffset input
+  let count := Limbs.limbCount m
+  let modulus := BigSetup.modulusNat input
+  have hb : b ≤ 1024 := hvalid.2.1
+  have he : e ≤ 1024 := hvalid.2.2.1
+  have hm : m ≤ 1024 := hvalid.2.2.2
+  have hcount : count ≤ 32 := Limbs.limbCount_le_32 m hm
+  have hn := BigSetup.limbCount_toNat m hm
+  have hmodulusPos : 0 < modulus := Nat.pos_of_ne_zero hmodulus
+  have hinitial := initializedAccumulatorState_represents st input hcalldata
+    hvalid hbig hmodulus
+  have hinitialCalldata :
+      (BigPath.initializedAccumulatorState st (BitVec.ofNat 256 b)
+        (BitVec.ofNat 256 m) 96 (BitVec.ofNat 256 modOff)).env.calldata =
+        input.toList := by
+    rw [initializedAccumulatorState_calldata, hcalldata]
+  have hrun := BigExponent.exponentiatedState_represents st input b e m modOff
+    count (baseNat input) modulus (by dsimp [b, e]; omega) hcount hn
+    hmodulusPos hinitialCalldata hinitial.1 hinitial.2.1 hinitial.2.2
+  simpa [b, e, m, modOff, count, modulus, exponentOffset, exponentNat]
+    using hrun.1
+
 /-- Serialization turns any exponent certificate for the exact source state
 into the MODEXP specification bytes.  `BigExponent` supplies `hexponent` by
 interpreting the source's nested byte/bit loop. -/
@@ -136,5 +186,23 @@ theorem returnedResultState_nonzero_spec (st : EvmState) (input : ByteArray)
       (BitVec.ofNat 256 (modulusSize input))).halted =
       some (HaltKind.ret, (spec input).toList) :=
   returnedResultState_spec _ input hvalid hbig hexponent
+
+/-- The closed nonzero big path returns exactly the challenge specification;
+all arithmetic premises have been discharged from fresh setup. -/
+theorem returnedResultState_nonzero_spec_complete (st : EvmState)
+    (input : ByteArray) (hcalldata : st.env.calldata = input.toList)
+    (hvalid : ValidInput input) (hbig : 32 < modulusSize input)
+    (hmodulus : BigSetup.modulusNat input ≠ 0) :
+    (BigPath.returnedResultState
+      (BigPath.exponentiatedState st
+        (BitVec.ofNat 256 (baseSize input))
+        (BitVec.ofNat 256 (exponentSize input))
+        (BitVec.ofNat 256 (modulusSize input)) 96
+        (BitVec.ofNat 256 (exponentOffset input))
+        (BitVec.ofNat 256 (BigSetup.modulusOffset input)))
+      (BitVec.ofNat 256 (modulusSize input))).halted =
+      some (HaltKind.ret, (spec input).toList) :=
+  returnedResultState_nonzero_spec st input hvalid hbig
+    (exponentiatedState_represents st input hcalldata hvalid hbig hmodulus)
 
 end Challenge.Modexp.Reference.Proofs.Yul.BigFinal
