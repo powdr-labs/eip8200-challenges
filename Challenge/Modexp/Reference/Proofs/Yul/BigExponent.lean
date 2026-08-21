@@ -88,7 +88,7 @@ theorem selectLimbPrefix_one_memory (st : EvmState) (count : Nat)
         omega
       rw [hdst, hsrc]
       congr 1
-      bv_decide
+      exact WordMath.select_one _ _
 
 theorem memoryLimbs_storeWordAt_same (st : EvmState)
     (ptr count index : Nat) (hindex : index < count)

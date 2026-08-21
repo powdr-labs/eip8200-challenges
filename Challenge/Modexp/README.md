@@ -39,6 +39,34 @@ exponentiation, and serialization through the shared `EvmProof` memory-cost
 potential. Functional correctness separately proves the limb arithmetic,
 modular exponent invariant, and exact fixed-width output bytes.
 
+### Source-Yul proof boundary
+
+The reference also has a direct proof against the relational Yul semantics.
+Reusable source-proof infrastructure lives under `Challenge/YulProof/`:
+
+* `ClosedEvm.lean` supplies the closed executable EVM dialect;
+* `Interpreter.lean` projects successful interpreter runs into relational
+  big-step judgments;
+* `EvmState.lean` supplies generic memory transformers and frame lemmas; and
+* `Word.lean` and `NatDigits.lean` supply fixed-width serialization and generic
+  positional-digit facts.
+
+The MODEXP-specific proof is organized under `Reference/Proofs/Yul/`.
+`Program` is the readable source AST, `StateModel` and `Procedures` give exact
+source-state contracts, `Word`/`WordMath` prove the at-most-32-byte path, and
+the remaining `Big*` modules prove source execution and arithmetic correctness
+for the arbitrary-precision limb path. `Execution` composes the header dispatch
+and every return branch into an unconditional source theorem.
+`Reference/Proofs/Yul.lean` separately pins parsing, normalization,
+optimization, compilation, and assembly to the frozen bytecode.
+
+The direct source proof can be checked with:
+
+```sh
+lake build Challenge.Modexp.Reference.Proofs.Yul.Execution
+lake build Challenge.Modexp.Reference.Proofs.Yul
+```
+
 ## Falsification
 
 ```sh

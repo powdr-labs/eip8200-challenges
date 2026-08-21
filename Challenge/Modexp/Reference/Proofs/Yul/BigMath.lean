@@ -138,8 +138,13 @@ theorem mask_toNat (word : U256) {take : Nat} (htake : take ≤ 1) :
   interval_cases take
   · simp
   · simp only [Nat.one_mul]
-    apply congrArg BitVec.toNat
-    bv_decide
+    rw [BitVec.toNat_and]
+    have hmask : ((0 - BitVec.ofNat 256 1).toNat) = 2 ^ 256 - 1 := by
+      rw [BitVec.toNat_sub]
+      change (2 ^ 256 - 1 + 0) % 2 ^ 256 = 2 ^ 256 - 1
+      norm_num
+    rw [hmask, Nat.and_two_pow_sub_one_eq_mod,
+      Nat.mod_eq_of_lt word.isLt]
 
 theorem loadWord_addPhase_future (st : EvmState) (dst src mask : U256)
     (ptr count j : Nat) (hptr : dst = BitVec.ofNat 256 ptr)

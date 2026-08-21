@@ -1,8 +1,18 @@
 import Challenge.Modexp.Reference.Bytecode
 import Challenge.Modexp.Reference.Proofs.Yul.BigArithmetic
 import Challenge.Modexp.Reference.Proofs.Yul.BigDriver
+import Challenge.Modexp.Reference.Proofs.Yul.BigExponent
+import Challenge.Modexp.Reference.Proofs.Yul.BigFinal
+import Challenge.Modexp.Reference.Proofs.Yul.BigFold
+import Challenge.Modexp.Reference.Proofs.Yul.BigMath
+import Challenge.Modexp.Reference.Proofs.Yul.BigMul
+import Challenge.Modexp.Reference.Proofs.Yul.BigPath
+import Challenge.Modexp.Reference.Proofs.Yul.BigResult
+import Challenge.Modexp.Reference.Proofs.Yul.BigSetup
+import Challenge.Modexp.Reference.Proofs.Yul.Execution
 import Challenge.Modexp.Reference.Proofs.Yul.Program
 import Challenge.Modexp.Reference.Proofs.Yul.Word
+import Challenge.Modexp.Reference.Proofs.Yul.WordMath
 import YulEvmCompiler.Optimizer.Implementation.Pipeline
 
 set_option warningAsError true
@@ -89,6 +99,11 @@ theorem referenceComputesResult_of_verifiedProgram
     (h : ComputesResult verifiedProgram) : ReferenceComputesResult := by
   rw [referenceComputesResult_iff, referenceParsedBlock_eq_verifiedProgram]
   exact h
+
+/-- Functional correctness of the actual parsed MODEXP reference source. -/
+theorem referenceComputesResult : ReferenceComputesResult := by
+  exact referenceComputesResult_of_verifiedProgram
+    Execution.verifiedProgram_computesResult
 
 /-- The production source entry point reproduces the frozen bytes. -/
 theorem referenceBytecode?_eq : referenceBytecode? = some referenceBytecode := by

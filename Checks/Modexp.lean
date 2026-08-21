@@ -29,3 +29,11 @@ info: 'Challenge.Modexp.Reference.Proofs.Bytecode.ReferenceCorrect.gasSteps_refe
 /-- info: 'Challenge.Modexp.Reference.Proofs.Gas.gasSchedule_correct' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Challenge.Modexp.Reference.Proofs.Gas.gasSchedule_correct
+
+/--
+info: 'Challenge.Modexp.Reference.Proofs.Yul.Execution.verifiedProgram_computesResult' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in
+#print axioms Challenge.Modexp.Reference.Proofs.Yul.Execution.verifiedProgram_computesResult
