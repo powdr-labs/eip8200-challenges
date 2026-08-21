@@ -310,11 +310,11 @@ private theorem highMemoryEq_storeWorking_0c0 (st : EvmState) (x : SourceWorking
     · apply highMemoryEq_storeWordAt
       · apply highMemoryEq_storeWordAt
         · apply highMemoryEq_storeWordAt (HighMemoryEq.refl st)
-          native_decide
-        · native_decide
-      · native_decide
-    · native_decide
-  · native_decide
+          decide
+        · decide
+      · decide
+    · decide
+  · decide
 
 private theorem highMemoryEq_storeWorking_0160 (st : EvmState) (x : SourceWorking) :
     HighMemoryEq st (storeWorking st 0x160 x) := by
@@ -324,11 +324,11 @@ private theorem highMemoryEq_storeWorking_0160 (st : EvmState) (x : SourceWorkin
     · apply highMemoryEq_storeWordAt
       · apply highMemoryEq_storeWordAt
         · apply highMemoryEq_storeWordAt (HighMemoryEq.refl st)
-          native_decide
-        · native_decide
-      · native_decide
-    · native_decide
-  · native_decide
+          decide
+        · decide
+      · decide
+    · decide
+  · decide
 
 private theorem highMemoryEq_roundState_0c0 (st : EvmState) (j : Nat)
     (wordIndex rotation constant : U256) :
@@ -957,9 +957,9 @@ theorem compressionWorkState_correct (st : EvmState) (msgOff : U256)
   let s3 := mcopyState s2 0x200 0x020 0x0a0
   let s4 := leftRoundPrefix 80 s3
   let s5 := rightRoundPrefix 80 s4
-  have lookup1 := lookup.mcopy s0 0x0c0 0x020 0x0a0 (by native_decide)
-  have lookup2 := lookup1.mcopy s1 0x160 0x020 0x0a0 (by native_decide)
-  have lookup3 := lookup2.mcopy s2 0x200 0x020 0x0a0 (by native_decide)
+  have lookup1 := lookup.mcopy s0 0x0c0 0x020 0x0a0 (by decide)
+  have lookup2 := lookup1.mcopy s1 0x160 0x020 0x0a0 (by decide)
+  have lookup3 := lookup2.mcopy s2 0x200 0x020 0x0a0 (by decide)
   have hhash1 : workingAt s1.memory 0x020 =
       sourceWorkingOf (CompressionCorrect.workingOfHash h) := by
     rw [workingAt_mcopy_hash s0 0x0c0 0x020 0x0a0 (by decide)]

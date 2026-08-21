@@ -18,7 +18,8 @@ verified optimizer's unconditional `RunEquivBlock` theorem.
 
 The `native_decide` uses below establish finite, concrete artifact facts: the
 result of parsing and compiling this fixed source. No universal semantic claim
-is discharged by native evaluation.
+is discharged by native evaluation; the direct functional theorem has a
+separately guarded kernel axiom footprint.
 -/
 
 namespace Challenge.Ripemd160.Reference.Proofs.Yul

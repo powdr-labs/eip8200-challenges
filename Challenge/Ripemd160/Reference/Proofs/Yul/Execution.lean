@@ -639,30 +639,30 @@ theorem FixedLookupCorrect.padState {st : EvmState} {input : ByteArray}
     unfold tableValue
     rw [loadWord_padState st input hcd hfit]
     · simpa [tableValue] using fixed.leftIndex i hi
-    · interval_cases i <;> native_decide
+    · interval_cases i <;> decide
   rightIndex i hi := by
     unfold tableValue
     rw [loadWord_padState st input hcd hfit]
     · simpa [tableValue] using fixed.rightIndex i hi
-    · interval_cases i <;> native_decide
+    · interval_cases i <;> decide
   leftRotation i hi := by
     unfold tableValue
     rw [loadWord_padState st input hcd hfit]
     · simpa [tableValue] using fixed.leftRotation i hi
-    · interval_cases i <;> native_decide
+    · interval_cases i <;> decide
   rightRotation i hi := by
     unfold tableValue
     rw [loadWord_padState st input hcd hfit]
     · simpa [tableValue] using fixed.rightRotation i hi
-    · interval_cases i <;> native_decide
+    · interval_cases i <;> decide
   leftConstant i hi := by
     rw [loadWord_padState st input hcd hfit]
     · exact fixed.leftConstant i hi
-    · interval_cases i <;> native_decide
+    · interval_cases i <;> decide
   rightConstant i hi := by
     rw [loadWord_padState st input hcd hfit]
     · exact fixed.rightConstant i hi
-    · interval_cases i <;> native_decide
+    · interval_cases i <;> decide
 
 private theorem storeMany_above (st : EvmState) (stores : List (U256 × U256))
     (cutoff : Nat) (hall : ∀ p v, (p, v) ∈ stores → p.toNat + 32 ≤ cutoff) :
@@ -685,7 +685,7 @@ theorem initTablesState_above (st : EvmState) (q : Nat) (hq : 0x800 ≤ q) :
   apply storeMany_above st tableStores 0x800 (fun p v hm => ?_) q hq
   simp only [tableStores, List.mem_cons, List.not_mem_nil, or_false] at hm
   rcases hm with h | h | h | h | h | h | h | h | h | h | h | h | h | h |
-    h | h | h | h | h | h | h | h <;> cases h <;> native_decide
+    h | h | h | h | h | h | h | h <;> cases h <;> decide
 
 def preparedState (st : EvmState) : EvmState :=
   padState (initHState (initTablesState st))
@@ -707,7 +707,7 @@ theorem preparedState_correct (st : EvmState) (input : ByteArray)
       apply sourceWorking_ext
       all_goals unfold workingAt
       all_goals apply loadWord_padState _ input hcd' hfit
-      all_goals native_decide
+      all_goals decide
     rw [hworking]
     simpa [hashPrefix] using workingAt_initHState (initTablesState st)
   · unfold preparedState
@@ -1154,7 +1154,7 @@ private theorem hAtValue_outputPrefix (st : EvmState) (n i : Nat)
   intro q hq
   apply outputPrefix_memory_above st n q hn
   have hp : (32 + BitVec.ofNat 256 i * 32 : U256).toNat = 32 + i * 32 := by
-    interval_cases i <;> native_decide
+    interval_cases i <;> decide
   rw [hp] at hq
   omega
 
@@ -1165,7 +1165,7 @@ private theorem hAtValue_zeroOutputState (st : EvmState) (i : Nat) (hi : i < 5) 
   intro q hq
   apply zeroOutputState_memory_above
   have hp : (32 + BitVec.ofNat 256 i * 32 : U256).toNat = 32 + i * 32 := by
-    interval_cases i <;> native_decide
+    interval_cases i <;> decide
   rw [hp] at hq
   omega
 
@@ -1284,8 +1284,8 @@ private theorem writtenByte_ofUInt32 (w : UInt32) (j : Nat) (hj : j < 4) :
   have hshift : 8 * j < 32 := by omega
   norm_num only [Nat.reducePow, Nat.reduceMod, Nat.shiftRight_zero]
   have hshiftBig : 8 * j < 4294967296 := by omega
-  have hffBV : BitVec.toNat (255 : U256) = 255 := by native_decide
-  have hff32 : UInt32.toNat (255 : UInt32) = 255 := by native_decide
+  have hffBV : BitVec.toNat (255 : U256) = 255 := by decide
+  have hff32 : UInt32.toNat (255 : UInt32) = 255 := by decide
   rw [hffBV, hff32, Nat.mod_eq_of_lt hshiftBig, Nat.mod_eq_of_lt hshift]
 
 private theorem sourceWordBytes_ofUInt32 (w : UInt32) :
@@ -1509,7 +1509,7 @@ theorem run_verifiedProgram (st : EvmState) (input : ByteArray)
       (initHState (initTablesState st)) (mkCall "pad" [])
       (.vals [BitVec.ofNat 256 (Padding.paddedLength input.size)]
         (padState (initHState (initTablesState st)))) := by
-    have hpadName : parse "pad" = none := by native_decide
+    have hpadName : parse "pad" = none := by decide
     simpa [mkCall, hpadName] using hpad
   have hblocks := eval_blockLoop (preparedState st) input hfit
   let compressed := compressedState st input

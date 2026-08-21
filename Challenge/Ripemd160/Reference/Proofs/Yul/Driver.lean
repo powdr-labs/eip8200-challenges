@@ -275,7 +275,7 @@ private theorem tableStores_disjoint_slot (slot : Nat) (hslot : slot < 22) :
     simp only [tableStores, List.mem_cons, List.not_mem_nil, or_false] at hm <;>
     rcases hm with h | h | h | h | h | h | h | h | h | h | h |
       h | h | h | h | h | h | h | h | h | h | h <;>
-    cases h <;> simp only [WordDisjoint] <;> native_decide
+    cases h <;> simp only [WordDisjoint] <;> decide
 
 private theorem loadWord_initTableSlot (st : EvmState) (slot : Nat)
     (hslot : slot < 22) :
@@ -283,7 +283,7 @@ private theorem loadWord_initTableSlot (st : EvmState) (slot : Nat)
       (tableStores[slot]!).2 := by
   have h := loadWord_initTables st
     (BitVec.ofNat 256 (0x4a0 + slot * 32)) (tableStores[slot]!).2
-    (by interval_cases slot <;> native_decide)
+    (by interval_cases slot <;> decide)
     (tableStores_disjoint_slot slot hslot)
   rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (by omega)] at h
   exact h
@@ -343,7 +343,7 @@ private theorem initTables_leftIndex (st : EvmState) :
     | rw [loadWord_initTableSlot st 0 (by decide)]
     | rw [loadWord_initTableSlot st 1 (by decide)]
     | rw [loadWord_initTableSlot st 2 (by decide)]
-  all_goals native_decide
+  all_goals decide
 
 private theorem initTables_rightIndex (st : EvmState) :
     ∀ i, i < 80 → tableValue (initTablesState st).memory 0x500
@@ -355,7 +355,7 @@ private theorem initTables_rightIndex (st : EvmState) :
     | rw [loadWord_initTableSlot st 3 (by decide)]
     | rw [loadWord_initTableSlot st 4 (by decide)]
     | rw [loadWord_initTableSlot st 5 (by decide)]
-  all_goals native_decide
+  all_goals decide
 
 private theorem initTables_leftRotation (st : EvmState) :
     ∀ i, i < 80 → tableValue (initTablesState st).memory 0x560
@@ -367,7 +367,7 @@ private theorem initTables_leftRotation (st : EvmState) :
     | rw [loadWord_initTableSlot st 6 (by decide)]
     | rw [loadWord_initTableSlot st 7 (by decide)]
     | rw [loadWord_initTableSlot st 8 (by decide)]
-  all_goals native_decide
+  all_goals decide
 
 private theorem initTables_rightRotation (st : EvmState) :
     ∀ i, i < 80 → tableValue (initTablesState st).memory 0x5c0
@@ -379,7 +379,7 @@ private theorem initTables_rightRotation (st : EvmState) :
     | rw [loadWord_initTableSlot st 9 (by decide)]
     | rw [loadWord_initTableSlot st 10 (by decide)]
     | rw [loadWord_initTableSlot st 11 (by decide)]
-  all_goals native_decide
+  all_goals decide
 
 private theorem constantAddress_nat (memory : Nat → UInt8) (base : U256)
     (baseNat i : Nat) (hi : i < 80) (hbase : base.toNat = baseNat)
@@ -406,7 +406,7 @@ private theorem initTables_leftConstant (st : EvmState) :
     | rw [loadWord_initTableSlot st 14 (by decide)]
     | rw [loadWord_initTableSlot st 15 (by decide)]
     | rw [loadWord_initTableSlot st 16 (by decide)]
-  all_goals native_decide
+  all_goals decide
 
 private theorem initTables_rightConstant (st : EvmState) :
     ∀ i, i < 80 →
@@ -422,7 +422,7 @@ private theorem initTables_rightConstant (st : EvmState) :
     | rw [loadWord_initTableSlot st 19 (by decide)]
     | rw [loadWord_initTableSlot st 20 (by decide)]
     | rw [loadWord_initTableSlot st 21 (by decide)]
-  all_goals native_decide
+  all_goals decide
 
 /-- Exact fixed lookup data after the source initializer. -/
 theorem fixedLookup_initTables (st : EvmState) :
