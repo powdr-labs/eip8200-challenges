@@ -1,4 +1,5 @@
 import Challenge.Ripemd160.Reference.Proofs.Bytecode.Padding
+import Challenge.Ripemd160.Reference.Proofs.Bytecode.Main
 import Challenge.Ripemd160.Reference.Proofs.Bytecode.Trace
 import Challenge.EvmProof.Stepper
 set_option warningAsError true

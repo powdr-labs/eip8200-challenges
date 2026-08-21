@@ -59,6 +59,21 @@ Its final compiler-route theorem explicitly requires Yul functional semantics
 and an initial-state abstraction. The direct bytecode proof does not rely on
 those two premises or on source/compiler correctness.
 
+### Source-Yul proof boundary
+
+Reusable source-proof infrastructure is a sibling of `Challenge.EvmProof`:
+
+- `Challenge/YulProof/Interpreter.lean` projects successful executable Yul
+  interpreter computations into the relational big-step semantics;
+- `Challenge/YulProof/EvmState.lean` provides common EVM-dialect state
+  transformers, bulk stores/copies, word reads, and memory-frame relations.
+
+The files under `Reference/Proofs/Yul/` are RIPEMD-specific: `StateModel`
+mirrors this source's fixed tables and exact state transitions, `Procedures`
+proves its procedure contracts, `Algorithm` relates its 256-bit expressions
+to RIPEMD's 32-bit model, `Driver` maintains the RIPEMD block invariant, and
+`Execution` proves this program's padding, serialization, and top-level run.
+
 ## 3. Direct-bytecode proof layout
 
 The proof reuses `Challenge.EvmProof.GasSteps`, located instruction paths,
@@ -164,6 +179,7 @@ Useful focused builds are:
 ```sh
 lake build Challenge.Ripemd160.Reference.Proofs.Bytecode.ReferenceCorrect
 lake build Challenge.Ripemd160.Reference.Proofs.Bytecode
+lake build Challenge.Ripemd160.Reference.Proofs.Yul
 lake build Challenge.Ripemd160.Reference.Proofs
 lake build Challenge.Ripemd160
 ```

@@ -17,3 +17,11 @@ info: 'Challenge.Ripemd160.Reference.Proofs.Bytecode.ReferenceCorrect.reference_
 -/
 #guard_msgs in
 #print axioms Challenge.Ripemd160.Reference.Proofs.Bytecode.ReferenceCorrect.reference_correct
+
+/--
+info: 'Challenge.Ripemd160.Reference.Proofs.Yul.Execution.verifiedProgram_computesDigest' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in
+#print axioms Challenge.Ripemd160.Reference.Proofs.Yul.Execution.verifiedProgram_computesDigest
