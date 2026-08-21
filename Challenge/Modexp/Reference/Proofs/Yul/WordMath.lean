@@ -25,14 +25,6 @@ open YulEvmCompiler
 open StateModel
 open Challenge.YulProof.Word
 
-theorem wordFrom_toNat (input : ByteArray) (offset : Nat) :
-    (wordFrom input.toList offset).toNat =
-      Precompile.bytesToNatPadded input offset 32 := by
-  have hload := (Challenge.EvmProof.Bytes.memMatch_toList input).loadWord offset
-  change conv (wordFrom input.toList offset) = MachineState.readWord input offset at hload
-  have hnat := congrArg UInt256.toNat hload
-  simpa [Challenge.EvmProof.Bytes.readWord_toNat] using hnat
-
 theorem calldataByteValue_toNat (st : EvmState) (input : ByteArray) (off : U256)
     (hcalldata : st.env.calldata = input.toList) :
     (calldataByteValue st off).toNat =
@@ -122,22 +114,6 @@ theorem exponentBit_eq (byte : U256) (j : Nat) (hj : j < 8) :
   rw [show (1 : Nat) = 2 ^ 1 - 1 by norm_num,
     Nat.and_two_pow_sub_one_eq_mod,
     Nat.mod_eq_of_lt (by omega : (byte.toNat >>> (7 - j)) % 2 < 2 ^ 256)]
-
-theorem select_zero (x y : U256) :
-    x ^^^ (((x ^^^ y) &&& ((0 : U256) - 0))) = x := by
-  simp
-
-theorem select_one (x y : U256) :
-    x ^^^ (((x ^^^ y) &&& ((0 : U256) - 1))) = y := by
-  apply BitVec.eq_of_toNat_eq
-  rw [BitVec.toNat_xor, BitVec.toNat_and, BitVec.toNat_xor]
-  have hmask : (((0 : U256) - 1).toNat) = 2 ^ 256 - 1 := by
-    rw [BitVec.toNat_sub]
-    change (2 ^ 256 - 1 + 0) % 2 ^ 256 = 2 ^ 256 - 1
-    norm_num
-  rw [hmask, Nat.and_two_pow_sub_one_eq_mod,
-    Nat.mod_eq_of_lt (Nat.xor_lt_two_pow x.isLt y.isLt),
-    ← Nat.xor_assoc, Nat.xor_self, Nat.zero_xor]
 
 def natBitStep (modulus : Nat) (byte : U256) (j acc base : Nat) : Nat :=
   let square := (acc * acc) % modulus
@@ -510,7 +486,7 @@ theorem wordReturnedState_result (st : EvmState) (input : ByteArray)
             (((32 : U256) - BitVec.ofNat 256 (modulusSize input)) * 8).toNat))
         0x1800 (BitVec.ofNat 256 (modulusSize input)).toNat) = _
   rw [hmsizeWord,
-    readBytes_storeWord_output st.memory (sourceWordResult st input)
+    readBytes_storeWord_output 0x1800 st.memory (sourceWordResult st input)
       (modulusSize input) hmemory hword (by simpa [hsource] using hresult)]
   rw [hsource, spec, if_neg (Nat.ne_of_gt hmsize)]
   congr 2

@@ -66,7 +66,7 @@ private theorem headerWord_base (st : EvmState) (input : ByteArray)
     (hcd : st.env.calldata = input.toList) :
     wordFrom st.env.calldata 0 = BitVec.ofNat 256 (baseSize input) := by
   apply BitVec.eq_of_toNat_eq
-  rw [hcd, WordMath.wordFrom_toNat]
+  rw [hcd, Challenge.YulProof.Word.wordFrom_toNat]
   change Precompile.bytesToNatPadded input 0 32 =
     Precompile.bytesToNatPadded input 0 32 % 2 ^ 256
   rw [Nat.mod_eq_of_lt (headerSize_lt_word input 0)]
@@ -75,7 +75,7 @@ private theorem headerWord_exponent (st : EvmState) (input : ByteArray)
     (hcd : st.env.calldata = input.toList) :
     wordFrom st.env.calldata 32 = BitVec.ofNat 256 (exponentSize input) := by
   apply BitVec.eq_of_toNat_eq
-  rw [hcd, WordMath.wordFrom_toNat]
+  rw [hcd, Challenge.YulProof.Word.wordFrom_toNat]
   change Precompile.bytesToNatPadded input 32 32 =
     Precompile.bytesToNatPadded input 32 32 % 2 ^ 256
   rw [Nat.mod_eq_of_lt (headerSize_lt_word input 32)]
@@ -84,7 +84,7 @@ private theorem headerWord_modulus (st : EvmState) (input : ByteArray)
     (hcd : st.env.calldata = input.toList) :
     wordFrom st.env.calldata 64 = BitVec.ofNat 256 (modulusSize input) := by
   apply BitVec.eq_of_toNat_eq
-  rw [hcd, WordMath.wordFrom_toNat]
+  rw [hcd, Challenge.YulProof.Word.wordFrom_toNat]
   change Precompile.bytesToNatPadded input 64 32 =
     Precompile.bytesToNatPadded input 64 32 % 2 ^ 256
   rw [Nat.mod_eq_of_lt (headerSize_lt_word input 64)]

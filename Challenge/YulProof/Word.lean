@@ -19,6 +19,35 @@ open EvmSemantics.EVM
 open YulSemantics.EVM
 open YulEvmCompiler
 
+/-- A 32-byte Yul calldata word agrees with the byte-array view used by the
+EVM precompile specifications. -/
+theorem wordFrom_toNat (input : ByteArray) (offset : Nat) :
+    (wordFrom input.toList offset).toNat =
+      Precompile.bytesToNatPadded input offset 32 := by
+  have hload := (Challenge.EvmProof.Bytes.memMatch_toList input).loadWord offset
+  change conv (wordFrom input.toList offset) =
+    MachineState.readWord input offset at hload
+  have hnat := congrArg UInt256.toNat hload
+  simpa [Challenge.EvmProof.Bytes.readWord_toNat] using hnat
+
+/-- Selecting with the all-zero mask retains the first word. -/
+theorem select_zero (x y : U256) :
+    x ^^^ (((x ^^^ y) &&& ((0 : U256) - 0))) = x := by
+  simp
+
+/-- Selecting with the all-one mask retains the second word. -/
+theorem select_one (x y : U256) :
+    x ^^^ (((x ^^^ y) &&& ((0 : U256) - 1))) = y := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_xor, BitVec.toNat_and, BitVec.toNat_xor]
+  have hmask : (((0 : U256) - 1).toNat) = 2 ^ 256 - 1 := by
+    rw [BitVec.toNat_sub]
+    change (2 ^ 256 - 1 + 0) % 2 ^ 256 = 2 ^ 256 - 1
+    norm_num
+  rw [hmask, Nat.and_two_pow_sub_one_eq_mod,
+    Nat.mod_eq_of_lt (Nat.xor_lt_two_pow x.isLt y.isLt),
+    ← Nat.xor_assoc, Nat.xor_self, Nat.zero_xor]
+
 theorem shiftedWord_toNat (value : U256) (width : Nat)
     (hwidth : width ≤ 32) (hvalue : value.toNat < 256 ^ width) :
     (value <<< (((32 : U256) - BitVec.ofNat 256 width) * 8).toNat).toNat =
@@ -57,14 +86,14 @@ theorem shifted_div (n width k : Nat) (hwidth : width ≤ 32) (hk : k < width) :
   exact Nat.mul_div_mul_right n (256 ^ (width - 1 - k))
     (pow_pos (by norm_num) _)
 
-theorem outputMemory_readPadded (value : U256) (width : Nat)
+theorem outputMemory_readPadded (outputOffset : Nat) (value : U256) (width : Nat)
     (hwidth : width ≤ 32) (hvalue : value.toNat < 256 ^ width) :
     let shifted := value <<<
       (((32 : U256) - BitVec.ofNat 256 width) * 8).toNat
     MachineState.readPadded
         (MachineState.writeBytes ByteArray.empty
-          (Data.Bytes.natToBytesPadded shifted.toNat 32) 0x1800)
-        0x1800 width =
+          (Data.Bytes.natToBytesPadded shifted.toNat 32) outputOffset)
+        outputOffset width =
       Precompile.natToBytes value.toNat width := by
   dsimp only
   apply ByteArray.ext_getElem
@@ -82,7 +111,7 @@ theorem outputMemory_readPadded (value : U256) (width : Nat)
         · omega
         · simp [YulEvmCompiler.BytesLemmas.natToBytesPadded_size]
           omega)]
-    rw [show 0x1800 + k - 0x1800 = k by omega,
+    rw [show outputOffset + k - outputOffset = k by omega,
       YulEvmCompiler.BytesLemmas.natToBytesPadded_getElem?_getD _ 32 k
         (by omega),
       Precompile.natToBytes,
@@ -90,19 +119,20 @@ theorem outputMemory_readPadded (value : U256) (width : Nat)
       shiftedWord_toNat value width hwidth hvalue,
       shifted_div value.toNat width k hwidth hk]
 
-theorem readBytes_storeWord_output (memory : Nat → UInt8) (value : U256)
-    (width : Nat) (hmemory : memory = fun _ => 0)
+theorem readBytes_storeWord_output (outputOffset : Nat)
+    (memory : Nat → UInt8) (value : U256) (width : Nat)
+    (hmemory : memory = fun _ => 0)
     (hwidth : width ≤ 32) (hvalue : value.toNat < 256 ^ width) :
     let shifted := value <<<
       (((32 : U256) - BitVec.ofNat 256 width) * 8).toNat
-    readBytes (storeWord memory 0x1800 shifted) 0x1800 width =
+    readBytes (storeWord memory outputOffset shifted) outputOffset width =
       (Precompile.natToBytes value.toNat width).toList := by
   dsimp only
   subst memory
   let shifted := value <<< (((32 : U256) - BitVec.ofNat 256 width) * 8).toNat
-  have hmatch := YulEvmCompiler.MemMatch.init.storeWord 0x1800 shifted
-  rw [hmatch.readBytes 0x1800 width]
+  have hmatch := YulEvmCompiler.MemMatch.init.storeWord outputOffset shifted
+  rw [hmatch.readBytes outputOffset width]
   exact congrArg ByteArray.toList
-    (outputMemory_readPadded value width hwidth hvalue)
+    (outputMemory_readPadded outputOffset value width hwidth hvalue)
 
 end Challenge.YulProof.Word
