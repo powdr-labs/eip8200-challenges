@@ -48,8 +48,8 @@ Reusable source-proof infrastructure lives under `Challenge/YulProof/`:
 * `Interpreter.lean` projects successful interpreter runs into relational
   big-step judgments;
 * `EvmState.lean` supplies generic memory transformers and frame lemmas; and
-* `Word.lean` and `NatDigits.lean` supply fixed-width serialization and generic
-  positional-digit facts.
+* `Word.lean`, `Limbs.lean`, and `NatDigits.lean` supply fixed-width
+  serialization, word-array representations, and positional-digit facts.
 
 The MODEXP-specific proof is organized under `Reference/Proofs/Yul/`.
 `Program` is the readable source AST, `StateModel` and `Procedures` give exact

@@ -15,3 +15,7 @@ set_option warningAsError true
 /-- info: 'Challenge.YulProof.EvmState.loadWord_storeMany_preserved' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in
 #print axioms Challenge.YulProof.EvmState.loadWord_storeMany_preserved
+
+/-- info: 'Challenge.YulProof.Limbs.copyWordsState_preserves' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in
+#print axioms Challenge.YulProof.Limbs.copyWordsState_preserves
