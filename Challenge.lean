@@ -34,6 +34,8 @@ challenges:
   (`lake exe modexpchallenge`).
 * `Challenge.Ripemd160.Spec` — the minimal RIPEMD-160 precompile-equivalence
   statement.
+* `Challenge.Ripemd160.YulSpec` — the closed-source RIPEMD-160 statement, with
+  external calls unavailable.
 * `Challenge.Ripemd160.Reference.Proofs.Bytecode.ReferenceCorrect` — the
   unconditional direct-bytecode correctness and exact-gas theorems.
 * `Challenge.Ripemd160.Scorer` — executable clean- and dirty-memory vectors

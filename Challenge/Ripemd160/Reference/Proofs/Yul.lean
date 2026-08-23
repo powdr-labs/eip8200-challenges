@@ -12,9 +12,10 @@ set_option maxHeartbeats 2000000
 # Verified source/compiler bridge for the reference RIPEMD-160 program
 
 This file pins the complete concrete path from `reference.yul` to the frozen
-artifact. The direct big-step proof establishes that the parsed Yul implements
-RIPEMD-160. Normalization and optimization preserve that property by the
-verified optimizer's unconditional `RunEquivBlock` theorem.
+artifact. The direct big-step proof establishes that the parsed Yul satisfies
+the public `Challenge.Ripemd160.Yul.Correct` predicate. Normalization and
+optimization preserve that property by the verified optimizer's unconditional
+`RunEquivBlock` theorem.
 
 The `native_decide` uses below establish finite, concrete artifact facts: the
 result of parsing and compiling this fixed source. No universal semantic claim
@@ -60,13 +61,17 @@ def referenceInstructions : List Instr :=
 theorem referenceBlock?_eq : referenceBlock? = some referenceParsedBlock := by
   exact Option.eq_some_of_isSome referenceParseSucceeded
 
-/-- Source-text-facing functional obligation: whatever block the parser
-returns computes the digest. -/
-def ReferenceComputesDigest : Prop :=
-  ∀ block, referenceBlock? = some block → ComputesDigest block
+/-- Source-text-facing functional obligation for the RIPEMD-160 reference.
+This pins the parsed source while keeping its target the public Yul challenge. -/
+def ReferenceCorrect : Prop :=
+  ∀ block, referenceBlock? = some block → Challenge.Ripemd160.Yul.Correct block
+
+/-- Compatibility name retained for downstream users of the original direct
+proof API. -/
+abbrev ReferenceComputesDigest := ReferenceCorrect
 
 theorem referenceComputesDigest_iff :
-    ReferenceComputesDigest ↔ ComputesDigest referenceParsedBlock := by
+    ReferenceCorrect ↔ Challenge.Ripemd160.Yul.Correct referenceParsedBlock := by
   constructor
   · intro h
     exact h referenceParsedBlock referenceBlock?_eq
@@ -86,10 +91,19 @@ theorem referenceBlock?_eq_verifiedProgram :
     referenceBlock? = some verifiedProgram := by
   rw [referenceBlock?_eq, referenceParsedBlock_eq_verifiedProgram]
 
-/-- Functional correctness of the actual parsed reference source. -/
-theorem referenceComputesDigest : ReferenceComputesDigest := by
+/-- Functional correctness of the actual parsed reference source against the
+public, auditor-facing Yul specification. -/
+theorem referenceCorrect : ReferenceCorrect := by
   rw [referenceComputesDigest_iff, referenceParsedBlock_eq_verifiedProgram]
   exact Execution.verifiedProgram_computesDigest
+
+/-- The parsed reference block directly satisfies the public Yul challenge. -/
+theorem referenceParsedBlock_correct :
+    Challenge.Ripemd160.Yul.Correct referenceParsedBlock :=
+  referenceComputesDigest_iff.mp referenceCorrect
+
+/-- Compatibility theorem for the original proof-facing name. -/
+theorem referenceComputesDigest : ReferenceComputesDigest := referenceCorrect
 
 /-- The production source entry point reproduces the frozen bytes. -/
 theorem referenceBytecode?_eq : referenceBytecode? = some referenceBytecode := by
@@ -121,8 +135,8 @@ theorem reference_runEquiv :
 /-- Hence the functional digest obligation can be proved against either the
 auditable parsed source or the exact block accepted by the backend. -/
 theorem computesDigest_optimized_iff :
-    ComputesDigest referenceOptimizedBlock ↔
-      ComputesDigest referenceParsedBlock := by
+    Challenge.Ripemd160.Yul.Correct referenceOptimizedBlock ↔
+      Challenge.Ripemd160.Yul.Correct referenceParsedBlock := by
   constructor
   · intro h
     exact h.map_program (fun initial finalEnv final outcome hrun =>
@@ -136,7 +150,7 @@ semantics and initial-frame abstraction are explicit hypotheses; parsing,
 optimization, backend compilation, assembly, and target simulation are proved
 here or in the reusable compiler library. -/
 theorem reference_correct_of_yul
-    (hyul : ReferenceComputesDigest)
+    (hyul : ReferenceCorrect)
     (habs : AbstractsInitialState referenceBytecode) :
     Correct referenceBytecode := by
   rw [← referenceInstructions_assemble] at habs ⊢

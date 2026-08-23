@@ -1,4 +1,5 @@
 import Challenge.Ripemd160.ProofSupport.InitialState
+import Challenge.Ripemd160.YulSpec
 import Challenge.YulProof.ClosedEvm
 import YulEvmCompiler.ContractCorrectness
 
@@ -7,10 +8,9 @@ set_option warningAsError true
 /-!
 # From a Yul-level obligation to the challenge statement
 
-For any program accepted by the verified compiler, the bytecode challenge can
-be discharged by proving two source-level facts: that the Yul program returns
-the RIPEMD-160 precompile result, and that a fresh Yul state abstracts the fixed
-EVM initial state.
+For any program accepted by the verified compiler, a proof of the public
+`Challenge.Ripemd160.Yul.Correct` predicate transports to the bytecode
+challenge once the source and target initial states are related.
 -/
 
 namespace Challenge.Ripemd160
@@ -31,10 +31,9 @@ theorem localExec_lawful : localExec.Lawful :=
 theorem localExternalsRealized : ExternalsRealized localModel :=
   Challenge.YulProof.ClosedEvm.externalsRealized
 
-/-- The RIPEMD-160 precompile result at the byte-list view used by Yul
-semantics. -/
-def digestOf (calldata : List UInt8) : List UInt8 :=
-  (spec (mkCode calldata)).toList
+/-- Backwards-compatible name for the public Yul result function. New
+candidate-facing statements should use `Challenge.Ripemd160.Yul.result`. -/
+abbrev digestOf := Yul.result
 
 /-- A target initial state is represented by a fresh Yul state carrying the
 same calldata. `StateMatch` is gas-independent, so one source state suffices
@@ -47,15 +46,9 @@ def AbstractsInitialState (code : ByteArray) : Prop :=
     (∀ k, yst.env.immutable k = 0) ∧
     yst.halted = none
 
-/-- From any fresh source state with realizable calldata, the program returns the 32-byte,
-left-padded Ethereum RIPEMD-160 precompile result. This proof-facing contract deliberately retains
-only the halt observation, not the constructed final memory or variable environment. -/
-def ComputesDigest (prog : Block Op) : Prop :=
-  RunContract (D := localDialect) prog
-    (fun yst => yst.memory = (fun _ => 0) ∧ yst.halted = none ∧
-      ∃ input : ByteArray, yst.env.calldata = input.toList ∧ CalldataFits input)
-    (fun yst _ yst' outcome => outcome = .halt ∧
-      yst'.halted = some (.ret, digestOf yst.env.calldata))
+/-- Backwards-compatible name for the public source-level challenge. New
+candidate proofs should state `Challenge.Ripemd160.Yul.Correct program`. -/
+abbrev ComputesDigest := Yul.Correct
 
 /-- The challenge's fixed initial state meets the verified compiler theorem's
 target-side frame conditions. -/
@@ -74,7 +67,7 @@ theorem correct_of_computesDigest {prog : Block Op} {is : List Instr}
     (hcomp : compile prog = some is)
     (hsize : (assemble is).size < 2 ^ 256)
     (habs : AbstractsInitialState (assemble is))
-    (hyul : ComputesDigest prog) :
+    (hyul : Yul.Correct prog) :
     Correct (assemble is) := by
   intro calldata hfit
   obtain ⟨yst, hmatch, hmem, hcd, himm, hhalted⟩ := habs calldata
@@ -89,6 +82,6 @@ theorem correct_of_computesDigest {prog : Block Op} {is : List Instr}
   obtain ⟨hk, hyk, heval⟩ := hhalt rfl
   rw [hres] at hyk
   cases hyk
-  simpa [resultOf, digestOf, hcd, mkCode_toList, spec] using heval
+  simpa [resultOf, hcd, spec, mkCode_toList] using heval
 
 end Challenge.Ripemd160

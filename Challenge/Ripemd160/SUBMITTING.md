@@ -20,6 +20,23 @@ Read `Spec.lean` before starting. It is the complete required functional
 statement. Properties under [`AdditionalGoals/`](AdditionalGoals/) are useful
 strengthenings, but are not required for an ordinary correctness submission.
 
+For a source-Yul candidate `program`, the corresponding auditor-facing
+functional obligation is defined in [`YulSpec.lean`](YulSpec.lean):
+
+```lean
+theorem yulCorrect : Challenge.Ripemd160.Yul.Correct program := by
+  -- direct relational Yul proof
+```
+
+The predicate uses closed source semantics in which external calls are
+unavailable, so this proof cannot call the incumbent `0x03` precompile. It is
+also independent of parsing, optimization, compilation, and the reference AST.
+A compiled submission still exposes concrete `bytecode` and a
+`Challenge.Ripemd160.Correct bytecode` theorem for the artifact-facing checks;
+the verified compiler bridge in [`ProofSupport/Yul.lean`](ProofSupport/Yul.lean)
+transports the source obligation once its compiler and initial-state premises
+are supplied.
+
 ## Directory and names
 
 Choose an UpperCamelCase Lean identifier for the candidate, such as
@@ -162,8 +179,11 @@ toolkit and functional seams, not copy those concrete states blindly.
 
 [`ProofSupport/Yul.lean`](ProofSupport/Yul.lean) provides an alternative
 reduction for a contributor who wants to prove a Yul program and rely on the
-verified compiler. It is optional. The bundled reference already has a direct
-proof of its final bytes and therefore needs no second Yul correctness proof.
+verified compiler. It is optional. The bundled reference demonstrates both
+routes: its direct source proof establishes
+`Challenge.Ripemd160.Yul.Correct`, while its independent direct bytecode proof
+establishes `Challenge.Ripemd160.Correct referenceBytecode` without relying on
+the source or compiler.
 
 Regardless of proof strategy, the PR must still expose the same concrete
 `bytecode` and `correct : Correct bytecode` declarations.

@@ -1441,7 +1441,7 @@ theorem serializedState_returns_digest (st : EvmState) (input : ByteArray)
     readBytes (serializedState st input).memory 0 32 = digestOf input.toList := by
   rw [readBytes_serializedState,
     sourceOutput_compressed_eq_spec st input hmem hcd hfit]
-  simp [digestOf, mkCode_toList]
+  simp [digestOf]
 
 def returnState (st : EvmState) : EvmState :=
   { touchMemory st 0 32 with halted := some (.ret, readBytes st.memory 0 32) }
@@ -1552,7 +1552,8 @@ theorem run_verifiedProgram (st : EvmState) (input : ByteArray)
 
 /-- The direct source proof: the complete Yul block returns the specified
 RIPEMD-160 precompile result for every admitted calldata value. -/
-theorem verifiedProgram_computesDigest : ComputesDigest verifiedProgram := by
+theorem verifiedProgram_computesDigest :
+    Challenge.Ripemd160.Yul.Correct verifiedProgram := by
   intro st hpre
   obtain ⟨hmem, _hnotHalted, input, hcd, hfit⟩ := hpre
   refine ⟨[], returnState (serializedState st input), .halt,

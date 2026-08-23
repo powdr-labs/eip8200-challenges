@@ -213,6 +213,26 @@ jobs:
             exit 1
           fi
 
+      # Source-level statements stay independent of compiler and reference
+      # machinery. Only challenges that publish YulSpec.lean enter this check.
+      - name: Verify ${{ matrix.name }} Yul specification boundary
+        run: |
+          yul_spec="Challenge/${{ matrix.directory }}/YulSpec.lean"
+          if [ ! -f "$yul_spec" ]; then
+            exit 0
+          fi
+          imports="$(grep '^import ' "$yul_spec")"
+          expected="$(printf '%s\n' \
+            'import Challenge.${{ matrix.directory }}.Spec' \
+            'import Challenge.YulProof.Bytes' \
+            'import Challenge.YulProof.ClosedEvmDialect' \
+            'import YulSemantics.Contract')"
+          if [ "$imports" != "$expected" ]; then
+            echo "::error::${{ matrix.name }} YulSpec.lean crossed the source specification boundary"
+            printf '%s\n' "$imports"
+            exit 1
+          fi
+
       # The Yul compiler is only the reproducible generator for the frozen
       # artifact; direct-bytecode proofs target the literal bytes themselves.
       - name: Verify frozen ${{ matrix.name }} reference bytecode
