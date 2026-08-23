@@ -180,6 +180,11 @@
     let lamHi, lamLo
     if fpEq(mload(0), mload(32), mload(128), mload(160)) {
         if iszero(fpEq(mload(64), mload(96), mload(192), mload(224))) {
+            storePoint(0, 0, 0, 0)
+            return(0, 128)
+        }
+        if fpZero(mload(64), mload(96)) {
+            storePoint(0, 0, 0, 0)
             return(0, 128)
         }
         let xSqHi, xSqLo := fpMul(mload(0), mload(32), mload(0), mload(32))
