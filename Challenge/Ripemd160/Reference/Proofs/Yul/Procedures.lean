@@ -113,7 +113,7 @@ private theorem eval_scheduleCond (st : EvmState) (msgOff : U256) (i : Nat) :
       (.vals [if (BitVec.ofNat 256 i).toNat < 16 then (1 : U256) else (0 : U256)] st) := by
   apply Step.builtinOk (D := localDialect)
     (Step.argsCons (Step.argsCons Step.argsNil Step.lit) (Step.var rfl))
-  simp [localDialect, YulSemantics.EVM.evmWithExternal,
+  simp [localDialect,
     YulSemantics.EVM.builtinWithExternal, YulSemantics.EVM.stepOp,
     YulSemantics.EVM.bin, BitVec.ult, YulSemantics.EVM.b2w,
     YulSemantics.EVM.litValue]
@@ -715,7 +715,7 @@ private theorem exec_roundPost_succ (funs : FunEnv localDialect)
   have hi : BitVec.ofNat 256 i + localDialect.litValue (.number 1) =
       BitVec.ofNat 256 (i + 1) := by
     apply BitVec.eq_of_toNat_eq
-    simp [BitVec.toNat_add, localDialect, YulSemantics.EVM.evmWithExternal,
+    simp [BitVec.toNat_add, localDialect,
       YulSemantics.EVM.litValue]
   have hadd : EvalExpr localDialect innerFuns
       (("i", BitVec.ofNat 256 i) :: Vtail) st (yulE% add(i, 1))
@@ -752,7 +752,7 @@ private theorem eval_roundCond (funs : FunEnv localDialect) (Vtail : VEnv localD
       (.vals [if i < 80 then (1 : U256) else (0 : U256)] st) := by
   apply Step.builtinOk (D := localDialect)
     (Step.argsCons (Step.argsCons Step.argsNil Step.lit) (Step.var rfl))
-  simp [localDialect, YulSemantics.EVM.evmWithExternal,
+  simp [localDialect,
     YulSemantics.EVM.builtinWithExternal, YulSemantics.EVM.stepOp,
     YulSemantics.EVM.bin, BitVec.ult, YulSemantics.EVM.b2w,
     YulSemantics.EVM.litValue]

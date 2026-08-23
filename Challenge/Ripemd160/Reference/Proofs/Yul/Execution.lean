@@ -109,7 +109,7 @@ private theorem exec_padPost (funs : FunEnv localDialect) (st : EvmState)
   have hi' : BitVec.ofNat 256 i + localDialect.litValue (.number 1) =
       BitVec.ofNat 256 (i + 1) := by
     apply BitVec.eq_of_toNat_eq
-    simp [BitVec.toNat_add, localDialect, YulSemantics.EVM.evmWithExternal,
+    simp [BitVec.toNat_add, localDialect,
       YulSemantics.EVM.litValue]
   have hadd : EvalExpr localDialect innerFuns
       (("i", BitVec.ofNat 256 i) :: Vtail) st (yulE% add(i, 1))
@@ -713,7 +713,7 @@ private theorem eval_blockCond (funs : FunEnv localDialect)
       (.vals [if n < blockCount input then (1 : U256) else 0] st) := by
   apply Step.builtinOk (D := localDialect)
     (Step.argsCons (Step.argsCons Step.argsNil (Step.var rfl)) (Step.var rfl))
-  simp [localDialect, YulSemantics.EVM.evmWithExternal,
+  simp [localDialect,
     YulSemantics.EVM.builtinWithExternal, YulSemantics.EVM.stepOp,
     YulSemantics.EVM.bin, BitVec.ult, YulSemantics.EVM.b2w]
   have hpadded : Padding.paddedLength input.size < 2 ^ 256 := by

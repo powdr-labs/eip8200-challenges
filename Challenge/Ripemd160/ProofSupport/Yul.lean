@@ -1,4 +1,5 @@
 import Challenge.Ripemd160.ProofSupport.InitialState
+import Challenge.YulProof.ClosedEvm
 import YulEvmCompiler.ContractCorrectness
 
 set_option warningAsError true
@@ -17,78 +18,23 @@ namespace Challenge.Ripemd160
 open EvmSemantics
 open EvmSemantics.EVM
 open YulSemantics (Block RunContract VEnv)
-open YulSemantics.EVM
-  (EvmState Op evmWithExternal ExternalCalls ExternalCreates ExternalGas)
+open YulSemantics.EVM (EvmState Op)
 open YulEvmCompiler
+
+/-- Compatibility names for the shared closed EVM source semantics. -/
+abbrev localModel := Challenge.YulProof.ClosedEvm.model
+abbrev localDialect := Challenge.YulProof.ClosedEvm.dialect
+abbrev localBuiltinFn := Challenge.YulProof.ClosedEvm.builtinFn
+abbrev localExec := Challenge.YulProof.ClosedEvm.exec
+theorem localExec_lawful : localExec.Lawful :=
+  Challenge.YulProof.ClosedEvm.exec_lawful
+theorem localExternalsRealized : ExternalsRealized localModel :=
+  Challenge.YulProof.ClosedEvm.externalsRealized
 
 /-- The RIPEMD-160 precompile result at the byte-list view used by Yul
 semantics. -/
 def digestOf (calldata : List UInt8) : List UInt8 :=
   (spec (mkCode calldata)).toList
-
-/-- The reference implementation neither calls contracts nor creates them. -/
-@[reducible] def localModel : ExternalModel :=
-  { calls := ExternalCalls.none, creates := ExternalCreates.none, gas := ExternalGas.none }
-
-/-- The gas-free source dialect used by the functional obligation. -/
-abbrev localDialect := evmWithExternal ExternalCalls.none ExternalCreates.none
-  YulSemantics.EVM.ExternalGas.none
-
-/-- Executable built-in function for the fully closed compiler source dialect. The only
-non-`stepOp` results that remain possible are the deterministic static-context violations imposed
-before an unavailable call or creation is consulted. -/
-def localBuiltinFn (op : Op) (args : List YulSemantics.EVM.U256) (st : EvmState) :
-    Option (YulSemantics.BuiltinResult YulSemantics.EVM.U256 EvmState) :=
-  match op with
-  | .call => match args with
-      | [_, _, value, _, _, _, _] =>
-          if st.env.static ∧ value ≠ 0 then
-            some (YulSemantics.BuiltinResult.halt
-              { st with halted := some (.staticViolation, []) })
-          else none
-      | _ => none
-  | .callcode | .delegatecall | .staticcall => none
-  | .create => match args with
-      | [_, _, _] =>
-          if st.env.static then
-            some (YulSemantics.BuiltinResult.halt
-              { st with halted := some (.staticViolation, []) })
-          else none
-      | _ => none
-  | .create2 => match args with
-      | [_, _, _, _] =>
-          if st.env.static then
-            some (YulSemantics.BuiltinResult.halt
-              { st with halted := some (.staticViolation, []) })
-          else none
-      | _ => none
-  | .gas => none
-  | _ => YulSemantics.EVM.stepOp op args st
-
-/-- Executable presentation of the fully closed compiler source dialect. -/
-@[reducible] def localExec : YulSemantics.ExecDialect :=
-  { toDialect := localDialect, builtinFn := localBuiltinFn }
-
-/-- The closed presentation is lawful: calls, creations, and `gas()` are impossible on both sides,
-while every local operation is exactly `stepOp`. -/
-theorem localExec_lawful : localExec.Lawful := by
-  intro op args st result
-  cases op <;>
-    simp [localExec, localDialect, evmWithExternal,
-      localBuiltinFn,
-      YulSemantics.EVM.builtinWithExternal, YulSemantics.EVM.externalCall,
-      YulSemantics.EVM.externalCreate, ExternalCalls.none, ExternalCreates.none,
-      ExternalGas.none, YulSemantics.EVM.stepOp]
-  all_goals
-    rcases args with _ | ⟨a, _ | ⟨b, _ | ⟨c, _ | ⟨d, _ | ⟨e, _ | ⟨f, _ | ⟨g, args⟩⟩⟩⟩⟩⟩⟩ <;>
-      simp <;> try split <;> simp_all
-  all_goals
-    intros
-    constructor <;> intro h <;> exact h.symm
-
-/-- The fully closed external model has no realizability obligations. -/
-theorem localExternalsRealized : ExternalsRealized localModel :=
-  ⟨CallsRealized.none, CreatesRealized.none, GasCallsRealized.noneOracle _⟩
 
 /-- A target initial state is represented by a fresh Yul state carrying the
 same calldata. `StateMatch` is gas-independent, so one source state suffices

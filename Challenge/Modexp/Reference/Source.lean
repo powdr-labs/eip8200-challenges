@@ -6,15 +6,19 @@ namespace Challenge.Modexp
 open YulSemantics (Block)
 open YulSemantics.EVM (Op)
 
+/-- The reference implementation, verbatim. -/
 def referenceSource : String := include_str "reference.yul"
 
+/-- Where that file lives, for executable tooling. -/
 def referenceSourcePath : String := "Challenge/Modexp/Reference/reference.yul"
 
+/-- The parsed reference source. -/
 def referenceBlock? : Option (Block Op) :=
   match YulParser.parseSource referenceSource with
   | some (.block statements) => some statements
   | _ => none
 
+/-- Bytecode emitted by the pinned verified Yul compiler. -/
 def referenceBytecode? : Option ByteArray :=
   YulParser.compileSource referenceSource
 
