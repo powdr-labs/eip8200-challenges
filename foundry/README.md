@@ -11,6 +11,12 @@ pinned semantics ever mispriced an opcode, charged memory expansion wrongly, or
 disagreed with a production EVM about a fork rule, the numbers in this
 repository would be wrong in a way no Lean-side test could reveal.
 
+`Bls12381G1Add.t.sol` is intentionally different: it compares the generated
+source-only G1ADD artifact with native `0x0b` over representative valid and
+malformed inputs. The Lean theorem covers parsed Yul, not these EVM bytes, so
+the Foundry test is a compiler/artifact falsification check rather than a gas
+cross-check for proved bytecode.
+
 ```sh
 cd foundry
 forge test        # summary

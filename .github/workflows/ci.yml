@@ -140,6 +140,13 @@ jobs:
             main: Blake2fMain.lean
             target: +Challenge.Blake2f blake2fchallenge
             has_submission_checks: true
+          - name: BLS12-381 G1ADD
+            directory: Bls12381G1Add
+            slug: bls12381-g1add
+            main: Challenge/Bls12381G1Add.lean
+            target: +Challenge.Bls12381G1Add
+            has_submission_checks: false
+            source_only: true
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -207,8 +214,17 @@ jobs:
       - name: Verify ${{ matrix.name }} specification boundary
         run: |
           imports="$(grep '^import ' "Challenge/${{ matrix.directory }}/Spec.lean")"
-          if [ "$imports" != 'import EvmSemantics.EVM.BigStep' ]; then
-            echo "::error::${{ matrix.name }} Spec.lean must depend only on the pinned EVM semantics"
+          if [ "${{ matrix.source_only }}" = 'true' ]; then
+            expected="$(printf '%s\n' \
+              'import EvmSemantics.EVM.BigStep' \
+              'import Challenge.Bls12381G1Add.Constants' \
+              'import Challenge.Bls12381.ProofSupport.CodecG1' \
+              'import Challenge.Bls12381.ProofSupport.G1Affine')"
+          else
+            expected='import EvmSemantics.EVM.BigStep'
+          fi
+          if [ "$imports" != "$expected" ]; then
+            echo "::error::${{ matrix.name }} Spec.lean crossed its approved specification boundary"
             printf '%s\n' "$imports"
             exit 1
           fi
@@ -222,11 +238,19 @@ jobs:
             exit 0
           fi
           imports="$(grep '^import ' "$yul_spec")"
-          expected="$(printf '%s\n' \
-            'import Challenge.${{ matrix.directory }}.Spec' \
-            'import Challenge.YulProof.Bytes' \
-            'import Challenge.YulProof.ClosedEvmDialect' \
-            'import YulSemantics.Contract')"
+          if [ "${{ matrix.source_only }}" = 'true' ]; then
+            expected="$(printf '%s\n' \
+              'import Challenge.${{ matrix.directory }}.Spec' \
+              'import Challenge.YulProof.Bytes' \
+              'import Challenge.YulProof.ModexpDialect' \
+              'import YulSemantics.Contract')"
+          else
+            expected="$(printf '%s\n' \
+              'import Challenge.${{ matrix.directory }}.Spec' \
+              'import Challenge.YulProof.Bytes' \
+              'import Challenge.YulProof.ClosedEvmDialect' \
+              'import YulSemantics.Contract')"
+          fi
           if [ "$imports" != "$expected" ]; then
             echo "::error::${{ matrix.name }} YulSpec.lean crossed the source specification boundary"
             printf '%s\n' "$imports"
@@ -236,6 +260,7 @@ jobs:
       # The Yul compiler is only the reproducible generator for the frozen
       # artifact; direct-bytecode proofs target the literal bytes themselves.
       - name: Verify frozen ${{ matrix.name }} reference bytecode
+        if: matrix.source_only != true
         run: |
           reference="Challenge/${{ matrix.directory }}/Reference"
           compiled="$(lake exe yulc --backend=classic "$reference/reference.yul")"
@@ -243,6 +268,26 @@ jobs:
           literal="$(lake exe ${{ matrix.executable }} --print-reference-hex)"
           if [ "$compiled" != "$frozen" ] || [ "$literal" != "$frozen" ]; then
             echo "::error::${{ matrix.name }} reference.hex is stale"
+            exit 1
+          fi
+
+      # Source-only challenges use yulc's current automatic selector to
+      # generate the Foundry artifact. Correctness is proved for parsed Yul,
+      # never transported to these bytes.
+      - name: Verify generated ${{ matrix.name }} Foundry artifact
+        if: matrix.source_only == true
+        run: |
+          reference="Challenge/${{ matrix.directory }}/Reference"
+          compiled="$(lake exe yulc --backend=auto "$reference/reference.yul")"
+          frozen="$(tr -d '[:space:]' < "$reference/reference.hex")"
+          if [ "$compiled" != "$frozen" ]; then
+            echo "::error::${{ matrix.name }} reference.hex is stale"
+            exit 1
+          fi
+          if grep -Rnw --include='*.lean' -E \
+              'assemble|compileProgram|referenceBytecode|referenceInstructions' \
+              "$reference/Proofs"; then
+            echo "::error::${{ matrix.name }} source proof crossed into bytecode correctness"
             exit 1
           fi
 
@@ -258,6 +303,7 @@ jobs:
           scripts/check-${{ matrix.slug }}-gas-report.sh
 
       - name: Run ${{ matrix.name }} scorer controls
+        if: matrix.source_only != true
         run: |
           case "${{ matrix.slug }}" in
             sha256)
