@@ -14,7 +14,7 @@ defaultTargets = ["Challenge"]
 [[require]]
 name = "yul-evm-compiler"
 git = "https://github.com/powdr-labs/yul-compiler"
-rev = "8675b3f3c39c8380815e979b5e8e183d5459d4b0"
+rev = "c2e44cd2d487fd59b14897732189acc0c1724873"
 
 # Pin the source semantics explicitly because it is part of the proof and
 # submission trust boundary, rather than relying on the compiler transitively.
