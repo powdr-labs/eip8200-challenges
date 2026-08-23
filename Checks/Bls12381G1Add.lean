@@ -17,8 +17,7 @@ info: 'Challenge.Bls12381G1Add.Reference.Proofs.Yul.referenceParsedBlock_correct
  Classical.choice,
  Quot.sound,
  Challenge.Bls12381G1Add.Reference.Proofs.Compilation.referenceNormalizedBlock_eq._native.native_decide.ax_1_1,
- Challenge.Bls12381G1Add.Reference.Proofs.Compilation.referenceParseSucceeded._native.native_decide.ax_1_1,
- Challenge.Bls12381G1Add.Reference.Proofs.Compilation.referenceRawBlock_eq._native.native_decide.ax_1_1]
+ Challenge.Bls12381G1Add.Reference.Proofs.Compilation.referenceParseSucceeded._native.native_decide.ax_1_1]
 -/
 #guard_msgs in
 #print axioms Challenge.Bls12381G1Add.Reference.Proofs.Yul.referenceParsedBlock_correct

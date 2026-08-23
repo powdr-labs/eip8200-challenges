@@ -10,7 +10,7 @@ namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 open EvmSemantics EvmSemantics.EVM
 open YulSemantics YulSemantics.EVM
 
-/-- Exact 241-byte MODEXP input window assembled by `fpMul`. -/
+/-- Exact 241-byte MODEXP input window prepared by `fpMul`. -/
 def fpMulInput (yst : EvmState) (ahi alo bhi blo : U256) : ByteArray :=
   Challenge.EvmProof.ModexpMemory.readWindow
     (fpMulInputState yst ahi alo bhi blo).memory 1024 241

@@ -142,7 +142,7 @@ are fixed by protocol in closed form, and requires the results to match
 sizes. Any offset or scaling error in the probe fails those assertions before it
 can reach a reported number.
 
-## Testing the same artifact the proofs cover
+## Bytecode suites: testing the same artifact the proofs cover
 
 A gas measurement is only interesting if it measures the bytecode the Lean
 theorems are about, and reading `reference.hex` alone would not establish that.
@@ -179,11 +179,13 @@ fixes, under `evm_version = "osaka"`, the fork each `initialState` fixes.
 |---|---|
 | [`src/GasProbe.sol`](src/GasProbe.sol) | exact frame-gas measurement |
 | [`src/LeanArtifact.sol`](src/LeanArtifact.sol) | artifact loading and provenance |
+| [`src/YulArtifact.sol`](src/YulArtifact.sol) | generated source-only artifact loading |
 | [`src/Vectors.sol`](src/Vectors.sol) | the scorers' vector generators, in Solidity |
 | [`test/GasProbe.t.sol`](test/GasProbe.t.sol) | probe controls against known schedules |
 | [`test/LeanArtifact.t.sol`](test/LeanArtifact.t.sol) | provenance negative controls |
 | [`test/GasCrossCheck.sol`](test/GasCrossCheck.sol) | shared scaffolding and report formatting |
-| `test/{Ripemd160,Sha256,Modexp}Gas.t.sol` | per-challenge vectors, Lean numbers, assertions |
+| `test/{Ripemd160,Sha256,Modexp,Blake2f}Gas.t.sol` | per-challenge vectors, Lean numbers, assertions |
+| [`test/Bls12381G1Add.t.sol`](test/Bls12381G1Add.t.sol) | source-artifact differential checks against native G1ADD |
 
 The vectors are regenerated in Solidity from the definitions in each
 `Scorer.lean` rather than exported from Lean, and every generated vector's byte

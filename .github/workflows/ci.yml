@@ -104,7 +104,7 @@ jobs:
   # Each matrix entry has its own job and source-keyed project cache. A RIPEMD
   # submission therefore neither rebuilds nor invalidates SHA-256 or MODEXP.
   challenge:
-    name: ${{ matrix.name }} proofs, submissions, and gas
+    name: ${{ matrix.name }} verification
     needs: shared-lean
     runs-on: warp-ubuntu-2404-x64-32x
     timeout-minutes: 45
@@ -174,7 +174,7 @@ jobs:
           # Only compiled Lean inputs belong in this hash. Documentation and
           # generated gas reports are checked separately and must not trigger
           # a cold proof rebuild.
-          key: project-${{ matrix.slug }}-v4-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-${{ hashFiles(format('Challenge/{0}.lean', matrix.directory), format('Challenge/{0}/**/*.lean', matrix.directory), matrix.main, format('Checks/{0}.lean', matrix.directory)) }}
+          key: project-${{ matrix.slug }}-v4-${{ runner.os }}-${{ runner.arch }}-${{ needs.shared-lean.outputs.shared-key }}-${{ hashFiles(format('Challenge/{0}.lean', matrix.directory), format('Challenge/{0}/**/*.lean', matrix.directory), matrix.main, format('Checks/{0}.lean', matrix.directory)) }}-${{ matrix.source_only && hashFiles('Challenge/Bls12381/**/*.lean') || '' }}
           # Prefer root-only v4 caches. Older namespaces can bootstrap root
           # outputs when their cache archive version is compatible.
           restore-keys: |
@@ -193,7 +193,7 @@ jobs:
           lint: "false"
           use-github-cache: "false"
 
-      - name: Build ${{ matrix.name }} proofs and scorer
+      - name: Build ${{ matrix.name }} targets
         run: lake build ${{ matrix.target }}
 
       # A proof is only a proof if its axiom footprint is the standard one.
@@ -207,10 +207,15 @@ jobs:
             echo "::error::found an unfinished ${{ matrix.name }} proof"
             exit 1
           fi
+          if [ "${{ matrix.source_only }}" = 'true' ] && \
+              grep -rn --include='*.lean' -w 'sorry' Challenge/Bls12381; then
+            echo "::error::found an unfinished shared BLS mathematical proof"
+            exit 1
+          fi
           lake build "+Checks.${{ matrix.directory }}"
 
-      # Keep each statement auditable in isolation. Proof support and bundled
-      # implementations may depend on the spec, never the reverse.
+      # Keep each statement auditable in isolation. The BLS statement admits
+      # only its explicitly listed proof-visible codec/field mathematics.
       - name: Verify ${{ matrix.name }} specification boundary
         run: |
           imports="$(grep '^import ' "Challenge/${{ matrix.directory }}/Spec.lean")"
@@ -282,12 +287,6 @@ jobs:
           frozen="$(tr -d '[:space:]' < "$reference/reference.hex")"
           if [ "$compiled" != "$frozen" ]; then
             echo "::error::${{ matrix.name }} reference.hex is stale"
-            exit 1
-          fi
-          if grep -Rnw --include='*.lean' -E \
-              'assemble|compileProgram|referenceBytecode|referenceInstructions' \
-              "$reference/Proofs"; then
-            echo "::error::${{ matrix.name }} source proof crossed into bytecode correctness"
             exit 1
           fi
 

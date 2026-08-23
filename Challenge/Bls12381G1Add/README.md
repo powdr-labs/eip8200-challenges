@@ -83,7 +83,7 @@ referenceParsedBlock_correct :
 The proof proceeds entirely in Yul big-step semantics:
 
 - the parser and semantics-preserving normalizer are connected to a frozen,
-  readable normalized AST by three finite `native_decide` checks;
+  readable normalized AST by two finite `native_decide` checks;
 - the MODEXP-only executable sub-dialect is proved sound for the public
   relational dialect;
 - codec and two-limb arithmetic lemmas refine memory and word schedules to
@@ -94,7 +94,7 @@ The proof proceeds entirely in Yul big-step semantics:
 [`Checks/Bls12381G1Add.lean`](../../Checks/Bls12381G1Add.lean) pins the axiom
 footprints. The normalized universal theorem uses only `propext`,
 `Classical.choice`, and `Quot.sound`; the parsed-source theorem additionally
-records exactly the three finite parser/AST checks. There is no lowering,
+records exactly the two finite parser/AST checks. There is no lowering,
 assembly, compiler-correctness, instruction-list, or bytecode theorem.
 
 The proof-friendly source and much of its arithmetic decomposition were
