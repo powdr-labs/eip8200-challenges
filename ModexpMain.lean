@@ -126,7 +126,7 @@ def main (args : List String) : IO UInt32 := do
         | none => do IO.eprintln s!"{path}: invalid hex"; return 64
     | none, maybePath =>
         let path := maybePath.getD referenceSourcePath
-        match YulParser.compileSource (← IO.FS.readFile path) with
+        match YulParser.compileSourceWithBackend (← IO.FS.readFile path) [] .classic with
         | some bytes => pure (System.FilePath.mk path, bytes)
         | none => do IO.eprintln s!"{path}: compiler rejected source"; return 2
 

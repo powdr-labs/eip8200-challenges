@@ -39,7 +39,7 @@ jobs:
       - name: Compute shared cache keys
         id: cache-keys
         env:
-          DEPENDENCY_HASH: ${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'patches/lean-4.33/*.patch', 'scripts/apply-lean-4.33-dependency-patches.sh') }}
+          DEPENDENCY_HASH: ${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
           PACKAGE_TARGET_HASH: ${{ hashFiles('.github/lean-package-cache-targets') }}
           SHARED_HASH: ${{ hashFiles('lakefile.toml', 'Challenge/EvmProof.lean', 'Challenge/EvmProof/**/*.lean', 'Challenge/YulProof.lean', 'Challenge/YulProof/**/*.lean', 'Checks/EvmProof.lean', 'Checks/YulProof.lean') }}
         run: |
@@ -85,7 +85,6 @@ jobs:
 
       - name: Build global package dependencies
         run: |
-          bash scripts/apply-lean-4.33-dependency-patches.sh
           mapfile -t targets < .github/lean-package-cache-targets
           lake build "${targets[@]}"
 
@@ -219,7 +218,7 @@ jobs:
       - name: Verify frozen ${{ matrix.name }} reference bytecode
         run: |
           reference="Challenge/${{ matrix.directory }}/Reference"
-          compiled="$(lake exe yulc "$reference/reference.yul")"
+          compiled="$(lake exe yulc --backend=classic "$reference/reference.yul")"
           frozen="$(tr -d '[:space:]' < "$reference/reference.hex")"
           literal="$(lake exe ${{ matrix.executable }} --print-reference-hex)"
           if [ "$compiled" != "$frozen" ] || [ "$literal" != "$frozen" ]; then

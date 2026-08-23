@@ -55,10 +55,13 @@ particular precompile or challenge specification.
 
 ```sh
 lake exe cache get
-bash scripts/apply-lean-4.33-dependency-patches.sh
 lake build
 lake env lean Checks.lean
 ```
+
+Repository-owned Yul compilation explicitly selects the pinned compiler's
+verified classic backend so the checked-in reference bytecode remains stable.
+No dependency source patches are applied.
 
 CI additionally checks each contributed candidate using the convention in its
 submission guide, freezes reference artifacts, runs challenge scorers, and

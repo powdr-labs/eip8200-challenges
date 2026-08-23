@@ -20,6 +20,6 @@ def referenceBlock? : Option (Block Op) :=
 
 /-- Bytecode emitted by the pinned verified Yul compiler. -/
 def referenceBytecode? : Option ByteArray :=
-  YulParser.compileSource referenceSource
+  YulParser.compileSourceWithBackend referenceSource [] .classic
 
 end Challenge.Modexp

@@ -28,6 +28,6 @@ def referenceBlock? : Option (Block Op) :=
 
 /-- The bytecode produced by the verified Yul compiler. -/
 def referenceBytecode? : Option ByteArray :=
-  YulParser.compileSource referenceSource
+  YulParser.compileSourceWithBackend referenceSource [] .classic
 
 end Challenge.Sha256

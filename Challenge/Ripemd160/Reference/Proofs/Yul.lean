@@ -41,7 +41,7 @@ def referenceNormalizedBlock : Block Op :=
   @Optimizer.Normalize.normalize localDialect referenceParsedBlock
 
 /-- The first (and successful) verified optimizer candidate used by
-`YulParser.compileSource` for this source. -/
+`YulParser.compileSourceWithBackend` in classic mode for this source. -/
 def referenceOptimizedBlock : Block Op :=
   (Optimizer.optimizerPipeline
     (calls := ExternalCalls.none) (creates := ExternalCreates.none)

@@ -62,7 +62,7 @@ def main (args : List String) : IO UInt32 := do
     | none, yulPath => do
         let path := yulPath.getD referenceSourcePath
         let source ← IO.FS.readFile path
-        match YulParser.compileSource source with
+        match YulParser.compileSourceWithBackend source [] .classic with
         | none => do
             IO.eprintln s!"{path}: rejected by the verified compiler"
             return 2
