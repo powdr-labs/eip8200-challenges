@@ -1,4 +1,5 @@
 import Challenge.Ripemd160.AdditionalGoals
+import Challenge.Ripemd160.YulSpec
 import Challenge.Ripemd160.ProofSupport
 import Challenge.Ripemd160.Reference
 import Challenge.Ripemd160.Reference.Proofs

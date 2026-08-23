@@ -25,3 +25,12 @@ info: 'Challenge.Ripemd160.Reference.Proofs.Yul.Execution.verifiedProgram_comput
 -/
 #guard_msgs in
 #print axioms Challenge.Ripemd160.Reference.Proofs.Yul.Execution.verifiedProgram_computesDigest
+
+/--
+info: 'Challenge.Ripemd160.Reference.Proofs.Yul.referenceParsedBlock_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound,
+ Lean.ofReduceBool]
+-/
+#guard_msgs in
+#print axioms Challenge.Ripemd160.Reference.Proofs.Yul.referenceParsedBlock_correct
