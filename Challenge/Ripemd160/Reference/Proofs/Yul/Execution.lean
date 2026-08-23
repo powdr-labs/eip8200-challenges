@@ -1441,7 +1441,7 @@ theorem serializedState_returns_digest (st : EvmState) (input : ByteArray)
     readBytes (serializedState st input).memory 0 32 = digestOf input.toList := by
   rw [readBytes_serializedState,
     sourceOutput_compressed_eq_spec st input hmem hcd hfit]
-  simp [digestOf, mkCode_toList]
+  simp [digestOf]
 
 def returnState (st : EvmState) : EvmState :=
   { touchMemory st 0 32 with halted := some (.ret, readBytes st.memory 0 32) }

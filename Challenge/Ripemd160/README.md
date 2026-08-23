@@ -15,9 +15,19 @@ proof so that each trust boundary can be audited independently.
 - `Correct code`: for every fitting input, all sufficiently large gas budgets
   return exactly `spec input`.
 
-The digest is `EvmSemantics.Crypto.Ripemd160.hash`, the same implementation
-used by the pinned EVM semantics for the `0x03` precompile. `Spec.lean` does not
-import the reference implementation, compiler, scorer, or proof modules.
+[`YulSpec.lean`](YulSpec.lean) defines the source-level counterpart,
+`Challenge.Ripemd160.Yul.Correct`. Both predicates require the same 32-byte
+result built from `EvmSemantics.Crypto.Ripemd160.hash`, the implementation used
+by the pinned EVM semantics for the `0x03` precompile. These are the two
+outer-facing predicates for auditors and candidate proofs; neither imports the
+reference implementation, optimizer, compiler, scorer, or proof modules.
+
+The Yul predicate runs programs in the shared closed EVM dialect. External
+calls and contract creation are unavailable there, and correctness requires a
+real terminating run for every admitted input. A source implementation
+therefore cannot delegate RIPEMD-160 to the incumbent `0x03` precompile. The
+raw-bytecode specification independently disables `0x03` in its execution
+configuration.
 
 Reusable submission-independent reductions live in [`ProofSupport/`](ProofSupport/):
 `Bytecode.lean` for direct raw-EVM proofs, `Yul.lean` for the verified-compiler
@@ -73,6 +83,22 @@ mirrors this source's fixed tables and exact state transitions, `Procedures`
 proves its procedure contracts, `Algorithm` relates its 256-bit expressions
 to RIPEMD's 32-bit model, `Driver` maintains the RIPEMD block invariant, and
 `Execution` proves this program's padding, serialization, and top-level run.
+`Reference/Proofs/Yul.lean` separately pins parsing, normalization,
+optimization, compilation, and assembly to the frozen bytecode.
+
+The outward-facing theorem for the actual parsed source is:
+
+```lean
+referenceParsedBlock_correct :
+  Challenge.Ripemd160.Yul.Correct referenceParsedBlock
+```
+
+The direct source proof can be checked with:
+
+```sh
+lake build Challenge.Ripemd160.Reference.Proofs.Yul.Execution
+lake build Challenge.Ripemd160.Reference.Proofs.Yul
+```
 
 ## 3. Direct-bytecode proof layout
 
