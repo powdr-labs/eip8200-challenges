@@ -94,10 +94,8 @@
         mstore(0x4a0, r0)
         mstore8(0x4c0, 1)
         storeModulus(0x4c1)
-        // EIP-150 caps this maximal request to the permitted 63/64 share.
-        // The verified Yul backend does not currently accept `gas()` as a
-        // call operand, while this source-equivalent request remains explicit.
-        if iszero(staticcall(not(0), 5, 0x400, 241, 0x500, 48)) { invalid() }
+        // Exact Osaka MODEXP charge for these lengths and exponent.
+        if iszero(staticcall(500, 5, 0x400, 241, 0x500, 48)) { invalid() }
         zHi := shr(128, mload(0x500))
         zLo := mload(0x510)
     }
@@ -114,7 +112,8 @@
             0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaa9
         )
         storeModulus(0x4c0)
-        if iszero(staticcall(not(0), 5, 0x400, 240, 0x500, 48)) { invalid() }
+        // Exact Osaka MODEXP charge for these lengths and p - 2.
+        if iszero(staticcall(36576, 5, 0x400, 240, 0x500, 48)) { invalid() }
         zHi := shr(128, mload(0x500))
         zLo := mload(0x510)
     }

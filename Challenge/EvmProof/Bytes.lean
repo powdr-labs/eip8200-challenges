@@ -66,6 +66,27 @@ theorem readPadded_toList_add (bytes : ByteArray)
   congr 1
   omega
 
+/-- An in-bounds padded read is exactly the corresponding byte-array
+extraction. -/
+theorem readPadded_eq_extract (bytes : ByteArray) (offset width : Nat)
+    (hfit : offset + width ≤ bytes.size) :
+    EvmSemantics.MachineState.readPadded bytes offset width =
+      bytes.extract offset (offset + width) := by
+  unfold EvmSemantics.MachineState.readPadded
+  dsimp only
+  have hoffset : offset.min bytes.size = offset := by
+    apply min_eq_left
+    omega
+  simp only [hoffset]
+  have havail : width ≤ bytes.size - offset := by omega
+  have htake : (bytes.size - offset).min width = width := by
+    apply min_eq_right
+    exact havail
+  simp only [htake]
+  rw [Nat.sub_self]
+  change bytes.extract offset (offset + width) ++ ByteArray.empty = _
+  exact ByteArray.append_empty
+
 theorem foldl_step (bytes : List UInt8) (acc : Nat) :
     bytes.foldl step acc =
       acc * 256 ^ bytes.length + bytes.foldl step 0 := by
@@ -112,6 +133,58 @@ theorem bytesNat_lt_pow (bytes : List UInt8) :
         Nat.mul_le_mul_right _ (by omega)
       _ = 256 ^ bytes.length * 256 := Nat.mul_comm _ _
 
+/-- Fixed-length big-endian byte strings have an injective natural-number
+interpretation. -/
+theorem bytesNat_injective_of_length {left right : List UInt8}
+    (hlength : left.length = right.length)
+    (hvalue : bytesNat left = bytesNat right) : left = right := by
+  induction left generalizing right with
+  | nil =>
+      cases right with
+      | nil => rfl
+      | cons byte bytes => simp at hlength
+  | cons leftHead leftTail ih =>
+      cases right with
+      | nil => simp at hlength
+      | cons rightHead rightTail =>
+          have htailLength : leftTail.length = rightTail.length := by
+            simpa using hlength
+          rw [bytesNat_cons, bytesNat_cons, htailLength] at hvalue
+          let place := 256 ^ rightTail.length
+          have hplace : 0 < place := Nat.pow_pos (by omega)
+          have hleftTail : bytesNat leftTail < place := by
+            simpa [place, htailLength] using bytesNat_lt_pow leftTail
+          have hrightTail : bytesNat rightTail < place := by
+            simpa [place] using bytesNat_lt_pow rightTail
+          have hheadNat : leftHead.toNat = rightHead.toNat := by
+            have hdiv := congrArg (fun n : Nat => n / place) hvalue
+            have hleftDiv :
+                (leftHead.toNat * place + bytesNat leftTail) / place =
+                  leftHead.toNat := by
+              calc
+                (leftHead.toNat * place + bytesNat leftTail) / place =
+                    bytesNat leftTail / place + leftHead.toNat := by
+                  rw [Nat.add_comm, Nat.mul_comm]
+                  exact Nat.add_mul_div_left _ _ hplace
+                _ = leftHead.toNat := by
+                  rw [Nat.div_eq_of_lt hleftTail, Nat.zero_add]
+            have hrightDiv :
+                (rightHead.toNat * place + bytesNat rightTail) / place =
+                  rightHead.toNat := by
+              calc
+                (rightHead.toNat * place + bytesNat rightTail) / place =
+                    bytesNat rightTail / place + rightHead.toNat := by
+                  rw [Nat.add_comm, Nat.mul_comm]
+                  exact Nat.add_mul_div_left _ _ hplace
+                _ = rightHead.toNat := by
+                  rw [Nat.div_eq_of_lt hrightTail, Nat.zero_add]
+            simpa [place, hleftDiv, hrightDiv] using hdiv
+          have hhead : leftHead = rightHead := UInt8.ext hheadNat
+          subst rightHead
+          have htailValue : bytesNat leftTail = bytesNat rightTail := by
+            omega
+          rw [ih htailLength htailValue]
+
 theorem bytesToNatPadded_succ (bytes : ByteArray) (offset width : Nat) :
     EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset (width + 1) =
       EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset width * 256 +
@@ -151,6 +224,33 @@ theorem bytesToNatPadded_lt_pow (bytes : ByteArray) (offset width : Nat) :
       (EvmSemantics.MachineState.readPadded bytes offset width).toList.length =
         width := by simpa using hlen
   simpa [hlen'] using h
+
+/-- Dividing a fixed-width big-endian window by the place value of its tail
+recovers the requested prefix. -/
+theorem bytesToNatPadded_prefix_eq_div (bytes : ByteArray)
+    (offset head tail : Nat) :
+    EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset (head + tail) /
+        256 ^ tail =
+      EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset head := by
+  rw [bytesToNatPadded_add]
+  have htail := bytesToNatPadded_lt_pow bytes (offset + head) tail
+  calc
+    (EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset head *
+          256 ^ tail +
+        EvmSemantics.EVM.Precompile.bytesToNatPadded bytes (offset + head) tail) /
+        256 ^ tail =
+      (EvmSemantics.EVM.Precompile.bytesToNatPadded bytes (offset + head) tail +
+          256 ^ tail *
+            EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset head) /
+        256 ^ tail := by
+      congr 1
+      rw [Nat.add_comm, Nat.mul_comm]
+    _ = EvmSemantics.EVM.Precompile.bytesToNatPadded bytes (offset + head) tail /
+          256 ^ tail +
+        EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset head :=
+      Nat.add_mul_div_left _ _ (Nat.pow_pos (by omega))
+    _ = EvmSemantics.EVM.Precompile.bytesToNatPadded bytes offset head := by
+      rw [Nat.div_eq_of_lt htail, Nat.zero_add]
 
 theorem readWord_toNat (bytes : ByteArray) (offset : Nat) :
     (EvmSemantics.MachineState.readWord bytes offset).toNat =

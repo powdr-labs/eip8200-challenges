@@ -38,7 +38,7 @@ contract Bls12381G1AddTest is Test {
     }
 
     function test_compiled_artifact_is_present() public view {
-        assertEq(REFERENCE.code.length, 1721, "automatic yul-compiler artifact size");
+        assertEq(REFERENCE.code.length, 1723, "automatic yul-compiler artifact size");
     }
 
     function test_infinity_plus_infinity() public view {
