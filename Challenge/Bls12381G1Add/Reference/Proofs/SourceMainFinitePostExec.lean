@@ -17,7 +17,7 @@ private theorem sound_execStmt {n funs V st stmt V' st' outcome}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.2.1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).2.2.1
     funs V st stmt V' st' outcome h
 
 private theorem eval_fpMulVars (V : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect)

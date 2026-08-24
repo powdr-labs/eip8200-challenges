@@ -13,7 +13,7 @@ open Challenge.Bls12381.ProofSupport
 /-- The complete finite-point source suffix, from the equal-x dispatch through
 the canonical return. -/
 def mainFiniteDispatcherBody : Block Op :=
-  Compilation.referenceCompiledBlock.drop 26
+  Compilation.referenceCompiledBlock.drop 29
 
 theorem mainFiniteDispatcherBody_eq : mainFiniteDispatcherBody =
     mainFiniteEqualStmt :: mainFiniteUnequalStmt :: mainFinitePostBody := by
@@ -26,7 +26,7 @@ private theorem sound_evalExpr {n funs V st expr result}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).1
     _ _ _ _ _ h
 
 private def finiteXEqCall : Expr Op :=

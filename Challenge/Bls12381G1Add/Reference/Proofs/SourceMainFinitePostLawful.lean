@@ -2,6 +2,7 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFinitePostExec
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDoubleLawful
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteUnequalLawful
 import Challenge.Bls12381.ProofSupport.CodecRepresentation
+import Challenge.EvmProof.ModexpMemory
 
 set_option warningAsError true
 

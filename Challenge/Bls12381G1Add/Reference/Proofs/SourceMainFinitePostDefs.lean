@@ -9,7 +9,7 @@ namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 open YulSemantics YulSemantics.EVM
 
 def mainFinitePostBody : Block Op :=
-  Compilation.referenceCompiledBlock.drop 28
+  Compilation.referenceCompiledBlock.drop 31
 
 def mainFinitePostStmt0 : Stmt Op := mainFinitePostBody[0]!
 def mainFinitePostStmt1 : Stmt Op := mainFinitePostBody[1]!

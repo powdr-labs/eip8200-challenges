@@ -348,7 +348,7 @@ theorem step_mainPointScope_curve2_reject (yst : EvmState)
 
 /-- The top-level source suffix beginning with the two-word slope
 declaration. -/
-def mainFiniteTopBody : Block Op := Compilation.referenceCompiledBlock.drop 25
+def mainFiniteTopBody : Block Op := Compilation.referenceCompiledBlock.drop 28
 
 theorem mainFiniteTopBody_eq : mainFiniteTopBody =
     mainFiniteSlopeDecl :: mainFiniteDispatcherBody := by

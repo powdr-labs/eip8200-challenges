@@ -10,7 +10,7 @@ namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 open YulSemantics YulSemantics.EVM
 open Challenge.Bls12381.ProofSupport
 
-/-- The executable top-level body after its thirteen function definitions. -/
+/-- The executable top-level body after its sixteen function definitions. -/
 def mainValidBody : Block Op := Compilation.referenceCompiledBlock.drop 16
 
 theorem mainValidBody_eq : mainValidBody =
