@@ -1,4 +1,4 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDoubleLawful
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteClassify
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceSub
 
 set_option warningAsError true

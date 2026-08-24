@@ -33,8 +33,7 @@ def mainFiniteUnequalDenominator (yst : EvmState) : Fp.Limbs :=
   limbsOfWords (mainFiniteUnequalDenominatorWords yst)
 
 def mainFiniteUnequalDenInv (yst : EvmState) : Fp.Limbs :=
-  fpInvOutputLimbs (mainFiniteUnequalDenominatorArgsState yst)
-    (mainFiniteUnequalDenominatorWords yst).1
+  fpInvResultLimbs (mainFiniteUnequalDenominatorWords yst).1
     (mainFiniteUnequalDenominatorWords yst).2
 
 def mainFiniteUnequalLambda (yst : EvmState) : Fp.Limbs :=
@@ -59,12 +58,11 @@ private theorem denominator_eq (yst : EvmState) :
         (mainFiniteUnequalX1 yst) :=
   conv_fpSubValue _ _ _ _
 
-private theorem denInv_eq (yst : EvmState)
+private theorem canonical_denInv (yst : EvmState)
     (hx1 : Fp.Canonical (mainFiniteUnequalX1 yst))
     (hx2 : Fp.Canonical (mainFiniteUnequalX2 yst)) :
-    mainFiniteUnequalDenInv yst =
-      Fp.invCanonical (mainFiniteUnequalDenominator yst) := by
-  apply fpInvOutput_eq_invCanonical
+    Fp.Canonical (mainFiniteUnequalDenInv yst) := by
+  apply canonical_fpInvResultLimbs
   change Fp.Canonical (mainFiniteUnequalDenominator yst)
   rw [denominator_eq]
   exact Fp.canonical_subSource hx2 hx1
@@ -84,20 +82,14 @@ private theorem fpMulOutput_eq_mulCanonical (yst : EvmState)
   simpa only [Fp.finEquiv_toField] using congrArg PrimeField.finEquiv hfin
 
 theorem mainFiniteUnequalLambda_eq (yst : EvmState)
-    (hx1 : Fp.Canonical (mainFiniteUnequalX1 yst))
-    (hy1 : Fp.Canonical (mainFiniteUnequalY1 yst))
-    (hx2 : Fp.Canonical (mainFiniteUnequalX2 yst))
-    (hy2 : Fp.Canonical (mainFiniteUnequalY2 yst)) :
+    (_hx1 : Fp.Canonical (mainFiniteUnequalX1 yst))
+    (_hy1 : Fp.Canonical (mainFiniteUnequalY1 yst))
+    (_hx2 : Fp.Canonical (mainFiniteUnequalX2 yst))
+    (_hy2 : Fp.Canonical (mainFiniteUnequalY2 yst)) :
     mainFiniteUnequalLambda yst =
       Fp.mulCanonical (mainFiniteUnequalNumerator yst)
         (mainFiniteUnequalDenInv yst) := by
-  apply fpMulOutput_eq_mulCanonical
-  · change Fp.Canonical (mainFiniteUnequalNumerator yst)
-    rw [numerator_eq]
-    exact Fp.canonical_subSource hy2 hy1
-  · change Fp.Canonical (mainFiniteUnequalDenInv yst)
-    rw [denInv_eq yst hx1 hx2, denominator_eq]
-    exact Fp.canonical_invCanonical (Fp.canonical_subSource hx2 hx1)
+  exact fpMulOutput_eq_mulCanonical_source _ _ _ _ _
 
 theorem canonical_mainFiniteUnequalLambda (yst : EvmState)
     (hx1 : Fp.Canonical (mainFiniteUnequalX1 yst))
@@ -109,8 +101,7 @@ theorem canonical_mainFiniteUnequalLambda (yst : EvmState)
   apply Fp.canonical_mulCanonical
   · rw [numerator_eq]
     exact Fp.canonical_subSource hy2 hy1
-  · rw [denInv_eq yst hx1 hx2, denominator_eq]
-    exact Fp.canonical_invCanonical (Fp.canonical_subSource hx2 hx1)
+  · exact canonical_denInv yst hx1 hx2
 
 private theorem lawful_subSource {a b : Fp.Limbs}
     (ha : Fp.Canonical a) (hb : Fp.Canonical b) :
@@ -128,6 +119,21 @@ private theorem lawful_invCanonical {a : Fp.Limbs}
     (ha : Fp.Canonical a) :
     toLawful (Fp.invCanonical a) = (toLawful a)⁻¹ := by
   simpa only [toLawful, Fp.finEquiv_toField] using Fp.lawful_invCanonical ha
+
+private theorem lawful_denInv (yst : EvmState)
+    (hx1 : Fp.Canonical (mainFiniteUnequalX1 yst))
+    (hx2 : Fp.Canonical (mainFiniteUnequalX2 yst)) :
+    toLawful (mainFiniteUnequalDenInv yst) =
+      (toLawful (mainFiniteUnequalDenominator yst))⁻¹ := by
+  let den := mainFiniteUnequalDenominatorWords yst
+  have hden : Fp.Canonical (fpInvInputLimbs den.1 den.2) := by
+    change Fp.Canonical (mainFiniteUnequalDenominator yst)
+    rw [denominator_eq]
+    exact Fp.canonical_subSource hx2 hx1
+  change PrimeField.finEquiv (Fp.toField (fpInvResultLimbs den.1 den.2)) =
+    (PrimeField.finEquiv (Fp.toField (fpInvInputLimbs den.1 den.2)))⁻¹
+  simpa only [toLawful, Fp.finEquiv_toField] using
+    fpInvResultLimbs_toLawful den.1 den.2 hden
 
 /-- The exact source lambda is the lawful general-addition slope. -/
 theorem mainFiniteUnequalLambda_toLawful (yst : EvmState)
@@ -149,13 +155,12 @@ theorem mainFiniteUnequalLambda_toLawful (yst : EvmState)
       toLawful (mainFiniteUnequalX1 yst))
   have hnum := Fp.canonical_subSource hy2 hy1
   have hden := Fp.canonical_subSource hx2 hx1
-  have hdenInv := Fp.canonical_invCanonical hden
+  have hdenInv := canonical_denInv yst hx1 hx2
   rw [mainFiniteUnequalLambda_eq yst hx1 hy1 hx2 hy2,
     lawful_mulCanonical (by rw [numerator_eq]; exact hnum)
-      (by rw [denInv_eq yst hx1 hx2, denominator_eq]; exact hdenInv),
+      hdenInv,
     numerator_eq, lawful_subSource hy2 hy1,
-    denInv_eq yst hx1 hx2, lawful_invCanonical (by
-      rw [denominator_eq]; exact hden),
+    lawful_denInv yst hx1 hx2,
     denominator_eq, lawful_subSource hx2 hx1]
   rfl
 
@@ -168,8 +173,8 @@ theorem step_mainFiniteUnequal_canonical (yst : EvmState)
       mainFiniteUnequalStmt (mainFiniteUnequalResultEnv yst)
       (mainFiniteUnequalFinalState yst) .normal := by
   apply step_mainFiniteUnequal yst hxeq
-  change (mainFiniteUnequalDenominator yst).hi.toNat < 2 ^ 128
+  change Fp.Canonical (mainFiniteUnequalDenominator yst)
   rw [denominator_eq]
-  exact (Fp.canonical_subSource hx2 hx1).1
+  exact Fp.canonical_subSource hx2 hx1
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

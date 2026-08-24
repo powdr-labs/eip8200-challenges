@@ -1,4 +1,6 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteUnequalState
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvResultBridge
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulRelationalCall
 import Challenge.EvmProof.ExecSound
 
 set_option warningAsError true
@@ -8,6 +10,7 @@ set_option warningAsError true
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
 open YulSemantics YulSemantics.EVM
+open Challenge.Bls12381.ProofSupport
 
 private theorem sound_execStmt {n funs V st stmt V' st' outcome}
     (h : Interp.execStmt Challenge.YulProof.ClosedEvm.exec n funs V st stmt =
@@ -17,7 +20,7 @@ private theorem sound_execStmt {n funs V st stmt V' st' outcome}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.2.1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).2.2.1
     funs V st stmt V' st' outcome h
 
 theorem eval_fpSubLoads
@@ -107,70 +110,62 @@ private theorem exec_stmt1 (yst : EvmState) :
     mainFiniteUnequalNumeratorArgsState_loadWord yst 32 (by norm_num)]
   rfl
 
-private theorem exec_stmt2 (yst : EvmState)
-    (hhi : (mainFiniteUnequalDenominatorWords yst).1.toNat < 2 ^ 128) :
-    Interp.execStmt Challenge.YulProof.ClosedEvm.exec 69 ([] :: mainFuns)
+private theorem step_stmt2 (yst : EvmState)
+    (hden : Fp.Canonical (fpInvInputLimbs
+      (mainFiniteUnequalDenominatorWords yst).1
+      (mainFiniteUnequalDenominatorWords yst).2)) :
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteUnequalEnv2 yst) (mainFiniteUnequalDenominatorArgsState yst)
-      mainFiniteUnequalStmt2 =
-    .ok (mainFiniteUnequalEnv3 yst, mainFiniteUnequalState1 yst,
-      .normal) := by
+      mainFiniteUnequalStmt2 (mainFiniteUnequalEnv3 yst)
+      (mainFiniteUnequalState1 yst) .normal := by
   let den := mainFiniteUnequalDenominatorWords yst
-  have hargs : Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 67
+  have hargs : EvalArgs Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteUnequalEnv2 yst)
       (mainFiniteUnequalDenominatorArgsState yst)
-      [.var "\x00113", .var "\x00114"] =
-    Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 67 mainFuns
-      [("hi", den.1), ("lo", den.2)]
-      (mainFiniteUnequalDenominatorArgsState yst) [.var "hi", .var "lo"] := by
-    rfl
+      [.var "\x00113", .var "\x00114"]
+      (.vals [den.1, den.2]
+        (mainFiniteUnequalDenominatorArgsState yst)) :=
+    Step.argsCons (Step.argsCons Step.argsNil (Step.var (by rfl)))
+      (Step.var (by rfl))
+  have hcall := eval_fpInv_call_result den.1 den.2 (by rfl) hargs hden
   rw [show mainFiniteUnequalStmt2 =
     .letDecl ["\x00115", "\x00116"]
-      (some (.call "\x0010" [.var "\x00113", .var "\x00114"])) by rfl,
-    Interp.execStmt,
-    Interp.evalExpr_call_of_evalArgs_lookup_eq (fn := "\x0010") hargs
-      (show lookupFun ([] :: mainFuns) "\x0010" =
-        lookupFun mainFuns "\x0010" by rfl)]
-  rw [show mainFuns = [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
-    Compilation.referenceCompiledBlock] by rfl]
-  rw [eval_fpInv den.1 den.2 (mainFiniteUnequalDenominatorArgsState yst) hhi]
-  rfl
+      (some (.call "\x0010" [.var "\x00113", .var "\x00114"])) by rfl]
+  have hstmt := Step.letVal (vars := ["\x00115", "\x00116"])
+    hcall (by rfl)
+  rw [mainFiniteUnequalEnv3_eq, mainFiniteUnequalState1_eq]
+  exact hstmt
 
-private theorem exec_stmt3 (yst : EvmState) :
-    Interp.execStmt Challenge.YulProof.ClosedEvm.exec 69 ([] :: mainFuns)
+private theorem step_stmt3 (yst : EvmState) :
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteUnequalEnv3 yst) (mainFiniteUnequalState1 yst)
-      mainFiniteUnequalStmt3 =
-    .ok (mainFiniteUnequalEnv4 yst, mainFiniteUnequalFinalState yst,
-      .normal) := by
+      mainFiniteUnequalStmt3 (mainFiniteUnequalEnv4 yst)
+      (mainFiniteUnequalFinalState yst) .normal := by
   let num := mainFiniteUnequalNumeratorWords yst
   let denInv := mainFiniteUnequalDenInvWords yst
-  have hargs : Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 67
+  have hargs : EvalArgs Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteUnequalEnv3 yst)
       (mainFiniteUnequalState1 yst)
       [.var "\x00111", .var "\x00112",
-        .var "\x00115", .var "\x00116"] =
-    Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 67 mainFuns
-      [("ahi", num.1), ("alo", num.2),
-        ("bhi", denInv.1), ("blo", denInv.2)]
-      (mainFiniteUnequalState1 yst)
-      [.var "ahi", .var "alo", .var "bhi", .var "blo"] := by
-    rfl
+        .var "\x00115", .var "\x00116"]
+      (.vals [num.1, num.2, denInv.1, denInv.2]
+        (mainFiniteUnequalState1 yst)) :=
+    Step.argsCons (Step.argsCons (Step.argsCons
+      (Step.argsCons Step.argsNil (Step.var (by rfl)))
+      (Step.var (by rfl))) (Step.var (by rfl))) (Step.var (by rfl))
+  have hcall := step_fpMul_call num.1 num.2 denInv.1 denInv.2
+    (by rfl) hargs
   rw [show mainFiniteUnequalStmt3 =
     .assign ["\x00101", "\x00102"]
       (.call "\x009"
         [.var "\x00111", .var "\x00112",
-          .var "\x00115", .var "\x00116"]) by rfl,
-    Interp.execStmt,
-    Interp.evalExpr_call_of_evalArgs_lookup_eq (fn := "\x009") hargs
-      (show lookupFun ([] :: mainFuns) "\x009" =
-        lookupFun mainFuns "\x009" by rfl)]
-  rw [show mainFuns = [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
-    Compilation.referenceCompiledBlock] by rfl]
-  rw [eval_fpMul num.1 num.2 denInv.1 denInv.2
-    (mainFiniteUnequalState1 yst)]
-  rfl
+          .var "\x00115", .var "\x00116"]) by rfl]
+  exact Step.assignVal hcall (by rfl)
 
 theorem step_mainFiniteUnequalBody (yst : EvmState)
-    (hhi : (mainFiniteUnequalDenominatorWords yst).1.toNat < 2 ^ 128) :
+    (hden : Fp.Canonical (fpInvInputLimbs
+      (mainFiniteUnequalDenominatorWords yst).1
+      (mainFiniteUnequalDenominatorWords yst).2)) :
     ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteUnequalConditionState yst)
       mainFiniteUnequalBody (mainFiniteUnequalEnv4 yst)
@@ -178,8 +173,8 @@ theorem step_mainFiniteUnequalBody (yst : EvmState)
   rw [mainFiniteUnequalBody_eq]
   exact Step.seqCons (sound_execStmt (exec_stmt0 yst))
     (Step.seqCons (sound_execStmt (exec_stmt1 yst))
-      (Step.seqCons (sound_execStmt (exec_stmt2 yst hhi))
-        (Step.seqCons (sound_execStmt (exec_stmt3 yst)) Step.seqNil)))
+      (Step.seqCons (step_stmt2 yst hden)
+        (Step.seqCons (step_stmt3 yst) Step.seqNil)))
 
 private theorem sound_evalExpr {n funs V st expr result}
     (h : Interp.evalExpr Challenge.YulProof.ClosedEvm.exec n funs V st expr =
@@ -188,7 +183,7 @@ private theorem sound_evalExpr {n funs V st expr result}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).1
     _ _ _ _ _ h
 
 private def unequalXEqCall : Expr Op :=
@@ -221,10 +216,12 @@ private theorem mainFiniteUnequalBody_hoist :
     hoist Challenge.YulProof.ClosedEvm.exec.toDialect mainFiniteUnequalBody = [] := by
   rfl
 
-/-- Exact top-level index-27 execution for unequal x coordinates. -/
+/-- Exact top-level index-30 execution for unequal x coordinates. -/
 theorem step_mainFiniteUnequal (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 0)
-    (hhi : (mainFiniteUnequalDenominatorWords yst).1.toNat < 2 ^ 128) :
+    (hden : Fp.Canonical (fpInvInputLimbs
+      (mainFiniteUnequalDenominatorWords yst).1
+      (mainFiniteUnequalDenominatorWords yst).2)) :
     ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteUnequalStmt (mainFiniteUnequalResultEnv yst)
@@ -236,7 +233,7 @@ theorem step_mainFiniteUnequal (yst : EvmState)
       (.vals [b2w (mainFiniteXEqValue yst = 0)]
         (mainFiniteUnequalConditionState yst)) :=
     Step.builtinOk (Step.argsCons Step.argsNil (unequalXEq_eval yst)) rfl
-  have hseq := step_mainFiniteUnequalBody yst hhi
+  have hseq := step_mainFiniteUnequalBody yst hden
   have hseq' : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
       (hoist Challenge.YulProof.ClosedEvm.exec.toDialect mainFiniteUnequalBody ::
         mainFuns) (mainFiniteEnv yst) (mainFiniteUnequalConditionState yst)

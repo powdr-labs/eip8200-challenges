@@ -1,4 +1,7 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteUnequalDefs
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteExceptional
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvResultDefs
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulExecDefs
 
 set_option warningAsError true
 
@@ -56,11 +59,15 @@ def mainFiniteUnequalDenominatorWords (yst : EvmState) : U256 × U256 :=
 
 def mainFiniteUnequalDenInvWords (yst : EvmState) : U256 × U256 :=
   let den := mainFiniteUnequalDenominatorWords yst
-  fpInvResult (mainFiniteUnequalDenominatorArgsState yst) den.1 den.2
+  fpInvResultWords den.1 den.2
 
 def mainFiniteUnequalState1 (yst : EvmState) : EvmState :=
-  let den := mainFiniteUnequalDenominatorWords yst
-  fpInvFinalState (mainFiniteUnequalDenominatorArgsState yst) den.1 den.2
+  mainFiniteUnequalDenominatorArgsState yst
+
+theorem mainFiniteUnequalState1_eq (yst : EvmState) :
+    mainFiniteUnequalState1 yst =
+      mainFiniteUnequalDenominatorArgsState yst := by
+  rfl
 
 def mainFiniteUnequalLambdaWords (yst : EvmState) : U256 × U256 :=
   let num := mainFiniteUnequalNumeratorWords yst
@@ -90,6 +97,14 @@ def mainFiniteUnequalEnv3 (yst : EvmState) :
   [("\x00115", (mainFiniteUnequalDenInvWords yst).1),
     ("\x00116", (mainFiniteUnequalDenInvWords yst).2)] ++
       mainFiniteUnequalEnv2 yst
+
+theorem mainFiniteUnequalEnv3_eq (yst : EvmState) :
+    let den := mainFiniteUnequalDenominatorWords yst
+    mainFiniteUnequalEnv3 yst =
+      [("\x00115", (fpInvResultWords den.1 den.2).1),
+       ("\x00116", (fpInvResultWords den.1 den.2).2)] ++
+        mainFiniteUnequalEnv2 yst := by
+  rfl
 
 def mainFiniteUnequalEnv4 (yst : EvmState) :
     VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
