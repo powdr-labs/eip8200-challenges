@@ -64,37 +64,37 @@ def mainFiniteDoubleFinalState (yst : EvmState) : EvmState :=
     num.1 num.2 denInv.1 denInv.2
 
 def mainFiniteDoubleEnv1 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00100", (mainFiniteDoubleXSqWords yst).1),
-    ("\x00101", (mainFiniteDoubleXSqWords yst).2)] ++ mainFiniteEnv yst
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00103", (mainFiniteDoubleXSqWords yst).1),
+    ("\x00104", (mainFiniteDoubleXSqWords yst).2)] ++ mainFiniteEnv yst
 
 def mainFiniteDoubleEnv2 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00102", (mainFiniteDoubleTwiceWords yst).1),
-    ("\x00103", (mainFiniteDoubleTwiceWords yst).2)] ++
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00105", (mainFiniteDoubleTwiceWords yst).1),
+    ("\x00106", (mainFiniteDoubleTwiceWords yst).2)] ++
       mainFiniteDoubleEnv1 yst
 
 def mainFiniteDoubleEnv3 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (mainFiniteDoubleEnv2 yst) ["\x00102", "\x00103"]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  VEnv.setMany (mainFiniteDoubleEnv2 yst) ["\x00105", "\x00106"]
     [(mainFiniteDoubleNumeratorWords yst).1,
       (mainFiniteDoubleNumeratorWords yst).2]
 
 def mainFiniteDoubleEnv4 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00104", (mainFiniteDoubleDenominatorWords yst).1),
-    ("\x00105", (mainFiniteDoubleDenominatorWords yst).2)] ++
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00107", (mainFiniteDoubleDenominatorWords yst).1),
+    ("\x00108", (mainFiniteDoubleDenominatorWords yst).2)] ++
       mainFiniteDoubleEnv3 yst
 
 def mainFiniteDoubleEnv5 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00106", (mainFiniteDoubleDenInvWords yst).1),
-    ("\x00107", (mainFiniteDoubleDenInvWords yst).2)] ++
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00109", (mainFiniteDoubleDenInvWords yst).1),
+    ("\x00110", (mainFiniteDoubleDenInvWords yst).2)] ++
       mainFiniteDoubleEnv4 yst
 
 def mainFiniteDoubleEnv6 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (mainFiniteDoubleEnv5 yst) ["\x0098", "\x0099"]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  VEnv.setMany (mainFiniteDoubleEnv5 yst) ["\x00101", "\x00102"]
     [(mainFiniteDoubleLambdaWords yst).1,
       (mainFiniteDoubleLambdaWords yst).2]
 

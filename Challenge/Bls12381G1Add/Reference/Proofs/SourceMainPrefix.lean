@@ -9,33 +9,33 @@ namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 open YulSemantics YulSemantics.EVM
 
 private theorem sound_execStmt {n funs V st stmt V' st' outcome}
-    (h : Interp.execStmt Challenge.EvmProof.modexpExec n funs V st stmt =
+    (h : Interp.execStmt Challenge.YulProof.ClosedEvm.exec n funs V st stmt =
       .ok (V', st', outcome)) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect funs V st stmt
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect funs V st stmt
       V' st' outcome :=
   (Interp.sound_all_of
-    (E := Challenge.EvmProof.modexpExec)
+    (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.EvmProof.modexpBuiltinFn_sound hbuiltin) n).2.2.1
+      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.2.1
     _ _ _ _ _ _ _ h
 
 private theorem sound_execStmts {n funs V st stmts V' st' outcome}
-    (h : Interp.execStmts Challenge.EvmProof.modexpExec n funs V st stmts =
+    (h : Interp.execStmts Challenge.YulProof.ClosedEvm.exec n funs V st stmts =
       .ok (V', st', outcome)) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V st stmts
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V st stmts
       V' st' outcome :=
   (Interp.sound_all_of
-    (E := Challenge.EvmProof.modexpExec)
+    (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.EvmProof.modexpBuiltinFn_sound hbuiltin) n).2.2.2.1
+      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.2.2.1
     _ _ _ _ _ _ _ h
 
 private theorem step_append_normal {funs V st pre Vmid stmid suffix Vend stend outcome}
-    (hprefix : ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V st
+    (hprefix : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V st
       pre Vmid stmid .normal)
-    (hsuffix : ExecStmts Challenge.EvmProof.modexpExec.toDialect funs Vmid stmid
+    (hsuffix : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs Vmid stmid
       suffix Vend stend outcome) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V st
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V st
       (pre ++ suffix) Vend stend outcome := by
   induction pre generalizing V st Vmid stmid with
   | nil =>
@@ -53,7 +53,7 @@ theorem step_mainDecodePrefix_success (yst : EvmState)
     (hsize : yst.env.calldata.length = 256)
     (hpadding : mainPaddingValue yst = 0)
     (hcanonical : mainCanonicalValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainDecodePrefix [] (mainAfterCanonicalReads yst) .normal := by
   have hlength := sound_execStmt (exec_mainLength_success yst hsize)
   have hstores := sound_execStmts (exec_mainStores yst)
@@ -68,13 +68,13 @@ theorem step_mainDecodePrefix_success (yst : EvmState)
 theorem step_mainDecodePrefix_padding_reject (yst : EvmState)
     (hsize : yst.env.calldata.length = 256)
     (hpadding : mainPaddingValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainDecodePrefix [] (mainInvalidState (mainAfterPaddingReads yst))
       .halt := by
   have hlength := sound_execStmt (exec_mainLength_success yst hsize)
   have hstores := sound_execStmts (exec_mainStores yst)
   have hpadding' := sound_execStmt (exec_mainPadding_reject yst hpadding)
-  have htail : ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns []
+  have htail : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns []
       (mainDecodedState yst) [mainPaddingStmt, mainCanonicalStmt]
       [] (mainInvalidState (mainAfterPaddingReads yst)) .halt :=
     Step.seqStop hpadding' (by decide)
@@ -85,7 +85,7 @@ theorem step_mainDecodePrefix_canonical_reject (yst : EvmState)
     (hsize : yst.env.calldata.length = 256)
     (hpadding : mainPaddingValue yst = 0)
     (hcanonical : mainCanonicalValue yst = 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainDecodePrefix [] (mainInvalidState (mainAfterCanonicalReads yst))
       .halt := by
   have hlength := sound_execStmt (exec_mainLength_success yst hsize)
@@ -93,7 +93,7 @@ theorem step_mainDecodePrefix_canonical_reject (yst : EvmState)
   have hpadding' := sound_execStmt (exec_mainPadding_success yst hpadding)
   have hcanonical' := sound_execStmt
     (exec_mainCanonical_reject yst hcanonical)
-  have htail : ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns []
+  have htail : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns []
       (mainDecodedState yst) [mainPaddingStmt, mainCanonicalStmt]
       [] (mainInvalidState (mainAfterCanonicalReads yst)) .halt :=
     Step.seqCons hpadding' (Step.seqStop hcanonical' (by decide))
@@ -105,7 +105,7 @@ validated-pair state. The next source statement is the both-infinity return. -/
 theorem step_mainPointValidation_success (yst : EvmState)
     (hcurve1 : mainCurve1ConditionValue yst = 0)
     (hcurve2 : mainCurve2ConditionValue yst = 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       [] (mainAfterCanonicalReads yst) mainPointValidationPrefix
       (mainPointEnv yst) (mainValidatedState yst) .normal := by
   have hinf1 := sound_execStmt (exec_mainInf1 yst)
@@ -116,7 +116,7 @@ theorem step_mainPointValidation_success (yst : EvmState)
 
 theorem step_mainPointValidation_curve1_reject (yst : EvmState)
     (hcurve1 : mainCurve1ConditionValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       [] (mainAfterCanonicalReads yst) mainPointValidationPrefix
       (mainPointEnv yst) (mainInvalidState (mainAfterCurve1 yst)) .halt := by
   have hinf1 := sound_execStmt (exec_mainInf1 yst)
@@ -127,7 +127,7 @@ theorem step_mainPointValidation_curve1_reject (yst : EvmState)
 theorem step_mainPointValidation_curve2_reject (yst : EvmState)
     (hcurve1 : mainCurve1ConditionValue yst = 0)
     (hcurve2 : mainCurve2ConditionValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       [] (mainAfterCanonicalReads yst) mainPointValidationPrefix
       (mainPointEnv yst) (mainInvalidState (mainValidatedState yst)) .halt := by
   have hinf1 := sound_execStmt (exec_mainInf1 yst)

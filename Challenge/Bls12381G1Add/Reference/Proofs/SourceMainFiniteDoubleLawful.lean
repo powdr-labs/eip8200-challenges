@@ -134,7 +134,7 @@ precondition, yielding the complete checked doubling-slope execution. -/
 theorem step_mainFiniteDoubleBody_canonical (yst : EvmState)
     (_hx : Fp.Canonical (mainFiniteDoubleX yst))
     (hy : Fp.Canonical (mainFiniteDoubleY yst)) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteYZeroArgsState yst)
       mainFiniteDoubleBody (mainFiniteDoubleEnv6 yst)
       (mainFiniteDoubleFinalState yst) .normal := by

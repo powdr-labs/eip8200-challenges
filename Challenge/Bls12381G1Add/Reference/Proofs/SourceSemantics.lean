@@ -1,7 +1,8 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceProgram
 import Challenge.Bls12381G1Add.Constants
 import Challenge.Bls12381.ProofSupport.FpAddSub
-import Challenge.EvmProof.ModexpExec
+import Challenge.YulProof.ClosedEvm
+import Challenge.EvmProof.ExecSound
 
 set_option warningAsError true
 
@@ -9,9 +10,8 @@ set_option warningAsError true
 # Source semantics of the proof-friendly G1ADD runtime
 
 The proofs in this directory connect the frozen normalized source block to
-the local EIP-correct G1 specification.  They use the deterministic MODEXP
-sub-interpreter only to construct derivations of the same open relational
-dialect consumed by compiler correctness.
+the local EIP-correct G1 specification. Every operation executes in the closed
+EVM dialect; modular arithmetic is supplied by ordinary local Yul functions.
 -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
@@ -229,43 +229,43 @@ private theorem reference_function_prefix_length :
   rfl
 
 private theorem exec_reference_function_prefix (funs V st) :
-    Interp.execStmts modexpExec 127 funs V st referenceCompiledBlock =
-      Interp.execStmts modexpExec 114 funs V st
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 127 funs V st referenceCompiledBlock =
+      Interp.execStmts Challenge.YulProof.ClosedEvm.exec 114 funs V st
         (invalidLengthStmt :: referenceCompiledBlock.drop 14) := by
-  have hprefix := execStmts_function_prefix modexpExec
+  have hprefix := execStmts_function_prefix Challenge.YulProof.ClosedEvm.exec
     (referenceCompiledBlock.take 13) (referenceCompiledBlock.drop 13)
     reference_function_prefix 114 (by omega) funs V st
   rw [reference_function_prefix_length] at hprefix
   norm_num at hprefix
   calc
-    Interp.execStmts modexpExec 127 funs V st referenceCompiledBlock =
-        Interp.execStmts modexpExec 127 funs V st
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 127 funs V st referenceCompiledBlock =
+        Interp.execStmts Challenge.YulProof.ClosedEvm.exec 127 funs V st
           (referenceCompiledBlock.take 13 ++ referenceCompiledBlock.drop 13) := by
       rw [List.take_append_drop]
-    _ = Interp.execStmts modexpExec 114 funs V st
+    _ = Interp.execStmts Challenge.YulProof.ClosedEvm.exec 114 funs V st
           (referenceCompiledBlock.drop 13) := hprefix
-    _ = Interp.execStmts modexpExec 114 funs V st
+    _ = Interp.execStmts Challenge.YulProof.ClosedEvm.exec 114 funs V st
           (invalidLengthStmt :: referenceCompiledBlock.drop 14) := by
       rw [reference_after_functions]
 
 /-- The first frozen helper implements the high-first modulus comparison used
 by the approved source-faithful Fp schedules. -/
 theorem eval_fpGeModulus (hi lo : U256) (yst : EvmState) :
-    Interp.evalExpr modexpExec 64
-      [hoist modexpExec.toDialect referenceCompiledBlock]
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect referenceCompiledBlock]
       [("hi", hi), ("lo", lo)] yst
       (.call "\x000" [.var "hi", .var "lo"]) =
     .ok (.vals [fpGeModulusValue hi lo] yst) := by
   simp [Interp.evalExpr, Interp.evalArgs, Interp.execStmt, Interp.execStmts,
     lookupFun, hoist, referenceCompiledBlock, frozenReferenceBlock,
-    modexpExec, modexpBuiltinFn, stepOp, bin, un, fpGeModulusValue,
+    Challenge.YulProof.ClosedEvm.exec, Challenge.YulProof.ClosedEvm.builtinFn, stepOp, bin, un, fpGeModulusValue,
     Dialect.zero, restore]
   rfl
 
 /-- The second frozen helper negates `fpGeModulus` exactly once. -/
 theorem eval_fpValid (hi lo : U256) (yst : EvmState) :
-    Interp.evalExpr modexpExec 64
-      [hoist modexpExec.toDialect referenceCompiledBlock]
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect referenceCompiledBlock]
       [("hi", hi), ("lo", lo)] yst
       (.call "\x001" [.var "hi", .var "lo"]) =
     .ok (.vals [fpValidValue hi lo] yst) := by
@@ -274,8 +274,8 @@ theorem eval_fpValid (hi lo : U256) (yst : EvmState) :
 
 /-- The third frozen helper tests both decoded limbs for zero. -/
 theorem eval_fpZero (hi lo : U256) (yst : EvmState) :
-    Interp.evalExpr modexpExec 64
-      [hoist modexpExec.toDialect referenceCompiledBlock]
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect referenceCompiledBlock]
       [("hi", hi), ("lo", lo)] yst
       (.call "\x002" [.var "hi", .var "lo"]) =
     .ok (.vals [fpZeroValue hi lo] yst) := by
@@ -284,8 +284,8 @@ theorem eval_fpZero (hi lo : U256) (yst : EvmState) :
 
 /-- The fourth frozen helper compares both decoded field limbs. -/
 theorem eval_fpEq (ahi alo bhi blo : U256) (yst : EvmState) :
-    Interp.evalExpr modexpExec 64
-      [hoist modexpExec.toDialect referenceCompiledBlock]
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect referenceCompiledBlock]
       [("ahi", ahi), ("alo", alo), ("bhi", bhi), ("blo", blo)] yst
       (.call "\x003" [.var "ahi", .var "alo", .var "bhi", .var "blo"]) =
     .ok (.vals [fpEqValue ahi alo bhi blo] yst) := by
@@ -295,15 +295,15 @@ theorem eval_fpEq (ahi alo bhi blo : U256) (yst : EvmState) :
 /-- The fifth frozen helper executes the approved source-faithful field-add
 schedule and returns its high word before its low word. -/
 theorem eval_fpAdd (ahi alo bhi blo : U256) (yst : EvmState) :
-    Interp.evalExpr modexpExec 64
-      [hoist modexpExec.toDialect referenceCompiledBlock]
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect referenceCompiledBlock]
       [("ahi", ahi), ("alo", alo), ("bhi", bhi), ("blo", blo)] yst
       (.call "\x004" [.var "ahi", .var "alo", .var "bhi", .var "blo"]) =
     .ok (.vals [(fpAddValue ahi alo bhi blo).1,
       (fpAddValue ahi alo bhi blo).2] yst) := by
   simp [Interp.evalExpr, Interp.evalArgs, Interp.execStmt, Interp.execStmts,
     lookupFun, hoist, referenceCompiledBlock, frozenReferenceBlock,
-    modexpExec, modexpBuiltinFn, stepOp, bin, un,
+    Challenge.YulProof.ClosedEvm.exec, Challenge.YulProof.ClosedEvm.builtinFn, stepOp, bin, un,
     Dialect.zero, VEnv.get, VEnv.setMany, VEnv.set,
     bindZeros, restore]
   split
@@ -323,15 +323,15 @@ theorem eval_fpAdd (ahi alo bhi blo : U256) (yst : EvmState) :
 /-- The sixth frozen helper executes the approved source-faithful field-sub
 schedule and returns its high word before its low word. -/
 theorem eval_fpSub (ahi alo bhi blo : U256) (yst : EvmState) :
-    Interp.evalExpr modexpExec 64
-      [hoist modexpExec.toDialect referenceCompiledBlock]
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect referenceCompiledBlock]
       [("ahi", ahi), ("alo", alo), ("bhi", bhi), ("blo", blo)] yst
       (.call "\x005" [.var "ahi", .var "alo", .var "bhi", .var "blo"]) =
     .ok (.vals [(fpSubValue ahi alo bhi blo).1,
       (fpSubValue ahi alo bhi blo).2] yst) := by
   simp [Interp.evalExpr, Interp.evalArgs, Interp.execStmt, Interp.execStmts,
     lookupFun, hoist, referenceCompiledBlock, frozenReferenceBlock,
-    modexpExec, modexpBuiltinFn, stepOp, bin,
+    Challenge.YulProof.ClosedEvm.exec, Challenge.YulProof.ClosedEvm.builtinFn, stepOp, bin,
     Dialect.zero, VEnv.get, VEnv.setMany, VEnv.set,
     bindZeros, restore]
   split
@@ -362,11 +362,11 @@ private theorem calldataSizeWord_ne {yst : EvmState}
 private theorem exec_invalidLengthStmt {yst : EvmState} (funs V)
     (hfit : yst.env.calldata.length < 2 ^ 256)
     (hsize : yst.env.calldata.length ≠ Challenge.Bls12381G1Add.inputBytes) :
-    Interp.execStmt modexpExec 113 funs V yst invalidLengthStmt =
+    Interp.execStmt Challenge.YulProof.ClosedEvm.exec 113 funs V yst invalidLengthStmt =
       .ok (V, { yst with halted := some (.invalid, []) }, .halt) := by
   have hword := calldataSizeWord_ne hfit hsize
   simp [invalidLengthStmt, Interp.execStmt, Interp.execStmts,
-    Interp.evalExpr, Interp.evalArgs, modexpExec, modexpBuiltinFn, stepOp,
+    Interp.evalExpr, Interp.evalArgs, Challenge.YulProof.ClosedEvm.exec, Challenge.YulProof.ClosedEvm.builtinFn, stepOp,
     bin, un, rd0, litValue, b2w, Dialect.zero, restore, hword]
 
 /-- A wrong calldata length takes the first source-level `invalid()` branch. -/
@@ -379,7 +379,10 @@ theorem run_invalid_length {yst : EvmState}
         referenceCompiledBlock yst [] yst' .halt ∧
       yst'.halted = some (.invalid, []) := by
   let yst' : EvmState := { yst with halted := some (.invalid, []) }
-  refine ⟨yst', modexpExec_run_sound (fuel := 128) ?_, rfl⟩
+  refine ⟨yst', Interp.run_sound_of
+    (fun op args st result h =>
+      (Challenge.YulProof.ClosedEvm.exec_lawful op args st result).mpr h)
+    (n := 128) ?_, rfl⟩
   unfold Interp.run
   simp only [Interp.execStmt]
   rw [exec_reference_function_prefix]

@@ -97,8 +97,8 @@ theorem bytesNat_readBytes_storeFpState (ptr hi lo : U256) (yst : EvmState)
 
 /-- The eighth frozen helper executes the two source-ordered field stores. -/
 theorem eval_storeFp (ptr hi lo : U256) (yst : EvmState) :
-    Interp.evalExpr Challenge.EvmProof.modexpExec 64
-      [hoist Challenge.EvmProof.modexpExec.toDialect
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
         Compilation.referenceCompiledBlock]
       [("ptr", ptr), ("hi", hi), ("lo", lo)] yst
       (.call "\x007" [.var "ptr", .var "hi", .var "lo"]) =
@@ -108,8 +108,8 @@ theorem eval_storeFp (ptr hi lo : U256) (yst : EvmState) :
 
 /-- The ninth frozen helper stores the exact BLS12-381 modulus words. -/
 theorem eval_storeModulus (ptr : U256) (yst : EvmState) :
-    Interp.evalExpr Challenge.EvmProof.modexpExec 64
-      [hoist Challenge.EvmProof.modexpExec.toDialect
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
         Compilation.referenceCompiledBlock]
       [("ptr", ptr)] yst (.call "\x008" [.var "ptr"]) =
     .ok (.vals [] (storeFpState yst ptr fpModulusHiValue fpModulusLoValue)) := by

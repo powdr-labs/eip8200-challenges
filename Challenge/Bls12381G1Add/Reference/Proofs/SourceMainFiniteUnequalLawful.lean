@@ -163,7 +163,7 @@ theorem step_mainFiniteUnequal_canonical (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 0)
     (hx1 : Fp.Canonical (mainFiniteUnequalX1 yst))
     (hx2 : Fp.Canonical (mainFiniteUnequalX2 yst)) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteUnequalStmt (mainFiniteUnequalResultEnv yst)
       (mainFiniteUnequalFinalState yst) .normal := by

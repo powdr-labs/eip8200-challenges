@@ -48,7 +48,7 @@ def mainFirstInfinityReturnState (yst : EvmState) : EvmState :=
       readBytes (mainFirstInfinityCopyState yst).memory 0 128) }
 
 private theorem mainFirstInfinityStmt_shape : mainFirstInfinityStmt =
-    .cond (.var "\x0096")
+    .cond (.var "\x0099")
       [.exprStmt mainCopySecondCall,
        .exprStmt
         (.builtin .ret [.lit (.number 0), .lit (.number 128)])] := by
@@ -68,8 +68,8 @@ theorem mainValidatedState_loadWord (yst : EvmState) (offset : Nat)
   rfl
 
 private theorem eval_mainCopySecondArgs
-    (funs : FunEnv Challenge.EvmProof.modexpExec.toDialect) (yst : EvmState) :
-    Interp.evalArgs Challenge.EvmProof.modexpExec 64 funs
+    (funs : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect) (yst : EvmState) :
+    Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 funs
       (mainPointEnv yst) (mainValidatedState yst)
       [.builtin .mload [.lit (.number 128)],
         .builtin .mload [.lit (.number 160)],
@@ -81,39 +81,39 @@ private theorem eval_mainCopySecondArgs
         (mainFirstInfinityArgsState yst)) := by
   simp [Interp.evalArgs, Interp.evalExpr, mainFirstInfinityArgsState,
     afterFourLoads, mainValidatedState_loadWord,
-    Challenge.EvmProof.modexpExec, Challenge.EvmProof.modexpBuiltinFn,
+    Challenge.YulProof.ClosedEvm.exec, Challenge.YulProof.ClosedEvm.builtinFn,
     stepOp, EVM.litValue]
 
 /-- Exact source execution of the frozen four-word `storePoint` helper. -/
 theorem eval_storePoint (xHi xLo yHi yLo : U256) (yst : EvmState) :
-    Interp.evalExpr Challenge.EvmProof.modexpExec 64 mainFuns
-      [("\x0092", xHi), ("\x0093", xLo),
-        ("\x0094", yHi), ("\x0095", yLo)] yst
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64 mainFuns
+      [("\x0095", xHi), ("\x0096", xLo),
+        ("\x0097", yHi), ("\x0098", yLo)] yst
       (.call "\x0012"
-        [.var "\x0092", .var "\x0093", .var "\x0094", .var "\x0095"]) =
+        [.var "\x0095", .var "\x0096", .var "\x0097", .var "\x0098"]) =
       .ok (.vals [] (mainStorePointState yst xHi xLo yHi yLo)) := by
   rw [Interp.evalExpr]
   rfl
 
 private theorem eval_mainCopySecondCall (yst : EvmState) :
-    Interp.evalExpr Challenge.EvmProof.modexpExec 65 ([] :: mainFuns)
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 65 ([] :: mainFuns)
       (mainPointEnv yst) (mainValidatedState yst) mainCopySecondCall =
       .ok (.vals [] (mainFirstInfinityCopyState yst)) := by
   have hargs := eval_mainCopySecondArgs ([] :: mainFuns) yst
   have hargs' :
-      Interp.evalArgs Challenge.EvmProof.modexpExec 64 ([] :: mainFuns)
+      Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 ([] :: mainFuns)
           (mainPointEnv yst) (mainValidatedState yst)
           [.builtin .mload [.lit (.number 128)],
             .builtin .mload [.lit (.number 160)],
             .builtin .mload [.lit (.number 192)],
             .builtin .mload [.lit (.number 224)]] =
-        Interp.evalArgs Challenge.EvmProof.modexpExec 64 mainFuns
-          [("\x0092", mainDecodedWord yst 128),
-            ("\x0093", mainDecodedWord yst 160),
-            ("\x0094", mainDecodedWord yst 192),
-            ("\x0095", mainDecodedWord yst 224)]
+        Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 mainFuns
+          [("\x0095", mainDecodedWord yst 128),
+            ("\x0096", mainDecodedWord yst 160),
+            ("\x0097", mainDecodedWord yst 192),
+            ("\x0098", mainDecodedWord yst 224)]
           (mainFirstInfinityArgsState yst)
-          [.var "\x0092", .var "\x0093", .var "\x0094", .var "\x0095"] := by
+          [.var "\x0095", .var "\x0096", .var "\x0097", .var "\x0098"] := by
     rw [hargs]
     rfl
   have hlookup : lookupFun ([] :: mainFuns) "\x0012" =
@@ -123,44 +123,44 @@ private theorem eval_mainCopySecondCall (yst : EvmState) :
   exact eval_storePoint _ _ _ _ _
 
 private theorem sound_evalExpr {n funs V st expr result}
-    (h : Interp.evalExpr Challenge.EvmProof.modexpExec n funs V st expr =
+    (h : Interp.evalExpr Challenge.YulProof.ClosedEvm.exec n funs V st expr =
       .ok result) :
-    EvalExpr Challenge.EvmProof.modexpExec.toDialect funs V st expr result :=
+    EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect funs V st expr result :=
   (Interp.sound_all_of
-    (E := Challenge.EvmProof.modexpExec)
+    (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.EvmProof.modexpBuiltinFn_sound hbuiltin) n).1
+      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).1
     _ _ _ _ _ h
 
 /-- Exact source execution of the first-infinity identity branch. -/
 theorem step_mainFirstInfinity_return (yst : EvmState)
     (hfirst : mainInf1 yst ≠ 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainPointEnv yst) (mainValidatedState yst) mainFirstInfinityStmt
       (mainPointEnv yst) (mainFirstInfinityReturnState yst) .halt := by
   rw [mainFirstInfinityStmt_shape]
-  have hcondition : EvalExpr Challenge.EvmProof.modexpExec.toDialect mainFuns
-      (mainPointEnv yst) (mainValidatedState yst) (.var "\x0096")
+  have hcondition : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
+      (mainPointEnv yst) (mainValidatedState yst) (.var "\x0099")
       (.vals [mainInf1 yst] (mainValidatedState yst)) := Step.var (by rfl)
-  have hcall : EvalExpr Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+  have hcall : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainPointEnv yst) (mainValidatedState yst) mainCopySecondCall
       (.vals [] (mainFirstInfinityCopyState yst)) :=
     sound_evalExpr (eval_mainCopySecondCall yst)
-  have hzero : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hzero : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainFirstInfinityCopyState yst)
       (.lit (.number 0))
       (.vals [0] (mainFirstInfinityCopyState yst)) := Step.lit
-  have hsize : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hsize : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainFirstInfinityCopyState yst)
       (.lit (.number 128))
       (.vals [128] (mainFirstInfinityCopyState yst)) := Step.lit
-  have hret : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hret : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainFirstInfinityCopyState yst)
       (.builtin .ret [.lit (.number 0), .lit (.number 128)])
       (.halt (mainFirstInfinityReturnState yst)) := by
     exact Step.builtinHalt
       (Step.argsCons (Step.argsCons Step.argsNil hsize) hzero) rfl
-  have hseq : ExecStmts Challenge.EvmProof.modexpExec.toDialect
+  have hseq : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainValidatedState yst)
       [.exprStmt mainCopySecondCall,
        .exprStmt
@@ -168,8 +168,8 @@ theorem step_mainFirstInfinity_return (yst : EvmState)
       (mainPointEnv yst) (mainFirstInfinityReturnState yst) .halt := by
     exact Step.seqCons (Step.exprStmt hcall)
       (Step.seqStop (Step.exprStmtHalt hret) (by decide))
-  have hseq' : ExecStmts Challenge.EvmProof.modexpExec.toDialect
-      (hoist Challenge.EvmProof.modexpExec.toDialect
+  have hseq' : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
+      (hoist Challenge.YulProof.ClosedEvm.exec.toDialect
         [.exprStmt mainCopySecondCall,
          .exprStmt
           (.builtin .ret [.lit (.number 0), .lit (.number 128)])] :: mainFuns)
@@ -179,7 +179,7 @@ theorem step_mainFirstInfinity_return (yst : EvmState)
         (.builtin .ret [.lit (.number 0), .lit (.number 128)])]
       (mainPointEnv yst) (mainFirstInfinityReturnState yst) .halt := by
     simpa [hoist] using hseq
-  have hblock : ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+  have hblock : ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainPointEnv yst) (mainValidatedState yst)
       (.block
         [.exprStmt mainCopySecondCall,
@@ -187,7 +187,7 @@ theorem step_mainFirstInfinity_return (yst : EvmState)
           (.builtin .ret [.lit (.number 0), .lit (.number 128)])])
       (mainPointEnv yst) (mainFirstInfinityReturnState yst) .halt := by
     have hblock' := Step.block
-      (D := Challenge.EvmProof.modexpExec.toDialect) hseq'
+      (D := Challenge.YulProof.ClosedEvm.exec.toDialect) hseq'
     simpa [restore] using hblock'
   exact Step.ifTrue hcondition hfirst hblock
 

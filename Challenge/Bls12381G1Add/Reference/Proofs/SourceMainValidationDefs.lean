@@ -8,8 +8,8 @@ namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
 open YulSemantics YulSemantics.EVM
 
-def mainFuns : FunEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [hoist Challenge.EvmProof.modexpExec.toDialect
+def mainFuns : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
     Compilation.referenceCompiledBlock]
 
 def mainLengthStmt : Stmt Op := Compilation.referenceCompiledBlock[13]!
@@ -136,8 +136,8 @@ def mainAfterInf2Reads (yst : EvmState) : EvmState :=
         (touchMemory (mainAfterInf1Reads yst) 224 32) 192 32) 160 32) 128 32
 
 def mainPointEnv (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x0097", mainInf2 yst), ("\x0096", mainInf1 yst)]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00100", mainInf2 yst), ("\x0099", mainInf1 yst)]
 
 def afterFourLoads (yst : EvmState)
     (xHiOffset xLoOffset yHiOffset yLoOffset : Nat) : EvmState :=

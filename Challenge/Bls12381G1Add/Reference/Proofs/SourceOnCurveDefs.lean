@@ -8,8 +8,8 @@ namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
 open YulSemantics YulSemantics.EVM
 
-def onCurveFuns : FunEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [hoist Challenge.EvmProof.modexpExec.toDialect
+def onCurveFuns : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
     Compilation.referenceCompiledBlock]
 
 def onCurveBody : Block Op :=
@@ -29,21 +29,21 @@ theorem onCurveBody_eq : onCurveBody =
   rfl
 
 theorem hoist_onCurveBody :
-    hoist Challenge.EvmProof.modexpExec.toDialect onCurveBody = [] := by
+    hoist Challenge.YulProof.ClosedEvm.exec.toDialect onCurveBody = [] := by
   rfl
 
-def onCurveBodyFuns : FunEnv Challenge.EvmProof.modexpExec.toDialect :=
+def onCurveBodyFuns : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
   [] :: onCurveFuns
 
 theorem onCurveBodyFuns_eq :
-    hoist Challenge.EvmProof.modexpExec.toDialect onCurveBody ::
+    hoist Challenge.YulProof.ClosedEvm.exec.toDialect onCurveBody ::
       onCurveFuns = onCurveBodyFuns := by
   rw [hoist_onCurveBody]
   rfl
 
-def onCurveDecl : FDecl Challenge.EvmProof.modexpExec.toDialect :=
-  { params := ["\x0081", "\x0082", "\x0083", "\x0084"]
-    rets := ["\x0085"]
+def onCurveDecl : FDecl Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  { params := ["\x0084", "\x0085", "\x0086", "\x0087"]
+    rets := ["\x0088"]
     body := onCurveBody }
 
 theorem lookup_onCurve : lookupFun onCurveFuns "\x0011" =
@@ -51,9 +51,9 @@ theorem lookup_onCurve : lookupFun onCurveFuns "\x0011" =
   rfl
 
 def onCurveInitialEnv (xHi xLo yHi yLo : U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x0081", xHi), ("\x0082", xLo), ("\x0083", yHi),
-    ("\x0084", yLo), ("\x0085", 0)]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x0084", xHi), ("\x0085", xLo), ("\x0086", yHi),
+    ("\x0087", yLo), ("\x0088", 0)]
 
 def onCurveLhsWords (yst : EvmState) (yHi yLo : U256) : U256 × U256 :=
   fpMulResult yst yHi yLo yHi yLo

@@ -58,8 +58,8 @@ def fullMulValue (ahi alo bhi blo : U256) : FullMulValue :=
 
 /-- The seventh frozen helper evaluates to the exact three-word source graph. -/
 theorem eval_fullMul (ahi alo bhi blo : U256) (yst : EvmState) :
-    Interp.evalExpr Challenge.EvmProof.modexpExec 64
-      [hoist Challenge.EvmProof.modexpExec.toDialect
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 64
+      [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
         Compilation.referenceCompiledBlock]
       [("ahi", ahi), ("alo", alo), ("bhi", bhi), ("blo", blo)] yst
       (.call "\x006" [.var "ahi", .var "alo", .var "bhi", .var "blo"]) =

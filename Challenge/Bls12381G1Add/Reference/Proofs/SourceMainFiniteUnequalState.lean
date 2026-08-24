@@ -75,30 +75,30 @@ def mainFiniteUnequalFinalState (yst : EvmState) : EvmState :=
     num.1 num.2 denInv.1 denInv.2
 
 def mainFiniteUnequalEnv1 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00108", (mainFiniteUnequalNumeratorWords yst).1),
-    ("\x00109", (mainFiniteUnequalNumeratorWords yst).2)] ++ mainFiniteEnv yst
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00111", (mainFiniteUnequalNumeratorWords yst).1),
+    ("\x00112", (mainFiniteUnequalNumeratorWords yst).2)] ++ mainFiniteEnv yst
 
 def mainFiniteUnequalEnv2 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00110", (mainFiniteUnequalDenominatorWords yst).1),
-    ("\x00111", (mainFiniteUnequalDenominatorWords yst).2)] ++
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00113", (mainFiniteUnequalDenominatorWords yst).1),
+    ("\x00114", (mainFiniteUnequalDenominatorWords yst).2)] ++
       mainFiniteUnequalEnv1 yst
 
 def mainFiniteUnequalEnv3 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00112", (mainFiniteUnequalDenInvWords yst).1),
-    ("\x00113", (mainFiniteUnequalDenInvWords yst).2)] ++
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00115", (mainFiniteUnequalDenInvWords yst).1),
+    ("\x00116", (mainFiniteUnequalDenInvWords yst).2)] ++
       mainFiniteUnequalEnv2 yst
 
 def mainFiniteUnequalEnv4 (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (mainFiniteUnequalEnv3 yst) ["\x0098", "\x0099"]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  VEnv.setMany (mainFiniteUnequalEnv3 yst) ["\x00101", "\x00102"]
     [(mainFiniteUnequalLambdaWords yst).1,
       (mainFiniteUnequalLambdaWords yst).2]
 
 def mainFiniteUnequalResultEnv (yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
   restore (mainFiniteEnv yst) (mainFiniteUnequalEnv4 yst)
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

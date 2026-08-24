@@ -19,11 +19,11 @@ theorem mainValidBody_eq : mainValidBody =
 
 private theorem step_append_normal
     {funs V st pre Vmid stmid suffix Vend stend outcome}
-    (hprefix : ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V st
+    (hprefix : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V st
       pre Vmid stmid .normal)
-    (hsuffix : ExecStmts Challenge.EvmProof.modexpExec.toDialect funs Vmid stmid
+    (hsuffix : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs Vmid stmid
       suffix Vend stend outcome) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V st
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V st
       (pre ++ suffix) Vend stend outcome := by
   induction pre generalizing V st Vmid stmid with
   | nil =>
@@ -37,9 +37,9 @@ private theorem step_append_normal
 
 private theorem step_append_halt
     {funs V st pre Vend stend suffix}
-    (hprefix : ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V st
+    (hprefix : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V st
       pre Vend stend .halt) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V st
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V st
       (pre ++ suffix) Vend stend .halt := by
   induction pre generalizing V st Vend stend with
   | nil => cases hprefix
@@ -61,7 +61,7 @@ private theorem step_mainValid_double (yst : EvmState)
     (hyzero : mainFiniteYZeroValue yst = 0)
     (hx : Fp.Canonical (mainFiniteDoubleX yst))
     (hy : Fp.Canonical (mainFiniteDoubleY yst)) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody
       (mainFinitePostEnv5 yst (mainFiniteDoubleResultEnv yst)
         (mainFiniteDoublePostState yst) (mainFiniteDoubleLambdaWords yst))
@@ -80,11 +80,11 @@ private theorem step_mainValid_of_finiteTail (yst : EvmState)
     (hcurve1 : mainCurve1ConditionValue yst = 0)
     (hcurve2 : mainCurve2ConditionValue yst = 0)
     (hfirst : mainInf1 yst = 0) (hsecond : mainInf2 yst = 0)
-    {Vend : VEnv Challenge.EvmProof.modexpExec.toDialect}
+    {Vend : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect}
     {stend : EvmState}
-    (htail : ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns
+    (htail : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       [] (mainValidatedState yst) mainFiniteTopBody Vend stend .halt) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody Vend stend .halt := by
   rw [mainValidBody_eq]
   exact step_append_normal
@@ -102,7 +102,7 @@ private theorem step_mainValid_unequal (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 0)
     (hx1 : Fp.Canonical (mainFiniteUnequalX1 yst))
     (hx2 : Fp.Canonical (mainFiniteUnequalX2 yst)) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody
       (mainFinitePostEnv5 yst (mainFiniteUnequalResultEnv yst)
         (mainFiniteUnequalFinalState yst) (mainFiniteUnequalLambdaWords yst))
@@ -120,7 +120,7 @@ private theorem step_mainValid_opposite (yst : EvmState)
     (hfirst : mainInf1 yst = 0) (hsecond : mainInf2 yst = 0)
     (hxeq : mainFiniteXEqValue yst = 1)
     (hyeq : mainFiniteYEqValue yst = 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody (mainFiniteEnv yst)
       (mainFiniteOppositeReturnState yst) .halt :=
   step_mainValid_of_finiteTail yst hsize hpadding hcanonical hcurve1 hcurve2
@@ -136,7 +136,7 @@ private theorem step_mainValid_zeroY (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 1)
     (hyeq : mainFiniteYEqValue yst ≠ 0)
     (hyzero : mainFiniteYZeroValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody (mainFiniteEnv yst)
       (mainFiniteZeroYReturnState yst) .halt :=
   step_mainValid_of_finiteTail yst hsize hpadding hcanonical hcurve1 hcurve2
@@ -147,9 +147,9 @@ private theorem step_mainValid_of_pointHalt (yst stend : EvmState)
     (hsize : yst.env.calldata.length = 256)
     (hpadding : mainPaddingValue yst = 0)
     (hcanonical : mainCanonicalValue yst ≠ 0)
-    (hscope : ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    (hscope : ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       [] (mainAfterCanonicalReads yst) mainPointScope [] stend .halt) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody [] stend .halt := by
   rw [mainValidBody_eq]
   exact step_append_normal
@@ -163,7 +163,7 @@ private theorem step_mainValid_bothInfinity (yst : EvmState)
     (hcurve1 : mainCurve1ConditionValue yst = 0)
     (hcurve2 : mainCurve2ConditionValue yst = 0)
     (hboth : mainBothInfinityValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody [] (mainBothInfinityReturnState yst) .halt :=
   step_mainValid_of_pointHalt yst _ hsize hpadding hcanonical
     (step_mainPointScope_bothInfinity yst hcurve1 hcurve2 hboth)
@@ -175,7 +175,7 @@ private theorem step_mainValid_firstInfinity (yst : EvmState)
     (hcurve1 : mainCurve1ConditionValue yst = 0)
     (hcurve2 : mainCurve2ConditionValue yst = 0)
     (hfirst : mainInf1 yst ≠ 0) (hsecond : mainInf2 yst = 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody [] (mainFirstInfinityReturnState yst) .halt :=
   step_mainValid_of_pointHalt yst _ hsize hpadding hcanonical
     (step_mainPointScope_firstInfinity yst hcurve1 hcurve2 hfirst hsecond)
@@ -187,7 +187,7 @@ private theorem step_mainValid_secondInfinity (yst : EvmState)
     (hcurve1 : mainCurve1ConditionValue yst = 0)
     (hcurve2 : mainCurve2ConditionValue yst = 0)
     (hfirst : mainInf1 yst = 0) (hsecond : mainInf2 yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody [] (mainSecondInfinityReturnState yst) .halt :=
   step_mainValid_of_pointHalt yst _ hsize hpadding hcanonical
     (step_mainPointScope_secondInfinity yst hcurve1 hcurve2 hfirst hsecond)
@@ -195,7 +195,7 @@ private theorem step_mainValid_secondInfinity (yst : EvmState)
 private theorem step_mainValid_padding_reject (yst : EvmState)
     (hsize : yst.env.calldata.length = 256)
     (hpadding : mainPaddingValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody [] (mainInvalidState (mainAfterPaddingReads yst)) .halt := by
   rw [mainValidBody_eq]
   exact step_append_halt
@@ -205,7 +205,7 @@ private theorem step_mainValid_canonical_reject (yst : EvmState)
     (hsize : yst.env.calldata.length = 256)
     (hpadding : mainPaddingValue yst = 0)
     (hcanonical : mainCanonicalValue yst = 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody []
       (mainInvalidState (mainAfterCanonicalReads yst)) .halt := by
   rw [mainValidBody_eq]
@@ -217,7 +217,7 @@ private theorem step_mainValid_curve1_reject (yst : EvmState)
     (hpadding : mainPaddingValue yst = 0)
     (hcanonical : mainCanonicalValue yst ≠ 0)
     (hcurve1 : mainCurve1ConditionValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody [] (mainInvalidState (mainAfterCurve1 yst)) .halt := by
   rw [mainValidBody_eq]
   exact step_append_normal
@@ -230,7 +230,7 @@ private theorem step_mainValid_curve2_reject (yst : EvmState)
     (hcanonical : mainCanonicalValue yst ≠ 0)
     (hcurve1 : mainCurve1ConditionValue yst = 0)
     (hcurve2 : mainCurve2ConditionValue yst ≠ 0) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody [] (mainInvalidState (mainValidatedState yst)) .halt := by
   rw [mainValidBody_eq]
   exact step_append_normal
@@ -244,9 +244,9 @@ private def isFunctionDefinition : Stmt Op → Bool
 
 private theorem step_function_definitions
     (defs : Block Op) (hdefs : defs.all isFunctionDefinition = true)
-    (funs : FunEnv Challenge.EvmProof.modexpExec.toDialect)
-    (V : VEnv Challenge.EvmProof.modexpExec.toDialect) (yst : EvmState) :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V yst defs
+    (funs : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
+    (V : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect) (yst : EvmState) :
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V yst defs
       V yst .normal := by
   induction defs with
   | nil => exact Step.seqNil
@@ -269,20 +269,20 @@ private theorem reference_decompose : Compilation.referenceCompiledBlock =
   exact (List.take_append_drop 13 Compilation.referenceCompiledBlock).symm
 
 private theorem run_of_mainValid (yst stend : EvmState)
-    {Vend : VEnv Challenge.EvmProof.modexpExec.toDialect}
-    (hmain : ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+    {Vend : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect}
+    (hmain : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       mainValidBody Vend stend .halt) :
     Run Challenge.Bls12381G1Add.ProofSupport.Yul.localDialect
       Compilation.referenceCompiledBlock yst [] stend .halt := by
   have hdefs := step_function_definitions
     (Compilation.referenceCompiledBlock.take 13) reference_function_prefix
     mainFuns [] yst
-  have hbody : ExecStmts Challenge.EvmProof.modexpExec.toDialect mainFuns [] yst
+  have hbody : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       Compilation.referenceCompiledBlock Vend stend .halt := by
     rw [reference_decompose]
     exact step_append_normal hdefs hmain
   have hblock := Step.block
-    (D := Challenge.EvmProof.modexpExec.toDialect) hbody
+    (D := Challenge.YulProof.ClosedEvm.exec.toDialect) hbody
   simpa [Run, mainFuns, restore] using hblock
 
 /-- A relational summary of a complete source path ending in `return`.

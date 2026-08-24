@@ -18,7 +18,7 @@ def mainSecondInfinityReturnState (yst : EvmState) : EvmState :=
     halted := some (.ret, readBytes (mainValidatedState yst).memory 0 128) }
 
 private theorem mainSecondInfinityStmt_shape : mainSecondInfinityStmt =
-    .cond (.var "\x0097")
+    .cond (.var "\x00100")
       [.exprStmt
         (.builtin .ret [.lit (.number 0), .lit (.number 128)])] := by
   rfl
@@ -26,33 +26,33 @@ private theorem mainSecondInfinityStmt_shape : mainSecondInfinityStmt =
 /-- Exact source execution of the second-infinity identity branch. -/
 theorem step_mainSecondInfinity_return (yst : EvmState)
     (hsecond : mainInf2 yst ≠ 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainPointEnv yst) (mainValidatedState yst) mainSecondInfinityStmt
       (mainPointEnv yst) (mainSecondInfinityReturnState yst) .halt := by
   rw [mainSecondInfinityStmt_shape]
-  have hcondition : EvalExpr Challenge.EvmProof.modexpExec.toDialect mainFuns
-      (mainPointEnv yst) (mainValidatedState yst) (.var "\x0097")
+  have hcondition : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
+      (mainPointEnv yst) (mainValidatedState yst) (.var "\x00100")
       (.vals [mainInf2 yst] (mainValidatedState yst)) := Step.var (by rfl)
-  have hzero : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hzero : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainValidatedState yst)
       (.lit (.number 0)) (.vals [0] (mainValidatedState yst)) := Step.lit
-  have hsize : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hsize : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainValidatedState yst)
       (.lit (.number 128)) (.vals [128] (mainValidatedState yst)) := Step.lit
-  have hret : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hret : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainValidatedState yst)
       (.builtin .ret [.lit (.number 0), .lit (.number 128)])
       (.halt (mainSecondInfinityReturnState yst)) := by
     exact Step.builtinHalt
       (Step.argsCons (Step.argsCons Step.argsNil hsize) hzero) rfl
-  have hseq : ExecStmts Challenge.EvmProof.modexpExec.toDialect
+  have hseq : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainPointEnv yst) (mainValidatedState yst)
       [.exprStmt
         (.builtin .ret [.lit (.number 0), .lit (.number 128)])]
       (mainPointEnv yst) (mainSecondInfinityReturnState yst) .halt := by
     exact Step.seqStop (Step.exprStmtHalt hret) (by decide)
-  have hseq' : ExecStmts Challenge.EvmProof.modexpExec.toDialect
-      (hoist Challenge.EvmProof.modexpExec.toDialect
+  have hseq' : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
+      (hoist Challenge.YulProof.ClosedEvm.exec.toDialect
         [.exprStmt
           (.builtin .ret [.lit (.number 0), .lit (.number 128)])] :: mainFuns)
       (mainPointEnv yst) (mainValidatedState yst)
@@ -60,13 +60,13 @@ theorem step_mainSecondInfinity_return (yst : EvmState)
         (.builtin .ret [.lit (.number 0), .lit (.number 128)])]
       (mainPointEnv yst) (mainSecondInfinityReturnState yst) .halt := by
     simpa [hoist] using hseq
-  have hblock : ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+  have hblock : ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainPointEnv yst) (mainValidatedState yst)
       (.block [.exprStmt
         (.builtin .ret [.lit (.number 0), .lit (.number 128)])])
       (mainPointEnv yst) (mainSecondInfinityReturnState yst) .halt := by
     have hblock' := Step.block
-      (D := Challenge.EvmProof.modexpExec.toDialect) hseq'
+      (D := Challenge.YulProof.ClosedEvm.exec.toDialect) hseq'
     simpa [restore] using hblock'
   exact Step.ifTrue hcondition hsecond hblock
 

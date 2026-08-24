@@ -76,49 +76,49 @@ def mainFinitePostReturnState (yst : EvmState) (st : EvmState)
   { touchMemory stored 0 128 with
     halted := some (.ret, readBytes stored.memory 0 128) }
 
-def mainFinitePostEnv0 (base : VEnv Challenge.EvmProof.modexpExec.toDialect)
+def mainFinitePostEnv0 (base : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
     (st : EvmState) (lam : U256 × U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00114", (mainFinitePostLambdaSqWords st lam).1),
-    ("\x00115", (mainFinitePostLambdaSqWords st lam).2)] ++ base
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00117", (mainFinitePostLambdaSqWords st lam).1),
+    ("\x00118", (mainFinitePostLambdaSqWords st lam).2)] ++ base
 
 def mainFinitePostEnv1 (yst : EvmState)
-    (base : VEnv Challenge.EvmProof.modexpExec.toDialect)
+    (base : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
     (st : EvmState) (lam : U256 × U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (mainFinitePostEnv0 base st lam) ["\x00114", "\x00115"]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  VEnv.setMany (mainFinitePostEnv0 base st lam) ["\x00117", "\x00118"]
     [(mainFinitePostX3FirstWords yst st lam).1,
       (mainFinitePostX3FirstWords yst st lam).2]
 
 def mainFinitePostEnv2 (yst : EvmState)
-    (base : VEnv Challenge.EvmProof.modexpExec.toDialect)
+    (base : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
     (st : EvmState) (lam : U256 × U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (mainFinitePostEnv1 yst base st lam) ["\x00114", "\x00115"]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  VEnv.setMany (mainFinitePostEnv1 yst base st lam) ["\x00117", "\x00118"]
     [(mainFinitePostX3Words yst st lam).1,
       (mainFinitePostX3Words yst st lam).2]
 
 def mainFinitePostEnv3 (yst : EvmState)
-    (base : VEnv Challenge.EvmProof.modexpExec.toDialect)
+    (base : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
     (st : EvmState) (lam : U256 × U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00116", (mainFinitePostDeltaWords yst st lam).1),
-    ("\x00117", (mainFinitePostDeltaWords yst st lam).2)] ++
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00119", (mainFinitePostDeltaWords yst st lam).1),
+    ("\x00120", (mainFinitePostDeltaWords yst st lam).2)] ++
       mainFinitePostEnv2 yst base st lam
 
 def mainFinitePostEnv4 (yst : EvmState)
-    (base : VEnv Challenge.EvmProof.modexpExec.toDialect)
+    (base : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
     (st : EvmState) (lam : U256 × U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x00118", (mainFinitePostYProductWords yst st lam).1),
-    ("\x00119", (mainFinitePostYProductWords yst st lam).2)] ++
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  [("\x00121", (mainFinitePostYProductWords yst st lam).1),
+    ("\x00122", (mainFinitePostYProductWords yst st lam).2)] ++
       mainFinitePostEnv3 yst base st lam
 
 def mainFinitePostEnv5 (yst : EvmState)
-    (base : VEnv Challenge.EvmProof.modexpExec.toDialect)
+    (base : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
     (st : EvmState) (lam : U256 × U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (mainFinitePostEnv4 yst base st lam) ["\x00118", "\x00119"]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  VEnv.setMany (mainFinitePostEnv4 yst base st lam) ["\x00121", "\x00122"]
     [(mainFinitePostY3Words yst st lam).1,
       (mainFinitePostY3Words yst st lam).2]
 

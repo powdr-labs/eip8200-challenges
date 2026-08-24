@@ -10,8 +10,8 @@ open YulSemantics YulSemantics.EVM
 
 /-- Environment after the source's two-word slope declaration. -/
 def mainFiniteEnv (_yst : EvmState) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  bindZeros Challenge.EvmProof.modexpExec.toDialect ["\x0098", "\x0099"]
+    VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
+  bindZeros Challenge.YulProof.ClosedEvm.exec.toDialect ["\x00101", "\x00102"]
 
 /-- State after evaluating the equal-x dispatch's four loads. -/
 def mainFiniteXEqArgsState (yst : EvmState) : EvmState :=
@@ -81,25 +81,25 @@ theorem mainFiniteYZeroArgsState_loadWord (yst : EvmState) (offset : Nat)
   exact mainValidatedState_loadWord yst offset hend
 
 theorem eval_fpEqLoads
-    (funs : FunEnv Challenge.EvmProof.modexpExec.toDialect)
-    (V : VEnv Challenge.EvmProof.modexpExec.toDialect) (yst : EvmState)
+    (funs : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
+    (V : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect) (yst : EvmState)
     (aHi aLo bHi bLo : Nat)
     (haHi : aHi < 2 ^ 256) (haLo : aLo < 2 ^ 256)
     (hbHi : bHi < 2 ^ 256) (hbLo : bLo < 2 ^ 256)
     (hlookup : lookupFun funs "\x003" = lookupFun mainFuns "\x003") :
-    Interp.evalExpr Challenge.EvmProof.modexpExec 65 funs V yst
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 65 funs V yst
       (fpEqLoads aHi aLo bHi bLo) =
       .ok (.vals
         [fpEqValue (loadWord yst.memory aHi) (loadWord yst.memory aLo)
           (loadWord yst.memory bHi) (loadWord yst.memory bLo)]
         (afterFourLoads yst aHi aLo bHi bLo)) := by
   have hargs :
-      Interp.evalArgs Challenge.EvmProof.modexpExec 64 funs V yst
+      Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 funs V yst
           [.builtin .mload [.lit (.number aHi)],
             .builtin .mload [.lit (.number aLo)],
             .builtin .mload [.lit (.number bHi)],
             .builtin .mload [.lit (.number bLo)]] =
-        Interp.evalArgs Challenge.EvmProof.modexpExec 64 mainFuns
+        Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 mainFuns
           [("ahi", loadWord yst.memory aHi),
             ("alo", loadWord yst.memory aLo),
             ("bhi", loadWord yst.memory bHi),
@@ -108,7 +108,7 @@ theorem eval_fpEqLoads
           [.var "ahi", .var "alo", .var "bhi", .var "blo"] := by
     norm_num at haHi haLo hbHi hbLo
     simp [Interp.evalArgs, Interp.evalExpr, afterFourLoads,
-      Challenge.EvmProof.modexpExec, Challenge.EvmProof.modexpBuiltinFn,
+      Challenge.YulProof.ClosedEvm.exec, Challenge.YulProof.ClosedEvm.builtinFn,
       stepOp, EVM.litValue, Nat.mod_eq_of_lt haHi,
       Nat.mod_eq_of_lt haLo, Nat.mod_eq_of_lt hbHi,
       Nat.mod_eq_of_lt hbLo, VEnv.get]
@@ -117,25 +117,25 @@ theorem eval_fpEqLoads
   exact eval_fpEq _ _ _ _ _
 
 private theorem eval_fpZeroLoads
-    (funs : FunEnv Challenge.EvmProof.modexpExec.toDialect)
-    (V : VEnv Challenge.EvmProof.modexpExec.toDialect) (yst : EvmState)
+    (funs : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
+    (V : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect) (yst : EvmState)
     (hi lo : Nat) (hhi : hi < 2 ^ 256) (hlo : lo < 2 ^ 256)
     (hlookup : lookupFun funs "\x002" = lookupFun mainFuns "\x002") :
-    Interp.evalExpr Challenge.EvmProof.modexpExec 65 funs V yst
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 65 funs V yst
       (fpZeroLoads hi lo) =
       .ok (.vals
         [fpZeroValue (loadWord yst.memory hi) (loadWord yst.memory lo)]
         (afterTwoLoads yst hi lo)) := by
   have hargs :
-      Interp.evalArgs Challenge.EvmProof.modexpExec 64 funs V yst
+      Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 funs V yst
           [.builtin .mload [.lit (.number hi)],
             .builtin .mload [.lit (.number lo)]] =
-        Interp.evalArgs Challenge.EvmProof.modexpExec 64 mainFuns
+        Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 mainFuns
           [("hi", loadWord yst.memory hi), ("lo", loadWord yst.memory lo)]
           (afterTwoLoads yst hi lo) [.var "hi", .var "lo"] := by
     norm_num at hhi hlo
     simp [Interp.evalArgs, Interp.evalExpr, afterTwoLoads,
-      Challenge.EvmProof.modexpExec, Challenge.EvmProof.modexpBuiltinFn,
+      Challenge.YulProof.ClosedEvm.exec, Challenge.YulProof.ClosedEvm.builtinFn,
       stepOp, EVM.litValue, Nat.mod_eq_of_lt hhi,
       Nat.mod_eq_of_lt hlo, VEnv.get]
   rw [fpZeroLoads,
@@ -143,17 +143,17 @@ private theorem eval_fpZeroLoads
   exact eval_fpZero _ _ _
 
 private theorem sound_evalExpr {n funs V st expr result}
-    (h : Interp.evalExpr Challenge.EvmProof.modexpExec n funs V st expr =
+    (h : Interp.evalExpr Challenge.YulProof.ClosedEvm.exec n funs V st expr =
       .ok result) :
-    EvalExpr Challenge.EvmProof.modexpExec.toDialect funs V st expr result :=
+    EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect funs V st expr result :=
   (Interp.sound_all_of
-    (E := Challenge.EvmProof.modexpExec)
+    (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.EvmProof.modexpBuiltinFn_sound hbuiltin) n).1
+      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).1
     _ _ _ _ _ h
 
 private theorem mainFiniteXEq_eval (yst : EvmState) :
-    EvalExpr Challenge.EvmProof.modexpExec.toDialect mainFuns
+    EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainValidatedState yst)
       (fpEqLoads 0 32 128 160)
       (.vals [mainFiniteXEqValue yst] (mainFiniteXEqArgsState yst)) := by
@@ -165,7 +165,7 @@ private theorem mainFiniteXEq_eval (yst : EvmState) :
       (by norm_num) rfl
 
 private theorem mainFiniteYEq_eval (yst : EvmState) :
-    EvalExpr Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+    EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       (fpEqLoads 64 96 192 224)
       (.vals [mainFiniteYEqValue yst] (mainFiniteYEqArgsState yst)) := by
@@ -193,7 +193,7 @@ private theorem mainFiniteYEq_eval (yst : EvmState) :
   exact h
 
 private theorem mainFiniteYZero_eval (yst : EvmState) :
-    EvalExpr Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+    EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteYEqArgsState yst)
       (fpZeroLoads 64 96)
       (.vals [mainFiniteYZeroValue yst] (mainFiniteYZeroArgsState yst)) := by
@@ -221,42 +221,42 @@ private def finiteInfinityBody : Block Op :=
     .exprStmt (.builtin .ret [.lit (.number 0), .lit (.number 128)])]
 
 private theorem finiteInfinityBody_hoist :
-    hoist Challenge.EvmProof.modexpExec.toDialect finiteInfinityBody = [] := by
+    hoist Challenge.YulProof.ClosedEvm.exec.toDialect finiteInfinityBody = [] := by
   rfl
 
 private theorem finiteInfinityBody_exec
-    (funs : FunEnv Challenge.EvmProof.modexpExec.toDialect)
-    (V : VEnv Challenge.EvmProof.modexpExec.toDialect) (yst : EvmState)
+    (funs : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect)
+    (V : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect) (yst : EvmState)
     (hlookup : lookupFun funs "\x0012" = lookupFun mainFuns "\x0012") :
-    ExecStmts Challenge.EvmProof.modexpExec.toDialect funs V yst
+    ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect funs V yst
       finiteInfinityBody V (finiteInfinityReturnState yst) .halt := by
   have hcallEval :
-      Interp.evalExpr Challenge.EvmProof.modexpExec 65 funs V yst
+      Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 65 funs V yst
         (.call "\x0012"
           [.lit (.number 0), .lit (.number 0),
             .lit (.number 0), .lit (.number 0)]) =
         .ok (.vals [] (finiteInfinityStoredState yst)) := by
     have hargs :
-        Interp.evalArgs Challenge.EvmProof.modexpExec 64 funs V yst
+        Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 funs V yst
             [.lit (.number 0), .lit (.number 0),
               .lit (.number 0), .lit (.number 0)] =
-          Interp.evalArgs Challenge.EvmProof.modexpExec 64 mainFuns
-            [("\x0092", 0), ("\x0093", 0),
-              ("\x0094", 0), ("\x0095", 0)] yst
-            [.var "\x0092", .var "\x0093",
-              .var "\x0094", .var "\x0095"] := by
+          Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 mainFuns
+            [("\x0095", 0), ("\x0096", 0),
+              ("\x0097", 0), ("\x0098", 0)] yst
+            [.var "\x0095", .var "\x0096",
+              .var "\x0097", .var "\x0098"] := by
       simp [Interp.evalArgs, Interp.evalExpr, EVM.litValue, VEnv.get]
     rw [Interp.evalExpr_call_of_evalArgs_lookup_eq
       (fn := "\x0012") hargs hlookup]
     exact eval_storePoint 0 0 0 0 yst
   have hcall := sound_evalExpr hcallEval
-  have hzero : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hzero : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       funs V (finiteInfinityStoredState yst) (.lit (.number 0))
       (.vals [0] (finiteInfinityStoredState yst)) := Step.lit
-  have hsize : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hsize : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       funs V (finiteInfinityStoredState yst) (.lit (.number 128))
       (.vals [128] (finiteInfinityStoredState yst)) := Step.lit
-  have hret : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hret : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       funs V (finiteInfinityStoredState yst)
       (.builtin .ret [.lit (.number 0), .lit (.number 128)])
       (.halt (finiteInfinityReturnState yst)) := by
@@ -279,29 +279,29 @@ private theorem mainFiniteEqualStmt_shape : mainFiniteEqualStmt =
   rfl
 
 private theorem mainFiniteEqualBody_hoist :
-    hoist Challenge.EvmProof.modexpExec.toDialect mainFiniteEqualBody = [] := by
+    hoist Challenge.YulProof.ClosedEvm.exec.toDialect mainFiniteEqualBody = [] := by
   rfl
 
 /-- Exact corrected source execution for equal x and unequal y. -/
 theorem step_mainFiniteOpposite_return (yst : EvmState)
     (hyeq : mainFiniteYEqValue yst = 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteOppositeStmt (mainFiniteEnv yst)
       (mainFiniteOppositeReturnState yst) .halt := by
   rw [mainFiniteOppositeStmt_shape]
-  have hcondition : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hcondition : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       (.builtin .iszero [fpEqLoads 64 96 192 224])
       (.vals [b2w (mainFiniteYEqValue yst = 0)]
         (mainFiniteYEqArgsState yst)) := by
     exact Step.builtinOk
-      (D := Challenge.EvmProof.modexpExec.toDialect)
+      (D := Challenge.YulProof.ClosedEvm.exec.toDialect)
       (Step.argsCons Step.argsNil (mainFiniteYEq_eval yst)) rfl
   have hseq := finiteInfinityBody_exec ([] :: [] :: mainFuns)
     (mainFiniteEnv yst) (mainFiniteYEqArgsState yst) rfl
-  have hseq' : ExecStmts Challenge.EvmProof.modexpExec.toDialect
-      (hoist Challenge.EvmProof.modexpExec.toDialect finiteInfinityBody ::
+  have hseq' : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
+      (hoist Challenge.YulProof.ClosedEvm.exec.toDialect finiteInfinityBody ::
         [] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteYEqArgsState yst)
       finiteInfinityBody (mainFiniteEnv yst)
@@ -309,14 +309,14 @@ theorem step_mainFiniteOpposite_return (yst : EvmState)
     rw [finiteInfinityBody_hoist]
     exact hseq
   have hblock' := Step.block
-    (D := Challenge.EvmProof.modexpExec.toDialect) hseq'
-  have hblock : ExecStmt Challenge.EvmProof.modexpExec.toDialect
+    (D := Challenge.YulProof.ClosedEvm.exec.toDialect) hseq'
+  have hblock : ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteYEqArgsState yst)
       (.block finiteInfinityBody) (mainFiniteEnv yst)
       (mainFiniteOppositeReturnState yst) .halt := by
     simpa [mainFiniteOppositeReturnState, restore] using hblock'
   have hnonzero : b2w (mainFiniteYEqValue yst = 0) ≠
-      Challenge.EvmProof.modexpExec.toDialect.zero := by
+      Challenge.YulProof.ClosedEvm.exec.toDialect.zero := by
     rw [hyeq]
     decide
   exact Step.ifTrue hcondition hnonzero hblock
@@ -324,7 +324,7 @@ theorem step_mainFiniteOpposite_return (yst : EvmState)
 /-- Exact corrected source execution for equal points with `y = 0`. -/
 theorem step_mainFiniteZeroY_return (yst : EvmState)
     (hyzero : mainFiniteYZeroValue yst ≠ 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteYEqArgsState yst)
       mainFiniteZeroYStmt (mainFiniteEnv yst)
       (mainFiniteZeroYReturnState yst) .halt := by
@@ -332,8 +332,8 @@ theorem step_mainFiniteZeroY_return (yst : EvmState)
   have hcondition := mainFiniteYZero_eval yst
   have hseq := finiteInfinityBody_exec ([] :: [] :: mainFuns)
     (mainFiniteEnv yst) (mainFiniteYZeroArgsState yst) rfl
-  have hseq' : ExecStmts Challenge.EvmProof.modexpExec.toDialect
-      (hoist Challenge.EvmProof.modexpExec.toDialect finiteInfinityBody ::
+  have hseq' : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
+      (hoist Challenge.YulProof.ClosedEvm.exec.toDialect finiteInfinityBody ::
         [] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteYZeroArgsState yst)
       finiteInfinityBody (mainFiniteEnv yst)
@@ -341,8 +341,8 @@ theorem step_mainFiniteZeroY_return (yst : EvmState)
     rw [finiteInfinityBody_hoist]
     exact hseq
   have hblock' := Step.block
-    (D := Challenge.EvmProof.modexpExec.toDialect) hseq'
-  have hblock : ExecStmt Challenge.EvmProof.modexpExec.toDialect
+    (D := Challenge.YulProof.ClosedEvm.exec.toDialect) hseq'
+  have hblock : ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteYZeroArgsState yst)
       (.block finiteInfinityBody) (mainFiniteEnv yst)
       (mainFiniteZeroYReturnState yst) .halt := by
@@ -351,21 +351,21 @@ theorem step_mainFiniteZeroY_return (yst : EvmState)
 
 private theorem step_mainFiniteOpposite_continue (yst : EvmState)
     (hyeq : mainFiniteYEqValue yst ≠ 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteOppositeStmt (mainFiniteEnv yst)
       (mainFiniteYEqArgsState yst) .normal := by
   rw [mainFiniteOppositeStmt_shape]
-  have hcondition : EvalExpr Challenge.EvmProof.modexpExec.toDialect
+  have hcondition : EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       (.builtin .iszero [fpEqLoads 64 96 192 224])
       (.vals [b2w (mainFiniteYEqValue yst = 0)]
         (mainFiniteYEqArgsState yst)) := by
     exact Step.builtinOk
-      (D := Challenge.EvmProof.modexpExec.toDialect)
+      (D := Challenge.YulProof.ClosedEvm.exec.toDialect)
       (Step.argsCons Step.argsNil (mainFiniteYEq_eval yst)) rfl
   have hzero : b2w (mainFiniteYEqValue yst = 0) =
-      Challenge.EvmProof.modexpExec.toDialect.zero := by
+      Challenge.YulProof.ClosedEvm.exec.toDialect.zero := by
     have hfalse : decide (mainFiniteYEqValue yst = 0) = false :=
       decide_eq_false_iff_not.mpr hyeq
     rw [b2w, hfalse]
@@ -376,26 +376,26 @@ private theorem step_mainFiniteOpposite_continue (yst : EvmState)
 theorem step_mainFiniteEqual_opposite (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 1)
     (hyeq : mainFiniteYEqValue yst = 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainValidatedState yst) mainFiniteEqualStmt
       (mainFiniteEnv yst) (mainFiniteOppositeReturnState yst) .halt := by
   rw [mainFiniteEqualStmt_shape]
-  have hseq : ExecStmts Challenge.EvmProof.modexpExec.toDialect
+  have hseq : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteEqualBody (mainFiniteEnv yst)
       (mainFiniteOppositeReturnState yst) .halt := by
     rw [mainFiniteEqualBody_eq]
     exact Step.seqStop (step_mainFiniteOpposite_return yst hyeq) (by decide)
   have hblock' := Step.block
-    (D := Challenge.EvmProof.modexpExec.toDialect)
-    (show ExecStmts Challenge.EvmProof.modexpExec.toDialect
-      (hoist Challenge.EvmProof.modexpExec.toDialect mainFiniteEqualBody ::
+    (D := Challenge.YulProof.ClosedEvm.exec.toDialect)
+    (show ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
+      (hoist Challenge.YulProof.ClosedEvm.exec.toDialect mainFiniteEqualBody ::
         mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteEqualBody (mainFiniteEnv yst)
       (mainFiniteOppositeReturnState yst) .halt from by
         rw [mainFiniteEqualBody_hoist]
         exact hseq)
-  have hblock : ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+  have hblock : ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       (.block mainFiniteEqualBody) (mainFiniteEnv yst)
       (mainFiniteOppositeReturnState yst) .halt := by
@@ -408,11 +408,11 @@ theorem step_mainFiniteEqual_zeroY (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 1)
     (hyeq : mainFiniteYEqValue yst ≠ 0)
     (hyzero : mainFiniteYZeroValue yst ≠ 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainValidatedState yst) mainFiniteEqualStmt
       (mainFiniteEnv yst) (mainFiniteZeroYReturnState yst) .halt := by
   rw [mainFiniteEqualStmt_shape]
-  have hseq : ExecStmts Challenge.EvmProof.modexpExec.toDialect
+  have hseq : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteEqualBody (mainFiniteEnv yst)
       (mainFiniteZeroYReturnState yst) .halt := by
@@ -420,15 +420,15 @@ theorem step_mainFiniteEqual_zeroY (yst : EvmState)
     exact Step.seqCons (step_mainFiniteOpposite_continue yst hyeq)
       (Step.seqStop (step_mainFiniteZeroY_return yst hyzero) (by decide))
   have hblock' := Step.block
-    (D := Challenge.EvmProof.modexpExec.toDialect)
-    (show ExecStmts Challenge.EvmProof.modexpExec.toDialect
-      (hoist Challenge.EvmProof.modexpExec.toDialect mainFiniteEqualBody ::
+    (D := Challenge.YulProof.ClosedEvm.exec.toDialect)
+    (show ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
+      (hoist Challenge.YulProof.ClosedEvm.exec.toDialect mainFiniteEqualBody ::
         mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteEqualBody (mainFiniteEnv yst)
       (mainFiniteZeroYReturnState yst) .halt from by
         rw [mainFiniteEqualBody_hoist]
         exact hseq)
-  have hblock : ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+  have hblock : ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       (.block mainFiniteEqualBody) (mainFiniteEnv yst)
       (mainFiniteZeroYReturnState yst) .halt := by
@@ -439,7 +439,7 @@ theorem step_mainFiniteEqual_zeroY (yst : EvmState)
 its exact four-word comparison. -/
 theorem step_mainFiniteEqual_skip (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainValidatedState yst) mainFiniteEqualStmt
       (mainFiniteEnv yst) (mainFiniteXEqArgsState yst) .normal := by
   rw [mainFiniteEqualStmt_shape]
@@ -447,7 +447,7 @@ theorem step_mainFiniteEqual_skip (yst : EvmState)
 
 private theorem step_mainFiniteZeroY_continue (yst : EvmState)
     (hyzero : mainFiniteYZeroValue yst = 0) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect ([] :: mainFuns)
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect ([] :: mainFuns)
       (mainFiniteEnv yst) (mainFiniteYEqArgsState yst)
       mainFiniteZeroYStmt (mainFiniteEnv yst)
       (mainFiniteYZeroArgsState yst) .normal := by
@@ -461,24 +461,24 @@ theorem step_mainFiniteEqual_nonexceptional (yst : EvmState)
     (hxeq : mainFiniteXEqValue yst = 1)
     (hyeq : mainFiniteYEqValue yst ≠ 0)
     (hyzero : mainFiniteYZeroValue yst = 0)
-    {V' : VEnv Challenge.EvmProof.modexpExec.toDialect} {st' : EvmState}
-    (htail : ExecStmts Challenge.EvmProof.modexpExec.toDialect
+    {V' : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect} {st' : EvmState}
+    (htail : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteYZeroArgsState yst)
       mainFiniteDoubleBody V' st' .normal) :
-    ExecStmt Challenge.EvmProof.modexpExec.toDialect mainFuns
+    ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns
       (mainFiniteEnv yst) (mainValidatedState yst) mainFiniteEqualStmt
       (restore (mainFiniteEnv yst) V') st' .normal := by
   rw [mainFiniteEqualStmt_shape]
-  have hseq : ExecStmts Challenge.EvmProof.modexpExec.toDialect
+  have hseq : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
       ([] :: mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteEqualBody V' st' .normal := by
     rw [mainFiniteEqualBody_eq]
     exact Step.seqCons (step_mainFiniteOpposite_continue yst hyeq)
       (Step.seqCons (step_mainFiniteZeroY_continue yst hyzero) htail)
   have hblock' := Step.block
-    (D := Challenge.EvmProof.modexpExec.toDialect)
-    (show ExecStmts Challenge.EvmProof.modexpExec.toDialect
-      (hoist Challenge.EvmProof.modexpExec.toDialect mainFiniteEqualBody ::
+    (D := Challenge.YulProof.ClosedEvm.exec.toDialect)
+    (show ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect
+      (hoist Challenge.YulProof.ClosedEvm.exec.toDialect mainFiniteEqualBody ::
         mainFuns) (mainFiniteEnv yst) (mainFiniteXEqArgsState yst)
       mainFiniteEqualBody V' st' .normal from by
         rw [mainFiniteEqualBody_hoist]
