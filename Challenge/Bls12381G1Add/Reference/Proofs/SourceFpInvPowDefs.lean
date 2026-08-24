@@ -75,6 +75,21 @@ def fpPowHighWord : U256 :=
 def fpPowLowWord : U256 := BitVec.ofNat 256
   45442060874369865957053122457065728162598490762543039060009208264153100167849
 
+@[irreducible] def highLoopEnv (aHi aLo : U256) (base acc : MontResultValue)
+    (bit : Nat) : VEnv D :=
+  fpPowLoopEnv aHi aLo base acc "\x00131" bit
+
+def highLoopBody : Block Op := fpPowLoopBody "\x00131" fpPowHighWord.toNat
+def highLoopFuns : FunEnv D := [] :: fpPowBodyFuns
+def highBodyFuns : FunEnv D := [] :: highLoopFuns
+def highCondFuns : FunEnv D := [] :: highBodyFuns
+
+theorem lookup_mont_highBody :
+    lookupFun highBodyFuns "\x0015" = some (montMul2Decl, fpInvFuns) := by rfl
+
+theorem lookup_mont_highCond :
+    lookupFun highCondFuns "\x0015" = some (montMul2Decl, fpInvFuns) := by rfl
+
 @[irreducible] def fpPowAfterHigh (aHi aLo : U256) : MontResultValue :=
   let base := fpPowBaseValue aHi aLo
   montFoldDownValue base fpPowHighWord 124 base
