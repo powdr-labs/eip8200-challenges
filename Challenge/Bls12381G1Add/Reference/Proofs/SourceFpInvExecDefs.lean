@@ -262,6 +262,71 @@ theorem conv_montMul2Value (xLo xHi yLo yHi : U256) :
       congrArg Fp.MontgomeryState.t0 hsecond⟩
   rw [hwords]
 
+/-- Opaque arithmetic view of one native source multiplication.  Long source
+traces refer to this boundary without elaborating the concrete CIOS word
+graph or the reducible shared `Fp.montMul2` definition. -/
+@[irreducible] def abstractMontMul2 (xLo xHi yLo yHi : U256) : Fp.Limbs :=
+  Fp.montMul2
+    { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi }
+    { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }
+
+theorem conv_montMul2Value_abstract (xLo xHi yLo yHi : U256) :
+    convMontResult (montMul2Value xLo xHi yLo yHi) =
+      abstractMontMul2 xLo xHi yLo yHi := by
+  unfold abstractMontMul2
+  exact conv_montMul2Value xLo xHi yLo yHi
+
+theorem canonical_abstractMontMul2 {xLo xHi yLo yHi : U256}
+    (hx : Fp.Canonical
+      { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi })
+    (hy : Fp.Canonical
+      { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }) :
+    Fp.Canonical (abstractMontMul2 xLo xHi yLo yHi) := by
+  unfold abstractMontMul2
+  exact Fp.canonical_montMul2 hx hy
+
+theorem lawful_abstractMontMul2 {xLo xHi yLo yHi : U256}
+    (hx : Fp.Canonical
+      { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi })
+    (hy : Fp.Canonical
+      { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }) :
+    (Fp.value (abstractMontMul2 xLo xHi yLo yHi) : PrimeField.LawfulFp) =
+      (Fp.value
+        { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi } :
+          PrimeField.LawfulFp) *
+      (Fp.value
+        { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi } :
+          PrimeField.LawfulFp) *
+      (Fp.montgomeryRadix : PrimeField.LawfulFp)⁻¹ := by
+  unfold abstractMontMul2
+  exact Fp.lawful_montMul2 hx hy
+
+theorem canonical_conv_montMul2Value {xLo xHi yLo yHi : U256}
+    (hx : Fp.Canonical
+      { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi })
+    (hy : Fp.Canonical
+      { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }) :
+    Fp.Canonical (convMontResult (montMul2Value xLo xHi yLo yHi)) := by
+  rw [conv_montMul2Value_abstract]
+  exact canonical_abstractMontMul2 hx hy
+
+theorem lawful_conv_montMul2Value {xLo xHi yLo yHi : U256}
+    (hx : Fp.Canonical
+      { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi })
+    (hy : Fp.Canonical
+      { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }) :
+    (Fp.value (convMontResult (montMul2Value xLo xHi yLo yHi)) :
+        PrimeField.LawfulFp) =
+      (Fp.value
+        { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi } :
+          PrimeField.LawfulFp) *
+      (Fp.value
+        { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi } :
+          PrimeField.LawfulFp) *
+      (Fp.montgomeryRadix : PrimeField.LawfulFp)⁻¹ := by
+  rw [conv_montMul2Value_abstract]
+  exact lawful_abstractMontMul2 hx hy
+
 def montMul2Stmt0 : Stmt Op := montMul2Body[0]!
 def montMul2Stmt1 : Stmt Op := montMul2Body[1]!
 def montMul2Stmt2 : Stmt Op := montMul2Body[2]!

@@ -141,49 +141,46 @@ theorem step_montMul2_call {callerFuns : FunEnv Challenge.YulProof.ClosedEvm.dia
   rw [montMul2BodyResult_lo, montMul2BodyResult_hi] at hcall
   exact hcall
 
-/-- Compact linking boundary used by the exponentiation loops.  The concrete
-source proof is hidden behind one field so every iteration does not elaborate
-the complete CIOS derivation again. -/
-structure MontMulSourceCorrect : Prop where
-  call : ∀ {callerFuns : FunEnv Challenge.YulProof.ClosedEvm.dialect}
-      {V : VEnv Challenge.YulProof.ClosedEvm.dialect} {args : List (Expr Op)}
-      {yst : EvmState} (xLo xHi yLo yHi : U256),
-    lookupFun callerFuns "\x0015" = some (montMul2Decl, fpInvFuns) →
-    EvalArgs Challenge.YulProof.ClosedEvm.dialect callerFuns V yst args
-      (.vals [xLo, xHi, yLo, yHi] yst) →
-    EvalExpr Challenge.YulProof.ClosedEvm.dialect callerFuns V yst
-      (.call "\x0015" args)
-      (.vals [(montMul2Value xLo xHi yLo yHi).lo,
-        (montMul2Value xLo xHi yLo yHi).hi] yst)
-
-theorem nativeMontMulSourceCorrect : MontMulSourceCorrect where
-  call := step_montMul2_call
-
-set_option linter.defProp false in
-@[irreducible] def MontMulRefines (xLo xHi yLo yHi zLo zHi : U256) : Prop :=
-  convMontResult { lo := zLo, hi := zHi } =
-    Challenge.Bls12381.ProofSupport.Fp.montMul2
-      { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi }
-      { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }
-
-/-- Implementation-independent multiplication boundary used by long loops.
-Only returned source words and an opaque shared `Fp.montMul2` refinement cross
-this boundary. -/
-structure MontMulRefinementCorrect : Prop where
-  call : ∀ {callerFuns : FunEnv Challenge.YulProof.ClosedEvm.dialect}
-      {V : VEnv Challenge.YulProof.ClosedEvm.dialect} {args : List (Expr Op)}
-      {yst : EvmState} (xLo xHi yLo yHi : U256),
-    lookupFun callerFuns "\x0015" = some (montMul2Decl, fpInvFuns) →
-    EvalArgs Challenge.YulProof.ClosedEvm.dialect callerFuns V yst args
-      (.vals [xLo, xHi, yLo, yHi] yst) →
-    ∃ zLo zHi,
-      EvalExpr Challenge.YulProof.ClosedEvm.dialect callerFuns V yst
-        (.call "\x0015" args) (.vals [zLo, zHi] yst) ∧
-      MontMulRefines xLo xHi yLo yHi zLo zHi
-
 set_option linter.defProp false in
 @[irreducible] def NativeMontMulResult (xLo xHi yLo yHi zLo zHi : U256) : Prop :=
-  zLo = (montMul2Value xLo xHi yLo yHi).lo ∧
-    zHi = (montMul2Value xLo xHi yLo yHi).hi
+  ∀ (_hx : Challenge.Bls12381.ProofSupport.Fp.Canonical
+        { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi })
+      (_hy : Challenge.Bls12381.ProofSupport.Fp.Canonical
+        { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }),
+    Challenge.Bls12381.ProofSupport.Fp.Canonical
+        { lo := YulEvmCompiler.conv zLo, hi := YulEvmCompiler.conv zHi } ∧
+      (Challenge.Bls12381.ProofSupport.Fp.value
+          { lo := YulEvmCompiler.conv zLo, hi := YulEvmCompiler.conv zHi } :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp) =
+        (Challenge.Bls12381.ProofSupport.Fp.value
+          { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi } :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp) *
+        (Challenge.Bls12381.ProofSupport.Fp.value
+          { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi } :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp) *
+        (Challenge.Bls12381.ProofSupport.Fp.montgomeryRadix :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp)⁻¹
+
+theorem NativeMontMulResult.spec {xLo xHi yLo yHi zLo zHi : U256}
+    (hresult : NativeMontMulResult xLo xHi yLo yHi zLo zHi)
+    (hx : Challenge.Bls12381.ProofSupport.Fp.Canonical
+      { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi })
+    (hy : Challenge.Bls12381.ProofSupport.Fp.Canonical
+      { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi }) :
+    Challenge.Bls12381.ProofSupport.Fp.Canonical
+        { lo := YulEvmCompiler.conv zLo, hi := YulEvmCompiler.conv zHi } ∧
+      (Challenge.Bls12381.ProofSupport.Fp.value
+          { lo := YulEvmCompiler.conv zLo, hi := YulEvmCompiler.conv zHi } :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp) =
+        (Challenge.Bls12381.ProofSupport.Fp.value
+          { lo := YulEvmCompiler.conv xLo, hi := YulEvmCompiler.conv xHi } :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp) *
+        (Challenge.Bls12381.ProofSupport.Fp.value
+          { lo := YulEvmCompiler.conv yLo, hi := YulEvmCompiler.conv yHi } :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp) *
+        (Challenge.Bls12381.ProofSupport.Fp.montgomeryRadix :
+          Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp)⁻¹ := by
+  unfold NativeMontMulResult at hresult
+  exact hresult hx hy
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

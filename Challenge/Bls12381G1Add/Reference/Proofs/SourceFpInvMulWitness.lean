@@ -20,7 +20,9 @@ theorem step_montMul2_nativeResult
   refine ⟨(montMul2Value xLo xHi yLo yHi).lo,
     (montMul2Value xLo xHi yLo yHi).hi,
     step_montMul2_call xLo xHi yLo yHi hlookup hargs, ?_⟩
-  simp only [NativeMontMulResult]
-  exact ⟨True.intro, True.intro⟩
+  unfold NativeMontMulResult
+  intro hx hy
+  exact ⟨canonical_conv_montMul2Value hx hy,
+    lawful_conv_montMul2Value hx hy⟩
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
