@@ -1,5 +1,5 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDoubleDefs
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvRefinement
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvResultDefs
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulMemory
 
 set_option warningAsError true
@@ -27,6 +27,10 @@ def mainFiniteDoubleState1 (yst : EvmState) : EvmState :=
   let x := mainFiniteDoubleXWords yst
   fpMulFinalState (mainFiniteDoubleXSqArgsState yst) x.1 x.2 x.1 x.2
 
+theorem mainFiniteDoubleState1_eq (yst : EvmState) :
+    mainFiniteDoubleState1 yst = mainFiniteDoubleXSqArgsState yst := by
+  rfl
+
 def mainFiniteDoubleTwiceWords (yst : EvmState) : U256 × U256 :=
   let xSq := mainFiniteDoubleXSqWords yst
   fpAddValue xSq.1 xSq.2 xSq.1 xSq.2
@@ -45,11 +49,14 @@ def mainFiniteDoubleDenArgsState (yst : EvmState) : EvmState :=
 
 def mainFiniteDoubleDenInvWords (yst : EvmState) : U256 × U256 :=
   let den := mainFiniteDoubleDenominatorWords yst
-  fpInvResult (mainFiniteDoubleDenArgsState yst) den.1 den.2
+  fpInvResultWords den.1 den.2
 
 def mainFiniteDoubleState2 (yst : EvmState) : EvmState :=
-  let den := mainFiniteDoubleDenominatorWords yst
-  fpInvFinalState (mainFiniteDoubleDenArgsState yst) den.1 den.2
+  mainFiniteDoubleDenArgsState yst
+
+theorem mainFiniteDoubleState2_eq (yst : EvmState) :
+    mainFiniteDoubleState2 yst = mainFiniteDoubleDenArgsState yst := by
+  rfl
 
 def mainFiniteDoubleLambdaWords (yst : EvmState) : U256 × U256 :=
   let num := mainFiniteDoubleNumeratorWords yst
@@ -67,6 +74,15 @@ def mainFiniteDoubleEnv1 (yst : EvmState) :
     VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
   [("\x00103", (mainFiniteDoubleXSqWords yst).1),
     ("\x00104", (mainFiniteDoubleXSqWords yst).2)] ++ mainFiniteEnv yst
+
+theorem mainFiniteDoubleEnv1_eq (yst : EvmState) :
+    let x := mainFiniteDoubleXWords yst
+    mainFiniteDoubleEnv1 yst =
+      [("\x00103", (fpMulResult (mainFiniteDoubleXSqArgsState yst)
+        x.1 x.2 x.1 x.2).1),
+       ("\x00104", (fpMulResult (mainFiniteDoubleXSqArgsState yst)
+        x.1 x.2 x.1 x.2).2)] ++ mainFiniteEnv yst := by
+  rfl
 
 def mainFiniteDoubleEnv2 (yst : EvmState) :
     VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
@@ -86,11 +102,27 @@ def mainFiniteDoubleEnv4 (yst : EvmState) :
     ("\x00108", (mainFiniteDoubleDenominatorWords yst).2)] ++
       mainFiniteDoubleEnv3 yst
 
+theorem mainFiniteDoubleEnv4_eq (yst : EvmState) :
+    let y := mainFiniteDoubleYWords yst
+    mainFiniteDoubleEnv4 yst =
+      [("\x00107", (fpAddValue y.1 y.2 y.1 y.2).1),
+       ("\x00108", (fpAddValue y.1 y.2 y.1 y.2).2)] ++
+        mainFiniteDoubleEnv3 yst := by
+  rfl
+
 def mainFiniteDoubleEnv5 (yst : EvmState) :
     VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
   [("\x00109", (mainFiniteDoubleDenInvWords yst).1),
     ("\x00110", (mainFiniteDoubleDenInvWords yst).2)] ++
       mainFiniteDoubleEnv4 yst
+
+theorem mainFiniteDoubleEnv5_eq (yst : EvmState) :
+    let den := mainFiniteDoubleDenominatorWords yst
+    mainFiniteDoubleEnv5 yst =
+      [("\x00109", (fpInvResultWords den.1 den.2).1),
+       ("\x00110", (fpInvResultWords den.1 den.2).2)] ++
+        mainFiniteDoubleEnv4 yst := by
+  rfl
 
 def mainFiniteDoubleEnv6 (yst : EvmState) :
     VEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
