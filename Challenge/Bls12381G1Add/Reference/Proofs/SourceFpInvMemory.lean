@@ -1,4 +1,4 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvRefinement
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvResultDefs
 
 set_option warningAsError true
 

@@ -1,4 +1,5 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvExec
+import Challenge.Bls12381.ProofSupport.FpInv
+import Challenge.YulProof.EvmState
 
 set_option warningAsError true
 
@@ -22,47 +23,52 @@ theorem conv_sourceWordOfUInt256 (word : EvmSemantics.UInt256) :
     BitVec.toNat_ofNat]
   exact Nat.mod_eq_of_lt word.val.isLt
 
-@[irreducible] def fpInvResult (_yst : EvmState) (hi lo : U256) : U256 × U256 :=
+@[irreducible] def fpInvResultWords (hi lo : U256) : U256 × U256 :=
   let result := Fp.invCanonical (fpInvInputLimbs hi lo)
   (sourceWordOfUInt256 result.hi, sourceWordOfUInt256 result.lo)
 
+/-- Compatibility wrapper for state graphs written before inversion became
+stack-only.  New proofs should use `fpInvResultWords`. -/
+def fpInvResult (_yst : EvmState) (hi lo : U256) : U256 × U256 :=
+  fpInvResultWords hi lo
+
 def fpInvFinalState (yst : EvmState) (_hi _lo : U256) : EvmState := yst
 
-@[irreducible] def fpInvOutputLimbs (_yst : EvmState) (hi lo : U256) : Fp.Limbs :=
+@[irreducible] def fpInvOutputLimbs (hi lo : U256) : Fp.Limbs :=
   Fp.invCanonical (fpInvInputLimbs hi lo)
 
-theorem fpInvResult_hi_conv (yst : EvmState) (hi lo : U256) :
-    YulEvmCompiler.conv (fpInvResult yst hi lo).1 =
+theorem fpInvResultWords_hi_conv (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResultWords hi lo).1 =
       (Fp.invCanonical (fpInvInputLimbs hi lo)).hi := by
-  unfold fpInvResult
+  unfold fpInvResultWords
   exact conv_sourceWordOfUInt256 _
 
-theorem fpInvResult_lo_conv (yst : EvmState) (hi lo : U256) :
-    YulEvmCompiler.conv (fpInvResult yst hi lo).2 =
+theorem fpInvResultWords_lo_conv (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResultWords hi lo).2 =
       (Fp.invCanonical (fpInvInputLimbs hi lo)).lo := by
-  unfold fpInvResult
+  unfold fpInvResultWords
   exact conv_sourceWordOfUInt256 _
 
-theorem fpInvOutputLimbs_hi (yst : EvmState) (hi lo : U256) :
-    (fpInvOutputLimbs yst hi lo).hi =
+theorem fpInvOutputLimbs_hi (hi lo : U256) :
+    (fpInvOutputLimbs hi lo).hi =
       (Fp.invCanonical (fpInvInputLimbs hi lo)).hi := by
   unfold fpInvOutputLimbs
   rfl
 
-theorem fpInvOutputLimbs_lo (yst : EvmState) (hi lo : U256) :
-    (fpInvOutputLimbs yst hi lo).lo =
+theorem fpInvOutputLimbs_lo (hi lo : U256) :
+    (fpInvOutputLimbs hi lo).lo =
       (Fp.invCanonical (fpInvInputLimbs hi lo)).lo := by
   unfold fpInvOutputLimbs
   rfl
 
-theorem fpInvResult_toOutput_hi (yst : EvmState) (hi lo : U256) :
-    YulEvmCompiler.conv (fpInvResult yst hi lo).1 =
-      (fpInvOutputLimbs yst hi lo).hi := by
-  rw [fpInvResult_hi_conv, fpInvOutputLimbs_hi]
+theorem fpInvResultWords_toOutput_hi (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResultWords hi lo).1 =
+      (fpInvOutputLimbs hi lo).hi := by
+  rw [fpInvResultWords_hi_conv, fpInvOutputLimbs_hi]
 
-theorem fpInvResult_toOutput_lo (yst : EvmState) (hi lo : U256) :
-    YulEvmCompiler.conv (fpInvResult yst hi lo).2 =
-      (fpInvOutputLimbs yst hi lo).lo := by
-  rw [fpInvResult_lo_conv, fpInvOutputLimbs_lo]
+theorem fpInvResultWords_toOutput_lo (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResultWords hi lo).2 =
+      (fpInvOutputLimbs hi lo).lo := by
+  rw [fpInvResultWords_lo_conv, fpInvOutputLimbs_lo]
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
