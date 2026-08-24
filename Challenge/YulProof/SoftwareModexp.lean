@@ -115,9 +115,9 @@ The callee environment is explicit because Yul function lookup returns both a
 declaration and its lexical environment.  A caller may use any larger function
 environment whose lookup of `name` resolves to this component. -/
 def Correct {Request : Type} (calleeFuns : FunEnv D) (name : Ident)
-    (interface : Interface Request) : Prop :=
+    (decl : FDecl D) (interface : Interface Request) : Prop :=
   ∀ {callerFuns : FunEnv D} {V : VEnv D} {st st1 : EvmState}
-      {args : List (Expr Op)} {decl : FDecl D} (request : Request),
+      {args : List (Expr Op)} (request : Request),
     lookupFun callerFuns name = some (decl, calleeFuns) →
     EvalArgs D callerFuns V st args (.vals (interface.arguments request) st1) →
     interface.pre st1 request →
@@ -131,9 +131,11 @@ namespace Correct
 
 /-- Apply a component contract at one resolved source call. -/
 theorem call {Request : Type} {calleeFuns : FunEnv D} {name : Ident}
-    {interface : Interface Request} (hcorrect : Correct calleeFuns name interface)
+    {decl : FDecl D}
+    {interface : Interface Request}
+    (hcorrect : Correct calleeFuns name decl interface)
     {callerFuns : FunEnv D} {V : VEnv D} {st st1 : EvmState}
-    {args : List (Expr Op)} {decl : FDecl D} {request : Request}
+    {args : List (Expr Op)} {request : Request}
     (hlookup : lookupFun callerFuns name = some (decl, calleeFuns))
     (hargs : EvalArgs D callerFuns V st args
       (.vals (interface.arguments request) st1))

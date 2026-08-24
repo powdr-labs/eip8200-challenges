@@ -126,12 +126,12 @@ def interface
 
 /-- A closed-dialect local Yul function implements BLS base-field modular
 exponentiation for the chosen source ABI. -/
-def Correct (calleeFuns : FunEnv D) (name : Ident)
+def Correct (calleeFuns : FunEnv D) (name : Ident) (decl : FDecl D)
     (arguments : Request → List U256)
     (inputRep : EvmState → Request → Prop)
     (writes : Request → List Challenge.YulProof.SoftwareModexp.MemoryRegion) :
     Prop :=
-  Challenge.YulProof.SoftwareModexp.Correct calleeFuns name
+  Challenge.YulProof.SoftwareModexp.Correct calleeFuns name decl
     (interface arguments inputRep writes)
 
 /-! ## Fixed BLS inversion ABI -/
@@ -162,9 +162,9 @@ def inversionInterface
 
 /-- Closed-dialect contract consumed by G1ADD for its fixed-exponent local
 software inversion function. -/
-def InversionCorrect (calleeFuns : FunEnv D) (name : Ident)
+def InversionCorrect (calleeFuns : FunEnv D) (name : Ident) (decl : FDecl D)
     (writes : Request → List Challenge.YulProof.SoftwareModexp.MemoryRegion) : Prop :=
-  Challenge.YulProof.SoftwareModexp.Correct calleeFuns name
+  Challenge.YulProof.SoftwareModexp.Correct calleeFuns name decl
     (inversionInterface writes)
 
 /-- The BLS result relation always exposes exactly two source words. -/
