@@ -21,15 +21,15 @@ structure FpMulSumValue where
   word : U256
   carry : U256
 
-private def fpMulAddTwo (x y : U256) : FpMulSumValue :=
+def fpMulAddTwo (x y : U256) : FpMulSumValue :=
   let word := x + y
   { word, carry := b2w (BitVec.ult word x) }
 
-private def fpMulAddTerm (sum : FpMulSumValue) (term : U256) : FpMulSumValue :=
+def fpMulAddTerm (sum : FpMulSumValue) (term : U256) : FpMulSumValue :=
   let word := sum.word + term
   { word, carry := sum.carry + b2w (BitVec.ult word term) }
 
-private def fpMulBarrettProducts (product : FullMulValue) :
+def fpMulBarrettProducts (product : FullMulValue) :
     FullWordValue × FullWordValue × FullWordValue ×
       FullWordValue × FullWordValue × FullWordValue :=
   let m0 := BitVec.ofNat 256
@@ -62,23 +62,9 @@ def fpMulBarrettL3 (product : FullMulValue) : FpMulSumValue :=
 
 /-- Exact source-word graph for the fixed Barrett quotient. -/
 def fpMulBarrettQuotient (product : FullMulValue) : FpMulWideValue :=
-  let m0 := BitVec.ofNat 256
-    0xad397b918f6ff20d533b6c08511c60e2757079ace6bd401859778ceb4dabc4f8
-  let m1 := BitVec.ofNat 256
-    0x1b82741ff6a0a94bdf4771e0286779d3997167a058f1c07b13e207f56591ba2e
-  let m2 := BitVec.ofNat 256 0x9d835d2f3cc9e45ce28101b0cc7a6ba29
-  let p00 := fullWordValue product.r1 m0
-  let p01 := fullWordValue product.r1 m1
-  let p02 := fullWordValue product.r1 m2
-  let p10 := fullWordValue product.r2 m0
-  let p11 := fullWordValue product.r2 m1
-  let p12 := fullWordValue product.r2 m2
-  let l1 := fpMulAddTerm (fpMulAddTwo p00.hi p01.lo) p10.lo
-  let l2 := fpMulAddTerm
-    (fpMulAddTerm (fpMulAddTerm (fpMulAddTwo p01.hi p10.hi) p02.lo) p11.lo)
-    l1.carry
-  let l3 := fpMulAddTerm
-    (fpMulAddTerm (fpMulAddTwo p02.hi p11.hi) p12.lo) l2.carry
+  let products := fpMulBarrettProducts product
+  let p12 := products.2.2.2.2.2
+  let l3 := fpMulBarrettL3 product
   { hi := p12.hi + l3.carry, lo := l3.word }
 
 def fpMulModulusWide : FpMulWideValue :=
