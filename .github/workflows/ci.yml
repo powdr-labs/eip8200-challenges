@@ -93,7 +93,7 @@ jobs:
 
       - name: Verify shared soundness
         run: |
-          if grep -rn --include='*.lean' -w 'sorry' \
+          if grep -rn --include='*.lean' -w -e 'sorry' -e 'admit' \
               Challenge/EvmProof Challenge/EvmProof.lean \
               Challenge/YulProof Challenge/YulProof.lean; then
             echo "::error::found an unfinished proof in shared EVM/Yul support"
@@ -200,7 +200,7 @@ jobs:
       # The textual scan catches an unfinished proof that an umbrella misses.
       - name: Verify ${{ matrix.name }} soundness
         run: |
-          if grep -rn --include='*.lean' -w 'sorry' \
+          if grep -rn --include='*.lean' -w -e 'sorry' -e 'admit' \
               "Challenge/${{ matrix.directory }}" \
               "Challenge/${{ matrix.directory }}.lean" \
               "${{ matrix.main }}"; then
@@ -208,7 +208,8 @@ jobs:
             exit 1
           fi
           if [ "${{ matrix.source_only }}" = 'true' ] && \
-              grep -rn --include='*.lean' -w 'sorry' Challenge/Bls12381; then
+              grep -rn --include='*.lean' -w -e 'sorry' -e 'admit' \
+                Challenge/Bls12381; then
             echo "::error::found an unfinished shared BLS mathematical proof"
             exit 1
           fi
