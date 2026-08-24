@@ -37,6 +37,10 @@ invariant makes restoration at the end of the source `for` compositional. -/
 def PowLoopHead (V : VEnv D) (bitName : Ident) (bit : Nat) : Prop :=
   ∃ tail : VEnv D, V = (bitName, BitVec.ofNat 256 bit) :: tail
 
+def PowLoopFrame (V : VEnv D) (aHi aLo : U256) (bitName : Ident) (bit : Nat)
+    (base acc : MontResultValue) : Prop :=
+  V = (bitName, BitVec.ofNat 256 bit) :: fpPowAccEnv aHi aLo base acc
+
 theorem PowLoopHead.afterSetBit {V : VEnv D} {bitName : Ident} {bit : Nat}
     (hhead : PowLoopHead V bitName bit) (next : Nat) :
     PowLoopHead (setBit V bitName next) bitName next := by

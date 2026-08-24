@@ -21,29 +21,33 @@ theorem fpPowStmt4_shape : fpPowStmt4 =
 result becoming the low-window accumulator. -/
 theorem step_fpPowHighLow (aHi aLo : U256) (base : MontResultValue)
     (yst : EvmState) :
-    ∃ Vhigh Vlow afterHigh afterLow,
+    ∃ afterHigh afterLow,
       ExecStmts D fpPowBodyFuns (fpPowAccEnv aHi aLo base base) yst
-        [fpPowStmt3, fpPowStmt4] Vlow yst .normal ∧
-      PowAccInv Vhigh base afterHigh ∧
-      PowAccInv Vlow base afterLow ∧
+        [fpPowStmt3, fpPowStmt4]
+        (fpPowAccEnv aHi aLo base afterLow) yst .normal ∧
       NativeFoldDown base fpPowHighWordNat 124 base afterHigh ∧
       NativeFoldDown base fpPowLowWordNat 256 afterHigh afterLow := by
   have hstart : PowAccInv (fpPowAccEnv aHi aLo base base) base base :=
     ⟨by rfl, by rfl, by rfl, by rfl⟩
-  obtain ⟨Vhigh, afterHigh, hhigh, hhighInv, hhighFold⟩ :=
-    step_fpPowForLoop "\x00131" base fpPowHighWordNat 124
+  obtain ⟨afterHigh, hhigh, hhighFold⟩ :=
+    step_fpPowForLoop "\x00131" aHi aLo base fpPowHighWordNat 124
       (fpPowAccEnv aHi aLo base base) base yst hstart
-      (by norm_num) (by decide) (by decide) (by decide) (by decide)
-  obtain ⟨Vlow, afterLow, hlow, hlowInv, hlowFold⟩ :=
-    step_fpPowForLoop "\x00132" base fpPowLowWordNat 256
-      Vhigh afterHigh yst hhighInv
-      (by norm_num) (by decide) (by decide) (by decide) (by decide)
+      rfl (by norm_num) (by decide) (by decide) (by decide) (by decide)
+  have hhighInv : PowAccInv
+      (fpPowAccEnv aHi aLo base afterHigh) base afterHigh :=
+    ⟨by rfl, by rfl, by rfl, by rfl⟩
+  obtain ⟨afterLow, hlow, hlowFold⟩ :=
+    step_fpPowForLoop "\x00132" aHi aLo base fpPowLowWordNat 256
+      (fpPowAccEnv aHi aLo base afterHigh) afterHigh yst hhighInv
+      rfl (by norm_num) (by decide) (by decide) (by decide) (by decide)
   rw [← fpPowStmt3_shape] at hhigh
   rw [← fpPowStmt4_shape] at hlow
-  have hnil : ExecStmts D fpPowBodyFuns Vlow yst [] Vlow yst .normal :=
+  have hnil : ExecStmts D fpPowBodyFuns
+      (fpPowAccEnv aHi aLo base afterLow) yst []
+      (fpPowAccEnv aHi aLo base afterLow) yst .normal :=
     Step.seqNil
-  exact ⟨Vhigh, Vlow, afterHigh, afterLow,
+  exact ⟨afterHigh, afterLow,
     Step.seqCons hhigh (Step.seqCons hlow hnil),
-    hhighInv, hlowInv, hhighFold, hlowFold⟩
+    hhighFold, hlowFold⟩
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

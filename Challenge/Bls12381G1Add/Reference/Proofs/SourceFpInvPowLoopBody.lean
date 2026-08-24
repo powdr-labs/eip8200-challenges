@@ -33,9 +33,10 @@ theorem fpPowLoopBody_eq (bitName : Ident) (word : Nat) :
   rfl
 
 theorem step_fpPowLoopBody {V : VEnv D} (bitName : Ident) (bit : Nat)
-    (base acc : MontResultValue) (word : Nat) (yst : EvmState)
+    (aHi aLo : U256) (base acc : MontResultValue) (word : Nat) (yst : EvmState)
     (hinv : PowLoopInv V bitName (bit + 1) base acc)
     (hhead : PowLoopHead V bitName (bit + 1))
+    (hframe : PowLoopFrame V aHi aLo bitName (bit + 1) base acc)
     (hfreshLo : bitName ≠ "\x00129") (hfreshHi : bitName ≠ "\x00130")
     (hfreshBaseLo : bitName ≠ "\x00127")
     (hfreshBaseHi : bitName ≠ "\x00128") :
@@ -45,6 +46,7 @@ theorem step_fpPowLoopBody {V : VEnv D} (bitName : Ident) (bit : Nat)
       V'.length = V.length ∧
       PowLoopInv V' bitName bit base next ∧
       PowLoopHead V' bitName bit ∧
+      PowLoopFrame V' aHi aLo bitName bit base next ∧
       NativeBitStep base acc word bit next := by
   have hdec := step_loop_decrement' bitName bit base acc yst hinv
   have hdecInv := hinv.afterSetBit bit hfreshLo hfreshHi
@@ -79,7 +81,13 @@ theorem step_fpPowLoopBody {V : VEnv D} (bitName : Ident) (bit : Nat)
     have hlen : (setAcc (setBit V bitName bit) square).length = V.length := by
       rw [setAcc_length, setBit_length]
     rw [restore_of_length_eq V _ hlen] at hblock
-    exact ⟨_, square, hblock, hlen, hsquareInv, hsquareHead,
+    have hsquareFrame : PowLoopFrame
+        (setAcc (setBit V bitName bit) square) aHi aLo bitName bit base square := by
+      have hframe' := hframe
+      unfold PowLoopFrame at hframe' ⊢
+      rw [hframe']
+      simp [setBit, setAcc, fpPowAccEnv, VEnv.set, hfreshLo, hfreshHi]
+    exact ⟨_, square, hblock, hlen, hsquareInv, hsquareHead, hsquareFrame,
       NativeBitStep.zero square hsquareNative hzero⟩
   · obtain ⟨resultLo, resultHi, hcond, hmultiply⟩ :=
       step_loop_condition_nonzero bitName bit base square word yst
@@ -113,7 +121,14 @@ theorem step_fpPowLoopBody {V : VEnv D} (bitName : Ident) (bit : Nat)
           V.length := by
       rw [setAcc_length, setAcc_length, setBit_length]
     rw [restore_of_length_eq V _ hlen] at hblock
-    exact ⟨_, result, hblock, hlen, hresultInv, hresultHead,
+    have hresultFrame : PowLoopFrame
+        (setAcc (setAcc (setBit V bitName bit) square) result)
+        aHi aLo bitName bit base result := by
+      have hframe' := hframe
+      unfold PowLoopFrame at hframe' ⊢
+      rw [hframe']
+      simp [setBit, setAcc, fpPowAccEnv, VEnv.set, hfreshLo, hfreshHi]
+    exact ⟨_, result, hblock, hlen, hresultInv, hresultHead, hresultFrame,
       NativeBitStep.nonzero square result hsquareNative hzero hmultiply⟩
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

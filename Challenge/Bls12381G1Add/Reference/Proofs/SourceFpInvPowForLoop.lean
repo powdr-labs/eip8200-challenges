@@ -65,32 +65,36 @@ theorem PowLoopInv.tail {V tail : VEnv D} {bitName : Ident} {bit : Nat}
 
 /-- Execute one complete source `for` loop and remove only its local bit
 binding at scope exit. -/
-theorem step_fpPowForLoop (bitName : Ident) (base : MontResultValue)
+theorem step_fpPowForLoop (bitName : Ident) (aHi aLo : U256)
+    (base : MontResultValue)
     (word count : Nat) (V : VEnv D) (acc : MontResultValue) (yst : EvmState)
-    (hinv : PowAccInv V base acc) (hbound : count < 2 ^ 256)
+    (hinv : PowAccInv V base acc)
+    (hframe : V = fpPowAccEnv aHi aLo base acc)
+    (hbound : count < 2 ^ 256)
     (hfreshLo : bitName ≠ "\x00129") (hfreshHi : bitName ≠ "\x00130")
     (hfreshBaseLo : bitName ≠ "\x00127")
     (hfreshBaseHi : bitName ≠ "\x00128") :
-    ∃ V' result,
+    ∃ result,
       ExecStmt D fpPowBodyFuns V yst (fpPowForStmt bitName word count)
-        V' yst .normal ∧
-      PowAccInv V' base result ∧
+        (fpPowAccEnv aHi aLo base result) yst .normal ∧
       NativeFoldDown base word count acc result := by
   obtain ⟨hinit, hloopInv, hloopHead⟩ :=
     step_fpPowForInit bitName count base acc yst hinv
       hfreshLo hfreshHi hfreshBaseLo hfreshBaseHi
-  obtain ⟨Vfinal, result, hloop, hfinalLength, hfinalInv, hfinalHead, hfold⟩ :=
-    step_fpPowLoop bitName base word count
+  have hloopFrame : PowLoopFrame
+      ((bitName, BitVec.ofNat 256 count) :: V)
+      aHi aLo bitName count base acc := by
+    unfold PowLoopFrame
+    rw [hframe]
+  obtain ⟨Vfinal, result, hloop, _hfinalLength, _hfinalInv, _hfinalHead,
+      hfinalFrame, hfold⟩ :=
+    step_fpPowLoop bitName aHi aLo base word count
       ((bitName, BitVec.ofNat 256 count) :: V) acc yst
-      hloopInv hloopHead hbound hfreshLo hfreshHi hfreshBaseLo hfreshBaseHi
-  rcases hfinalHead with ⟨tail, hfinalEq⟩
-  have htailLength : tail.length = V.length := by
-    rw [hfinalEq] at hfinalLength
-    simp at hfinalLength
-    exact hfinalLength
-  have hrestore : restore V Vfinal = tail := by
-    rw [hfinalEq]
-    simp [restore, htailLength]
+      hloopInv hloopHead hloopFrame hbound
+      hfreshLo hfreshHi hfreshBaseLo hfreshBaseHi
+  have hrestore : restore V Vfinal = fpPowAccEnv aHi aLo base result := by
+    rw [hfinalFrame, hframe]
+    rfl
   have hinit' : ExecStmts D
       (hoist D (fpPowForInit bitName count) :: fpPowBodyFuns) V yst
       (fpPowForInit bitName count)
@@ -100,8 +104,6 @@ theorem step_fpPowForLoop (bitName : Ident) (base : MontResultValue)
   change ExecStmt D fpPowBodyFuns V yst (fpPowForStmt bitName word count)
     (restore V Vfinal) yst .normal at hfor
   rw [hrestore] at hfor
-  exact ⟨tail, result, hfor,
-    hfinalInv.tail hfinalEq hfreshLo hfreshHi hfreshBaseLo hfreshBaseHi,
-    hfold⟩
+  exact ⟨result, hfor, hfold⟩
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

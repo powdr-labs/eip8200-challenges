@@ -48,10 +48,12 @@ theorem step_empty_fpPowPost (V : VEnv D) (yst : EvmState) :
 
 /-- A `count`-iteration source loop, proved by a compact Nat induction rather
 than by interpreter-fuel evaluation or concrete term unrolling. -/
-theorem step_fpPowLoop (bitName : Ident) (base : MontResultValue) (word count : Nat)
+theorem step_fpPowLoop (bitName : Ident) (aHi aLo : U256)
+    (base : MontResultValue) (word count : Nat)
     (V : VEnv D) (acc : MontResultValue) (yst : EvmState)
     (hinv : PowLoopInv V bitName count base acc)
     (hhead : PowLoopHead V bitName count)
+    (hframe : PowLoopFrame V aHi aLo bitName count base acc)
     (hbound : count < 2 ^ 256)
     (hfreshLo : bitName ≠ "\x00129") (hfreshHi : bitName ≠ "\x00130")
     (hfreshBaseLo : bitName ≠ "\x00127")
@@ -62,23 +64,27 @@ theorem step_fpPowLoop (bitName : Ident) (base : MontResultValue) (word count : 
       V'.length = V.length ∧
       PowLoopInv V' bitName 0 base result ∧
       PowLoopHead V' bitName 0 ∧
+      PowLoopFrame V' aHi aLo bitName 0 base result ∧
       NativeFoldDown base word count acc result := by
   induction count generalizing V acc with
   | zero =>
       refine ⟨V, acc, Step.loopDone (eval_fpPowLoopGuard bitName 0 base acc yst hinv)
-        fpPowGuardValue_zero, rfl, hinv, hhead, NativeFoldDown.zero acc⟩
+        fpPowGuardValue_zero, rfl, hinv, hhead, hframe,
+        NativeFoldDown.zero acc⟩
   | succ bit ih =>
-      obtain ⟨Vnext, next, hbody, hnextLength, hnextInv, hnextHead, hstep⟩ :=
-        step_fpPowLoopBody bitName bit base acc word yst hinv hhead
+      obtain ⟨Vnext, next, hbody, hnextLength, hnextInv, hnextHead,
+          hnextFrame, hstep⟩ :=
+        step_fpPowLoopBody bitName bit aHi aLo base acc word yst hinv hhead hframe
           hfreshLo hfreshHi hfreshBaseLo hfreshBaseHi
-      obtain ⟨Vfinal, result, hloop, hfinalLength, hfinalInv, hfinalHead, hrest⟩ :=
-        ih Vnext next hnextInv hnextHead (by omega)
+      obtain ⟨Vfinal, result, hloop, hfinalLength, hfinalInv, hfinalHead,
+          hfinalFrame, hrest⟩ :=
+        ih Vnext next hnextInv hnextHead hnextFrame (by omega)
       refine ⟨Vfinal, result,
         Step.loopStep
           (eval_fpPowLoopGuard bitName (bit + 1) base acc yst hinv)
           (fpPowGuardValue_succ_ne_zero bit hbound)
           hbody (Or.inl rfl) (step_empty_fpPowPost Vnext yst) hloop,
-        hfinalLength.trans hnextLength, hfinalInv, hfinalHead,
+        hfinalLength.trans hnextLength, hfinalInv, hfinalHead, hfinalFrame,
         NativeFoldDown.succ hstep hrest⟩
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
