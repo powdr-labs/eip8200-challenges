@@ -11,6 +11,7 @@ import Challenge.Modexp.Reference.Proofs.Yul.BigResult
 import Challenge.Modexp.Reference.Proofs.Yul.BigSetup
 import Challenge.Modexp.Reference.Proofs.Yul.Execution
 import Challenge.Modexp.Reference.Proofs.Yul.Program
+import Challenge.Modexp.Reference.Proofs.Yul.SoftwareModexpMath
 import Challenge.Modexp.Reference.Proofs.Yul.Word
 import Challenge.Modexp.Reference.Proofs.Yul.WordMath
 import YulEvmCompiler.Optimizer.Implementation.Pipeline
