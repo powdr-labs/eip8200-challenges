@@ -362,4 +362,6 @@ jobs:
         run: forge fmt --check
 
       - name: Cross-check reference gas against the published numbers
-        run: forge test -vv
+        run: |
+          forge test -vv
+          ../scripts/check-bls12381-g1add-gas-report.sh

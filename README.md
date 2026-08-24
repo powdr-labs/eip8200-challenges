@@ -95,24 +95,26 @@ proof and regenerates the Foundry artifact with the automatic Yul backend.
 
 ## Independent gas cross-check
 
-The gas figures in the challenge gas reports come from concrete execution in the
-pinned Lean semantics. [`foundry/`](foundry/) re-measures the same frozen
-bytecode over the same vectors under a production EVM (revm, via Foundry) and
-requires exact agreement, so a mispricing in the pinned semantics could not
-quietly become a published number. All 45 scored vectors currently agree to the
-gas. It also measures the equivalent implementations from
-[eth-act/evmification](https://github.com/eth-act/evmification) alongside the
-references.
+For the four direct-bytecode challenges, gas-report figures come from concrete
+execution in the pinned Lean semantics. [`foundry/`](foundry/) re-measures the
+same frozen bytecode over the same vectors under a production EVM (revm, via
+Foundry) and requires exact agreement, so a mispricing in the pinned semantics
+could not quietly become a published number. All published scored vectors
+currently agree exactly. Foundry also measures the equivalent implementations
+from [eth-act/evmification](https://github.com/eth-act/evmification) alongside
+the references. The source-only BLS12-381 report is instead generated directly
+from pinned Foundry measurements of its reproducible compiler artifact and is
+explicitly labeled as unproved artifact evidence.
 
 ```sh
 cd foundry && forge test -vv
 ```
 
-For the four gas suites, the cross-check is self-contained: it verifies that
-the bytecode it runs is the artifact the Lean theorems cover, and produces no
-input to the generated gas tables. The BLS test is separate: CI connects its
-hex artifact to the Yul source by deterministic regeneration, while Lean proves
-the source rather than that artifact.
+For the four bytecode suites, the cross-check is self-contained: it verifies
+that the bytecode it runs is the artifact the Lean theorems cover, and produces
+no input to their generated gas tables. The BLS report is separate: CI connects
+its hex artifact to the Yul source by deterministic regeneration and generates
+the table from revm, while Lean proves the source rather than that artifact.
 
 ## Trust boundary
 
