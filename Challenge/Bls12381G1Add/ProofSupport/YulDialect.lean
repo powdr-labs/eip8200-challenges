@@ -1,4 +1,4 @@
-import Challenge.YulProof.ModexpDialect
+import Challenge.YulProof.ClosedEvmDialect
 
 set_option warningAsError true
 
@@ -7,6 +7,6 @@ set_option warningAsError true
 namespace Challenge.Bls12381G1Add.ProofSupport.Yul
 
 abbrev localDialect :=
-  Challenge.YulProof.Modexp.dialect
+  Challenge.YulProof.ClosedEvm.dialect
 
 end Challenge.Bls12381G1Add.ProofSupport.Yul

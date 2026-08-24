@@ -5,6 +5,7 @@ import Challenge.YulProof.ClosedEvm
 import Challenge.EvmProof.ExecSound
 
 set_option warningAsError true
+set_option maxRecDepth 4096
 
 /-!
 # Source semantics of the proof-friendly G1ADD runtime
@@ -216,36 +217,36 @@ private def invalidLengthStmt : Stmt Op :=
     [.exprStmt (.builtin .invalid [])]
 
 private theorem reference_after_functions :
-    referenceCompiledBlock.drop 13 =
-      invalidLengthStmt :: referenceCompiledBlock.drop 14 := by
+    referenceCompiledBlock.drop 16 =
+      invalidLengthStmt :: referenceCompiledBlock.drop 17 := by
   rfl
 
 private theorem reference_function_prefix :
-    (referenceCompiledBlock.take 13).all isFunctionDefinition = true := by
+    (referenceCompiledBlock.take 16).all isFunctionDefinition = true := by
   rfl
 
 private theorem reference_function_prefix_length :
-    (referenceCompiledBlock.take 13).length = 13 := by
+    (referenceCompiledBlock.take 16).length = 16 := by
   rfl
 
 private theorem exec_reference_function_prefix (funs V st) :
-    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 127 funs V st referenceCompiledBlock =
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 130 funs V st referenceCompiledBlock =
       Interp.execStmts Challenge.YulProof.ClosedEvm.exec 114 funs V st
-        (invalidLengthStmt :: referenceCompiledBlock.drop 14) := by
+        (invalidLengthStmt :: referenceCompiledBlock.drop 17) := by
   have hprefix := execStmts_function_prefix Challenge.YulProof.ClosedEvm.exec
-    (referenceCompiledBlock.take 13) (referenceCompiledBlock.drop 13)
+    (referenceCompiledBlock.take 16) (referenceCompiledBlock.drop 16)
     reference_function_prefix 114 (by omega) funs V st
   rw [reference_function_prefix_length] at hprefix
   norm_num at hprefix
   calc
-    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 127 funs V st referenceCompiledBlock =
-        Interp.execStmts Challenge.YulProof.ClosedEvm.exec 127 funs V st
-          (referenceCompiledBlock.take 13 ++ referenceCompiledBlock.drop 13) := by
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 130 funs V st referenceCompiledBlock =
+        Interp.execStmts Challenge.YulProof.ClosedEvm.exec 130 funs V st
+          (referenceCompiledBlock.take 16 ++ referenceCompiledBlock.drop 16) := by
       rw [List.take_append_drop]
     _ = Interp.execStmts Challenge.YulProof.ClosedEvm.exec 114 funs V st
-          (referenceCompiledBlock.drop 13) := hprefix
+          (referenceCompiledBlock.drop 16) := hprefix
     _ = Interp.execStmts Challenge.YulProof.ClosedEvm.exec 114 funs V st
-          (invalidLengthStmt :: referenceCompiledBlock.drop 14) := by
+          (invalidLengthStmt :: referenceCompiledBlock.drop 17) := by
       rw [reference_after_functions]
 
 /-- The first frozen helper implements the high-first modulus comparison used
@@ -382,7 +383,7 @@ theorem run_invalid_length {yst : EvmState}
   refine ⟨yst', Interp.run_sound_of
     (fun op args st result h =>
       (Challenge.YulProof.ClosedEvm.exec_lawful op args st result).mpr h)
-    (n := 128) ?_, rfl⟩
+    (n := 131) ?_, rfl⟩
   unfold Interp.run
   simp only [Interp.execStmt]
   rw [exec_reference_function_prefix]

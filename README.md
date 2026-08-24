@@ -31,7 +31,9 @@ The experimental BLS12-381 challenge has a deliberately narrower contract. It
 publishes only `Yul.Correct : Block Op → Prop` and proves the parsed Yul source;
 no theorem targets its generated EVM bytes. Two finite `native_decide` facts
 connect the checked-in source text to the readable proof AST, and their exact
-axiom footprint is pinned in `Checks/Bls12381G1Add.lean`.
+axiom footprint is pinned in `Checks/Bls12381G1Add.lean`. Its arithmetic is
+implemented entirely in local Yul under a dialect with no external calls or
+contract creation; it does not invoke existing precompiles.
 
 Each active bytecode challenge directory separates:
 

@@ -33,7 +33,32 @@ contract Bls12381G1AddTest is Test {
     }
 
     function test_compiled_artifact_is_present() public view {
-        assertEq(REFERENCE.code.length, 1723, "automatic yul-compiler artifact size");
+        assertEq(REFERENCE.code.length, 4687, "automatic yul-compiler artifact size");
+    }
+
+    function _contains(bytes memory haystack, bytes memory needle) private pure returns (bool) {
+        if (needle.length > haystack.length) return false;
+        for (uint256 i = 0; i + needle.length <= haystack.length; i++) {
+            bool equal = true;
+            for (uint256 j = 0; j < needle.length; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    equal = false;
+                    break;
+                }
+            }
+            if (equal) return true;
+        }
+        return false;
+    }
+
+    function test_reference_source_has_no_external_operations() public view {
+        bytes memory source = bytes(vm.readFile("../Challenge/Bls12381G1Add/Reference/reference.yul"));
+        assertFalse(_contains(source, bytes("call(")), "CALL is forbidden");
+        assertFalse(_contains(source, bytes("callcode(")), "CALLCODE is forbidden");
+        assertFalse(_contains(source, bytes("delegatecall(")), "DELEGATECALL is forbidden");
+        assertFalse(_contains(source, bytes("staticcall(")), "STATICCALL is forbidden");
+        assertFalse(_contains(source, bytes("create(")), "CREATE is forbidden");
+        assertFalse(_contains(source, bytes("create2(")), "CREATE2 is forbidden");
     }
 
     function test_infinity_plus_infinity() public view {
@@ -46,6 +71,13 @@ contract Bls12381G1AddTest is Test {
 
     function test_generator_doubling() public view {
         _assertMatchesNative(abi.encodePacked(GENERATOR, GENERATOR), "generator doubling");
+    }
+
+    function test_generator_plus_double_generator() public view {
+        (bool ok, bytes memory doubled) =
+            NATIVE_G1ADD.staticcall{gas: 1_000_000}(abi.encodePacked(GENERATOR, GENERATOR));
+        assertTrue(ok, "native generator doubling");
+        _assertMatchesNative(abi.encodePacked(GENERATOR, doubled), "generator + doubled generator");
     }
 
     function test_rejects_malformed_inputs() public view {

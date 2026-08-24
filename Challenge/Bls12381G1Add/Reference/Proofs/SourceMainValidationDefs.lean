@@ -36,7 +36,7 @@ def mainDecodePrefix : List (Stmt Op) :=
     mainCanonicalStmt]
 
 theorem mainDecodePrefix_eq :
-    (Compilation.referenceCompiledBlock.drop 13).take 11 = mainDecodePrefix := by
+    (Compilation.referenceCompiledBlock.drop 16).take 11 = mainDecodePrefix := by
   rfl
 
 def mainPointScopeBody : Block Op :=

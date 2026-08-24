@@ -11,7 +11,7 @@ open YulSemantics YulSemantics.EVM
 open Challenge.Bls12381.ProofSupport
 
 /-- The executable top-level body after its thirteen function definitions. -/
-def mainValidBody : Block Op := Compilation.referenceCompiledBlock.drop 13
+def mainValidBody : Block Op := Compilation.referenceCompiledBlock.drop 16
 
 theorem mainValidBody_eq : mainValidBody =
     mainDecodePrefix ++ mainPointScope :: mainFiniteTopBody := by
@@ -260,13 +260,13 @@ private theorem step_function_definitions
       case funDef => exact Step.seqCons Step.funDef (ih hparts.2)
 
 private theorem reference_function_prefix :
-    (Compilation.referenceCompiledBlock.take 13).all
+    (Compilation.referenceCompiledBlock.take 16).all
       isFunctionDefinition = true := by
   rfl
 
 private theorem reference_decompose : Compilation.referenceCompiledBlock =
-    Compilation.referenceCompiledBlock.take 13 ++ mainValidBody := by
-  exact (List.take_append_drop 13 Compilation.referenceCompiledBlock).symm
+    Compilation.referenceCompiledBlock.take 16 ++ mainValidBody := by
+  exact (List.take_append_drop 16 Compilation.referenceCompiledBlock).symm
 
 private theorem run_of_mainValid (yst stend : EvmState)
     {Vend : VEnv Challenge.YulProof.ClosedEvm.exec.toDialect}
@@ -275,7 +275,7 @@ private theorem run_of_mainValid (yst stend : EvmState)
     Run Challenge.Bls12381G1Add.ProofSupport.Yul.localDialect
       Compilation.referenceCompiledBlock yst [] stend .halt := by
   have hdefs := step_function_definitions
-    (Compilation.referenceCompiledBlock.take 13) reference_function_prefix
+    (Compilation.referenceCompiledBlock.take 16) reference_function_prefix
     mainFuns [] yst
   have hbody : ExecStmts Challenge.YulProof.ClosedEvm.exec.toDialect mainFuns [] yst
       Compilation.referenceCompiledBlock Vend stend .halt := by

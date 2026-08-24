@@ -41,17 +41,20 @@ Challenge.Bls12381G1Add.Yul.Correct : Block Op → Prop
 
 It requires the G1ADD result for every calldata value that fits the EVM
 `calldatasize` word. Malformed input must execute `invalid()`; valid input must
-return exactly the encoded sum. The source dialect permits successful Osaka
-MODEXP calls to `0x05` and no other external calls or creates, so an
-implementation cannot delegate its result to native G1ADD at `0x0b`.
+return exactly the encoded sum. The source dialect provides no external calls
+or contract creation at all. Neither MODEXP at `0x05` nor native G1ADD at
+`0x0b` is available to the implementation.
 
 ## Reference Yul and generated artifact
 
 [`Reference/reference.yul`](Reference/reference.yul) uses a two-limb
-`128 + 256` representation for 381-bit field values. Wide products are reduced
-with MODEXP exponent one; inversion uses exponent `p - 2`. Its fixed Osaka
-MODEXP stipends are 500 and 36,576 gas. The source handles infinity, opposite
-points, vertical tangents, doubling, and unequal-point addition explicitly.
+`128 + 256` representation for 381-bit field values. It implements field
+multiplication with an exact three-word schoolbook product and fixed-modulus
+Barrett reduction. Inversion is a fixed `p - 2` exponentiation built from a
+two-limb CIOS Montgomery multiplication. All of this is ordinary local Yul;
+the source contains no call-family or create-family operation. It handles
+infinity, opposite points, vertical tangents, doubling, and unequal-point
+addition explicitly.
 
 The repository pins the current upstream `yul-compiler` main revision. This
 artifact intentionally uses its automatic backend selector rather than the
@@ -62,14 +65,10 @@ lake exe yulc --backend=auto \
   Challenge/Bls12381G1Add/Reference/reference.yul
 ```
 
-The resulting 1,723-byte lowercase hex is stored in
+The resulting 4,687-byte lowercase hex is stored in
 [`Reference/reference.hex`](Reference/reference.hex). CI regenerates and
 compares it for Foundry. This equality is a reproducibility check, not a
 semantic theorem.
-
-The reference assumes native Osaka MODEXP remains available. Its exact call
-stipends are not suitable for recursively replacing MODEXP with ordinary EVM
-code at the same address.
 
 ## Source proof
 
@@ -84,10 +83,16 @@ The proof proceeds entirely in Yul big-step semantics:
 
 - the parser and semantics-preserving normalizer are connected to a frozen,
   readable normalized AST by two finite `native_decide` checks;
-- the MODEXP-only executable sub-dialect is proved sound for the public
-  relational dialect;
+- the executable and public relational semantics both use the closed EVM
+  dialect, in which external calls and contract creation are unavailable;
+- a recursive parsed-AST check separately certifies that the checked-in source
+  contains no call-family or create-family operation;
 - codec and two-limb arithmetic lemmas refine memory and word schedules to
   lawful `ZMod p` operations;
+- a reusable local-function contract states software MODEXP correctness
+  independently of its Yul implementation, scratch-memory choice, compiler,
+  and bytecode; the BLS inversion proof instantiates that contract with the
+  reference's Montgomery implementation;
 - source execution covers every validation and affine-addition branch; and
 - normalization transports the universal theorem back to the parsed source.
 

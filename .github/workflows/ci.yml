@@ -247,7 +247,7 @@ jobs:
             expected="$(printf '%s\n' \
               'import Challenge.${{ matrix.directory }}.Spec' \
               'import Challenge.YulProof.Bytes' \
-              'import Challenge.YulProof.ModexpDialect' \
+              'import Challenge.YulProof.ClosedEvmDialect' \
               'import YulSemantics.Contract')"
           else
             expected="$(printf '%s\n' \

@@ -1,6 +1,6 @@
 import Challenge.Bls12381G1Add.Spec
 import Challenge.YulProof.Bytes
-import Challenge.YulProof.ModexpDialect
+import Challenge.YulProof.ClosedEvmDialect
 import YulSemantics.Contract
 
 set_option warningAsError true
@@ -17,7 +17,7 @@ namespace Challenge.Bls12381G1Add.Yul
 
 open YulSemantics (Block RunContract)
 open YulSemantics.EVM (Op HaltKind)
-open Challenge.YulProof.Modexp
+open Challenge.YulProof.ClosedEvm
 
 /-- Observable halt required for one calldata byte list. -/
 def expected (calldata : List UInt8) : HaltKind × List UInt8 :=
@@ -35,10 +35,9 @@ def expected (calldata : List UInt8) : HaltKind × List UInt8 :=
 /-- **The Yul challenge.** From fresh memory and EVM-sized calldata, the
 program must return the G1 sum or halt with `invalid` for malformed input.
 
-The dialect permits only successful calls to Osaka MODEXP at `0x05`; in
-particular, a candidate cannot call the native G1ADD precompile at `0x0b`.
-The fixed MODEXP stipends used by the reference are part of its source proof,
-not assumptions in this predicate. -/
+The dialect has no external calls or contract creation. In particular, neither
+MODEXP at `0x05` nor native G1ADD at `0x0b` is available: every field operation
+must be implemented by local Yul code. -/
 def Correct (program : Block Op) : Prop :=
   RunContract (D := dialect) program
     (fun initial =>

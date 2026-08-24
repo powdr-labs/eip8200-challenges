@@ -21,3 +21,12 @@ info: 'Challenge.Bls12381G1Add.Reference.Proofs.Yul.referenceParsedBlock_correct
 -/
 #guard_msgs in
 #print axioms Challenge.Bls12381G1Add.Reference.Proofs.Yul.referenceParsedBlock_correct
+
+/--
+info: 'Challenge.Bls12381G1Add.Reference.referenceParsed_noExternalOps' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound,
+ Challenge.Bls12381G1Add.Reference.referenceParsed_noExternalOps._native.native_decide.ax_1_1]
+-/
+#guard_msgs in
+#print axioms Challenge.Bls12381G1Add.Reference.referenceParsed_noExternalOps

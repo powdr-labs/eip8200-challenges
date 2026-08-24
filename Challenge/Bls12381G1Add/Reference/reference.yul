@@ -2,9 +2,11 @@
 // Proof-friendly naive EIP-2537 G1ADD.
 //
 // Field elements are carried as (high128, low256) words. Multiplication uses
-// an exact three-word schoolbook product and the MODEXP precompile with
-// exponent one for reduction. Inversion uses MODEXP with exponent p-2.
-// Only native G1ADD is disabled by the challenge execution profile.
+// an exact three-word schoolbook product and fixed-modulus Barrett reduction.
+// Inversion is Fermat exponentiation in a two-word Montgomery domain. Every
+// operation is ordinary local EVM arithmetic: no precompile or external call.
+// The word schedules are adapted from evmification's MIT-licensed
+// src/bls12381/Fp.sol and stay aligned with the shared Lean arithmetic model.
 {
     function fpGeModulus(hi, lo) -> yes {
         let pHi := 0x1a0111ea397fe69a4b1ba7b6434bacd7
@@ -84,38 +86,11 @@
 
     function fpMul(aHi, aLo, bHi, bLo) -> zHi, zLo {
         let r2, r1, r0 := fullMul(aHi, aLo, bHi, bLo)
-
-        // MODEXP(base = r2:r1:r0, exponent = 1, modulus = p).
-        mstore(0x400, 96)
-        mstore(0x420, 1)
-        mstore(0x440, 48)
-        mstore(0x460, r2)
-        mstore(0x480, r1)
-        mstore(0x4a0, r0)
-        mstore8(0x4c0, 1)
-        storeModulus(0x4c1)
-        // Exact Osaka MODEXP charge for these lengths and exponent.
-        if iszero(staticcall(500, 5, 0x400, 241, 0x500, 48)) { invalid() }
-        zHi := shr(128, mload(0x500))
-        zLo := mload(0x510)
+        zHi, zLo := fpReduceProduct(r2, r1, r0)
     }
 
     function fpInv(aHi, aLo) -> zHi, zLo {
-        // MODEXP(base = a, exponent = p-2, modulus = p).
-        mstore(0x400, 48)
-        mstore(0x420, 48)
-        mstore(0x440, 48)
-        storeFp(0x460, aHi, aLo)
-        storeFp(
-            0x490,
-            0x1a0111ea397fe69a4b1ba7b6434bacd7,
-            0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaa9
-        )
-        storeModulus(0x4c0)
-        // Exact Osaka MODEXP charge for these lengths and p - 2.
-        if iszero(staticcall(36576, 5, 0x400, 240, 0x500, 48)) { invalid() }
-        zHi := shr(128, mload(0x500))
-        zLo := mload(0x510)
+        zHi, zLo := fpPowPMinus2(aHi, aLo)
     }
 
     function onCurve(xHi, xLo, yHi, yLo) -> yes {
@@ -208,4 +183,217 @@
     y3Hi, y3Lo := fpSub(y3Hi, y3Lo, mload(64), mload(96))
     storePoint(x3Hi, x3Lo, y3Hi, y3Lo)
     return(0, 128)
+
+    function fpPowPMinus2(aHi, aLo) -> zHi, zLo {
+        // Encode once, process the 380 remaining bits of the fixed nonzero
+        // exponent p-2, then decode once. The leading one initializes acc.
+        let baseLo, baseHi := montMul2(
+            aLo, aHi,
+            0xcc0868ce6a76590c76e5bc3ff951c543861c23693de6a351fb73eaead26ebe58,
+            0x0010a8c1a49a064ff0a85a3f35446d0b
+        )
+        let accLo := baseLo
+        let accHi := baseHi
+
+        // The high limb of p-2 is 125 bits; bit 124 is the consumed leading 1.
+        for { let bit := 124 } gt(bit, 0) {} {
+            bit := sub(bit, 1)
+            accLo, accHi := montMul2(accLo, accHi, accLo, accHi)
+            if and(shr(bit, 0x1a0111ea397fe69a4b1ba7b6434bacd7), 1) {
+                accLo, accHi := montMul2(accLo, accHi, baseLo, baseHi)
+            }
+        }
+
+        for { let bit := 256 } gt(bit, 0) {} {
+            bit := sub(bit, 1)
+            accLo, accHi := montMul2(accLo, accHi, accLo, accHi)
+            if and(shr(bit,
+                0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaa9), 1) {
+                accLo, accHi := montMul2(accLo, accHi, baseLo, baseHi)
+            }
+        }
+
+        zLo, zHi := montMul2(accLo, accHi, 1, 0)
+    }
+
+    function fpReduceProduct(r2, r1, r0) -> zHi, zLo {
+        // mu = floor(2^1024 / p). The six full products below compute
+        // q = ((r2:r1) * mu) >> 768.
+        let qLo
+        let qHi
+        {
+            let m0 := 0xad397b918f6ff20d533b6c08511c60e2757079ace6bd401859778ceb4dabc4f8
+            let m1 := 0x1b82741ff6a0a94bdf4771e0286779d3997167a058f1c07b13e207f56591ba2e
+            let m2 := 0x9d835d2f3cc9e45ce28101b0cc7a6ba29
+
+            let lo00 := mul(r1, m0)
+            let mm := mulmod(r1, m0, not(0))
+            let hi00 := sub(sub(mm, lo00), lt(mm, lo00))
+
+            let lo01 := mul(r1, m1)
+            mm := mulmod(r1, m1, not(0))
+            let hi01 := sub(sub(mm, lo01), lt(mm, lo01))
+
+            let lo02 := mul(r1, m2)
+            mm := mulmod(r1, m2, not(0))
+            let hi02 := sub(sub(mm, lo02), lt(mm, lo02))
+
+            let lo10 := mul(r2, m0)
+            mm := mulmod(r2, m0, not(0))
+            let hi10 := sub(sub(mm, lo10), lt(mm, lo10))
+
+            let lo11 := mul(r2, m1)
+            mm := mulmod(r2, m1, not(0))
+            let hi11 := sub(sub(mm, lo11), lt(mm, lo11))
+
+            let lo12 := mul(r2, m2)
+            mm := mulmod(r2, m2, not(0))
+            let hi12 := sub(sub(mm, lo12), lt(mm, lo12))
+
+            let limb := add(hi00, lo01)
+            let carry := lt(limb, hi00)
+            limb := add(limb, lo10)
+            carry := add(carry, lt(limb, lo10))
+
+            limb := add(hi01, hi10)
+            let nextCarry := lt(limb, hi01)
+            limb := add(limb, lo02)
+            nextCarry := add(nextCarry, lt(limb, lo02))
+            limb := add(limb, lo11)
+            nextCarry := add(nextCarry, lt(limb, lo11))
+            limb := add(limb, carry)
+            nextCarry := add(nextCarry, lt(limb, carry))
+
+            qLo := add(hi02, hi11)
+            carry := lt(qLo, hi02)
+            qLo := add(qLo, lo12)
+            carry := add(carry, lt(qLo, lo12))
+            qLo := add(qLo, nextCarry)
+            carry := add(carry, lt(qLo, nextCarry))
+            qHi := add(hi12, carry)
+        }
+
+        let pHi := 0x1a0111ea397fe69a4b1ba7b6434bacd7
+        let pLo := 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+
+        // Subtract the low two words of q*p. The Barrett bound gives a
+        // nonnegative remainder below 3p, so two corrections are sufficient.
+        {
+            let productLo := mul(qLo, pLo)
+            let mm := mulmod(qLo, pLo, not(0))
+            let productHi := sub(sub(mm, productLo), lt(mm, productLo))
+            productHi := add(add(productHi, mul(qLo, pHi)), mul(qHi, pLo))
+
+            zLo := sub(r0, productLo)
+            zHi := sub(sub(r1, productHi), lt(r0, productLo))
+        }
+
+        if fpGeModulus(zHi, zLo) {
+            let nextLo := sub(zLo, pLo)
+            zHi := sub(sub(zHi, pHi), gt(pLo, zLo))
+            zLo := nextLo
+        }
+        if fpGeModulus(zHi, zLo) {
+            let nextLo := sub(zLo, pLo)
+            zHi := sub(sub(zHi, pHi), gt(pLo, zLo))
+            zLo := nextLo
+        }
+
+    }
+
+    // Two-limb CIOS Montgomery multiplication, with R = 2^512. Inputs and
+    // output are canonical low/high word pairs.
+    function montMul2(xLo, xHi, yLo, yHi) -> zLo, zHi {
+        let t0 := 0
+        let t1 := 0
+        let t2 := 0
+
+        {
+            let lo := mul(xLo, yLo)
+            let mm := mulmod(xLo, yLo, not(0))
+            let hi := sub(sub(mm, lo), lt(mm, lo))
+            t0 := lo
+            let carry := hi
+
+            lo := mul(xLo, yHi)
+            mm := mulmod(xLo, yHi, not(0))
+            hi := sub(sub(mm, lo), lt(mm, lo))
+            let sum := add(lo, carry)
+            t1 := sum
+            t2 := add(hi, lt(sum, lo))
+        }
+
+        let factor := mul(t0,
+            0x19ecca0e8eb2db4c16ef2ef0c8e30b48286adb92d9d113e889f3fffcfffcfffd)
+        {
+            let pLo := 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+            let lo := mul(factor, pLo)
+            let mm := mulmod(factor, pLo, not(0))
+            let hi := sub(sub(mm, lo), lt(mm, lo))
+            let sum := add(t0, lo)
+            let carry := add(hi, lt(sum, t0))
+
+            let pHi := 0x1a0111ea397fe69a4b1ba7b6434bacd7
+            lo := mul(factor, pHi)
+            mm := mulmod(factor, pHi, not(0))
+            hi := sub(sub(mm, lo), lt(mm, lo))
+            sum := add(t1, lo)
+            let carry1 := lt(sum, t1)
+            let sum2 := add(sum, carry)
+            let carry2 := lt(sum2, sum)
+            t0 := sum2
+            t1 := add(t2, add(hi, add(carry1, carry2)))
+            t2 := 0
+        }
+
+        {
+            let lo := mul(xHi, yLo)
+            let mm := mulmod(xHi, yLo, not(0))
+            let hi := sub(sub(mm, lo), lt(mm, lo))
+            let sum := add(t0, lo)
+            let carry := add(hi, lt(sum, t0))
+            t0 := sum
+
+            lo := mul(xHi, yHi)
+            mm := mulmod(xHi, yHi, not(0))
+            hi := sub(sub(mm, lo), lt(mm, lo))
+            sum := add(t1, lo)
+            let carry1 := lt(sum, t1)
+            let sum2 := add(sum, carry)
+            let carry2 := lt(sum2, sum)
+            t1 := sum2
+            t2 := add(hi, add(carry1, carry2))
+        }
+
+        factor := mul(t0,
+            0x19ecca0e8eb2db4c16ef2ef0c8e30b48286adb92d9d113e889f3fffcfffcfffd)
+        {
+            let pLo := 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+            let lo := mul(factor, pLo)
+            let mm := mulmod(factor, pLo, not(0))
+            let hi := sub(sub(mm, lo), lt(mm, lo))
+            let sum := add(t0, lo)
+            let carry := add(hi, lt(sum, t0))
+
+            let pHi := 0x1a0111ea397fe69a4b1ba7b6434bacd7
+            lo := mul(factor, pHi)
+            mm := mulmod(factor, pHi, not(0))
+            hi := sub(sub(mm, lo), lt(mm, lo))
+            sum := add(t1, lo)
+            let carry1 := lt(sum, t1)
+            let sum2 := add(sum, carry)
+            let carry2 := lt(sum2, sum)
+            zLo := sum2
+            zHi := add(t2, add(hi, add(carry1, carry2)))
+        }
+
+        if fpGeModulus(zHi, zLo) {
+            let pHi := 0x1a0111ea397fe69a4b1ba7b6434bacd7
+            let pLo := 0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
+            let nextLo := sub(zLo, pLo)
+            zHi := sub(sub(zHi, pHi), gt(pLo, zLo))
+            zLo := nextLo
+        }
+    }
+
 }
