@@ -1,37 +1,47 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvInput
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvExec
 
 set_option warningAsError true
 
-/-! # Frozen G1ADD `fpInv` result state -/
+/-! # Stable canonical result words for native G1ADD inversion -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
-open EvmSemantics EvmSemantics.EVM
 open YulSemantics YulSemantics.EVM
+open Challenge.Bls12381.ProofSupport
 
-def fpInvReducedValue (hi lo : U256) : Nat :=
-  Precompile.modPow
-    (hi.toNat * Challenge.EvmProof.Limbs.radix + lo.toNat)
-    (EvmSemantics.Crypto.Bls12381.p - 2)
-    EvmSemantics.Crypto.Bls12381.p
+def fpInvInputLimbs (hi lo : U256) : Fp.Limbs :=
+  { hi := YulEvmCompiler.conv hi, lo := YulEvmCompiler.conv lo }
 
-def fpInvOutputBytes (hi lo : U256) : ByteArray :=
-  Precompile.natToBytes (fpInvReducedValue hi lo) 48
+def sourceWordOfUInt256 (word : EvmSemantics.UInt256) : U256 :=
+  BitVec.ofNat 256 word.toNat
 
-def fpInvResponse (yst : EvmState) (hi lo : U256) : CallResponse :=
-  { success := true
-    returndata := (fpInvOutputBytes hi lo).toList
-    world := CallWorld.ofState (fpInvInputState yst hi lo) }
+theorem conv_sourceWordOfUInt256 (word : EvmSemantics.UInt256) :
+    YulEvmCompiler.conv (sourceWordOfUInt256 word) = word := by
+  apply YulEvmCompiler.u256ext
+  simp only [YulEvmCompiler.conv_toNat, sourceWordOfUInt256,
+    BitVec.toNat_ofNat]
+  exact Nat.mod_eq_of_lt word.val.isLt
 
-def fpInvCallState (yst : EvmState) (hi lo : U256) : EvmState :=
-  finishCall .staticcall (fpInvInputState yst hi lo)
-    (fpInvResponse yst hi lo) 1024 240 1280 48
+@[irreducible] def fpInvResult (_yst : EvmState) (hi lo : U256) : U256 × U256 :=
+  let result := Fp.invCanonical (fpInvInputLimbs hi lo)
+  (sourceWordOfUInt256 result.hi, sourceWordOfUInt256 result.lo)
 
-def fpInvResult (yst : EvmState) (hi lo : U256) : U256 × U256 :=
-  (loadWord (fpInvCallState yst hi lo).memory 1280 >>> 128,
-    loadWord (fpInvCallState yst hi lo).memory 1296)
+def fpInvFinalState (yst : EvmState) (_hi _lo : U256) : EvmState := yst
 
-def fpInvFinalState (yst : EvmState) (hi lo : U256) : EvmState :=
-  touchMemory (touchMemory (fpInvCallState yst hi lo) 1280 32) 1296 32
+def fpInvOutputLimbs (yst : EvmState) (hi lo : U256) : Fp.Limbs :=
+  { hi := YulEvmCompiler.conv (fpInvResult yst hi lo).1
+    lo := YulEvmCompiler.conv (fpInvResult yst hi lo).2 }
+
+theorem fpInvResult_hi_conv (yst : EvmState) (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResult yst hi lo).1 =
+      (Fp.invCanonical (fpInvInputLimbs hi lo)).hi := by
+  unfold fpInvResult
+  exact conv_sourceWordOfUInt256 _
+
+theorem fpInvResult_lo_conv (yst : EvmState) (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResult yst hi lo).2 =
+      (Fp.invCanonical (fpInvInputLimbs hi lo)).lo := by
+  unfold fpInvResult
+  exact conv_sourceWordOfUInt256 _
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
