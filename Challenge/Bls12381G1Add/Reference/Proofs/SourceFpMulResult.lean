@@ -3,7 +3,7 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulBody
 set_option warningAsError true
 set_option maxHeartbeats 100000
 
-/-! # Opaque native `fpMul` result components -/
+/-! # Opaque concrete-source `fpMul` result components -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

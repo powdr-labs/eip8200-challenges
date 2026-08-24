@@ -89,4 +89,3 @@ theorem prime43670061551 : Nat.Prime 43670061551 := by
       by bls_norm_mod_pow, by simp⟩
 
 end Challenge.Bls12381.ProofSupport.PrimeCertificate
-

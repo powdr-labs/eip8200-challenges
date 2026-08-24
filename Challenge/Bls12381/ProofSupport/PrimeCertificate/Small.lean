@@ -109,4 +109,3 @@ theorem prime1151 : Nat.Prime 1151 := by
     exact ⟨by bls_norm_mod_pow, h5, h5, by bls_norm_mod_pow, by simp⟩
 
 end Challenge.Bls12381.ProofSupport.PrimeCertificate
-

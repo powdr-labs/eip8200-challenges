@@ -4,7 +4,7 @@ import Challenge.Bls12381.ProofSupport.FpRepresentation
 set_option warningAsError true
 set_option maxHeartbeats 100000
 
-/-! # Native G1ADD `fpMul` result boundary -/
+/-! # Concrete-source G1ADD `fpMul` result boundary -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -317,7 +317,7 @@ private theorem fpMulOutputLimbs_graph (yst : EvmState)
     exact congrArg YulEvmCompiler.conv
       (fpMulResult_lo_graph yst ahi alo bhi blo)
 
-/-- The parsed native word graph is exactly the shared source-faithful
+/-- The parsed concrete word graph is exactly the shared source-faithful
 canonical multiplication schedule. -/
 theorem fpMulOutput_eq_mulCanonical_source (yst : EvmState)
     (ahi alo bhi blo : U256) :

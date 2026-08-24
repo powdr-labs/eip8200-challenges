@@ -4,7 +4,7 @@ import Challenge.Bls12381.ProofSupport.FpMul
 set_option warningAsError true
 set_option maxRecDepth 4096
 
-/-! # Frozen G1ADD native multiplication values -/
+/-! # Frozen G1ADD concrete multiplication values -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -125,7 +125,7 @@ opaque fpMulResultContract : FpMulResultContract :=
       (reduced.hi, reduced.lo)
     value_eq := by intro ahi alo bhi blo; rfl }
 
-/-- Pure native multiplication result, kept opaque at wrapper boundaries. -/
+/-- Pure concrete multiplication result, kept opaque at wrapper boundaries. -/
 def fpMulResultValue (ahi alo bhi blo : U256) : U256 × U256 :=
   fpMulResultContract.value ahi alo bhi blo
 
@@ -147,11 +147,11 @@ theorem fpMulResultGraph_spec (ahi alo bhi blo : U256) :
   fpMulGraphContract.graph_eq ahi alo bhi blo
 
 
-/-- Native multiplication result in the source theorem interface. -/
+/-- Multiplication result in the source theorem interface. -/
 def fpMulResult (_yst : EvmState) (ahi alo bhi blo : U256) : U256 × U256 :=
   fpMulResultValue ahi alo bhi blo
 
-/-- Native multiplication leaves the EVM state unchanged. -/
+/-- The local multiplication helper leaves the EVM state unchanged. -/
 def fpMulFinalState (yst : EvmState) (_ahi _alo _bhi _blo : U256) : EvmState :=
   yst
 

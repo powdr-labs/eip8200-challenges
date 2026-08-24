@@ -1,4 +1,4 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteUnequalLawful
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceProgram
 
 set_option warningAsError true
 

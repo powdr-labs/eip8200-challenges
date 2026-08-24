@@ -1,4 +1,4 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteExceptional
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteClassify
 
 set_option warningAsError true
 

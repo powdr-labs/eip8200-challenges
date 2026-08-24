@@ -8,7 +8,7 @@ open YulSemantics YulSemantics.EVM
 private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 
 /-- One abstract exponentiation bit step.  Its only arithmetic assumptions are
-the opaque correctness facts returned by the native source `montMul2` calls. -/
+the opaque correctness facts returned by the local source `montMul2` calls. -/
 inductive NativeBitStep (base acc : MontResultValue) (word bit : Nat) :
     MontResultValue → Prop
   | zero (square : MontResultValue)

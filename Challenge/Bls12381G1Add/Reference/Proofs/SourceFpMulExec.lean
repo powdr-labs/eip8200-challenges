@@ -5,7 +5,7 @@ set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 200000
 
-/-! # Frozen G1ADD native `fpMul` execution -/
+/-! # Frozen G1ADD `fpMul` execution -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

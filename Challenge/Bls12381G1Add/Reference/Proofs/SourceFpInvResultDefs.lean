@@ -3,7 +3,7 @@ import Challenge.YulProof.EvmState
 
 set_option warningAsError true
 
-/-! # Stable canonical result words for native G1ADD inversion -/
+/-! # Stable canonical result words for concrete G1ADD inversion -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -26,13 +26,6 @@ theorem conv_sourceWordOfUInt256 (word : EvmSemantics.UInt256) :
 @[irreducible] def fpInvResultWords (hi lo : U256) : U256 × U256 :=
   let result := Fp.invCanonical (fpInvInputLimbs hi lo)
   (sourceWordOfUInt256 result.hi, sourceWordOfUInt256 result.lo)
-
-/-- Compatibility wrapper for state graphs written before inversion became
-stack-only.  New proofs should use `fpInvResultWords`. -/
-def fpInvResult (_yst : EvmState) (hi lo : U256) : U256 × U256 :=
-  fpInvResultWords hi lo
-
-def fpInvFinalState (yst : EvmState) (_hi _lo : U256) : EvmState := yst
 
 @[irreducible] def fpInvOutputLimbs (hi lo : U256) : Fp.Limbs :=
   Fp.invCanonical (fpInvInputLimbs hi lo)

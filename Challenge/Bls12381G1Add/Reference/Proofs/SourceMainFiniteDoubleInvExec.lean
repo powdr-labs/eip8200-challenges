@@ -15,7 +15,7 @@ private theorem mainFiniteDoubleStmt4_shape : mainFiniteDoubleStmt4 =
       (some (.call "\x0010" [.var "\x00107", .var "\x00108"])) := by
   rfl
 
-/-- The native `fpInv` call preserves the EVM state and binds the two stable
+/-- The local `fpInv` call preserves the EVM state and binds the two stable
 inversion-result words.  Keeping this proof in a leaf module prevents the
 interpreter proofs for the surrounding slope schedule from unfolding it. -/
 theorem step_mainFiniteDoubleStmt4 (yst : EvmState)

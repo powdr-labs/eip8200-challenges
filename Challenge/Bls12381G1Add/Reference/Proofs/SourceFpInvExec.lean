@@ -2,7 +2,7 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvBody
 
 set_option warningAsError true
 
-/-! # Relational execution contract for native frozen G1ADD `fpInv` -/
+/-! # Relational execution contract for frozen G1ADD `fpInv` -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -12,7 +12,7 @@ open Challenge.Bls12381.ProofSupport
 private abbrev D := Challenge.YulProof.ClosedEvm.dialect
 
 /-- Relational source-call theorem used by the enclosing G1ADD proof.  Argument
-evaluation may change state; the native inversion body preserves the resulting
+evaluation may change state; the local inversion body preserves the resulting
 argument state exactly. -/
 theorem step_fpInv_call {callerFuns : FunEnv D} {V : VEnv D}
     {args : List (Expr Op)} {yst argsState : EvmState} (hi lo : U256)
@@ -33,7 +33,7 @@ theorem step_fpInv_call {callerFuns : FunEnv D} {V : VEnv D}
   rw [fpInvReturnEnv_hi, fpInvReturnEnv_lo] at hcall
   exact ⟨resultHi, resultLo, hcall, hresult⟩
 
-/-- Compatibility spelling for the relational native call theorem. -/
+/-- Compatibility spelling for the relational local-call theorem. -/
 theorem eval_fpInv {callerFuns : FunEnv D} {V : VEnv D}
     {args : List (Expr Op)} {yst argsState : EvmState} (hi lo : U256)
     (hlookup : lookupFun callerFuns "\x0010" = some (fpInvDecl, fpInvFuns))

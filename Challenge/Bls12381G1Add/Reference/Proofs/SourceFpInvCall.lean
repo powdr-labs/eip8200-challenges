@@ -3,7 +3,7 @@ import Challenge.YulProof.Interpreter
 
 set_option warningAsError true
 
-/-! # Native frozen G1ADD `montMul2` execution -/
+/-! # Frozen G1ADD `montMul2` execution -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

@@ -2,7 +2,7 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvResultDefs
 
 set_option warningAsError true
 
-/-! # Auditor-facing refinement of native frozen G1ADD `fpInv` -/
+/-! # Auditor-facing refinement of frozen G1ADD `fpInv` -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -25,7 +25,7 @@ theorem canonical_fpInvOutput (hi lo : U256)
   rw [fpInvOutput_eq_invCanonical hi lo hcanonical]
   exact Fp.canonical_invCanonical hcanonical
 
-/-- The stable native result represents lawful field inversion. -/
+/-- The stable concrete result represents lawful field inversion. -/
 theorem fpInvOutput_toLawful (hi lo : U256)
     (hcanonical : Fp.Canonical (fpInvInputLimbs hi lo)) :
     PrimeField.finEquiv (Fp.toField (fpInvOutputLimbs hi lo)) =

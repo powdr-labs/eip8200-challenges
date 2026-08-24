@@ -1,4 +1,9 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFinitePostState
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteExceptional
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFirstInfinity
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulResult
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulMemory
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceSub
 import Challenge.EvmProof.ExecSound
 
 set_option warningAsError true

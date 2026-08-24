@@ -2,7 +2,7 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvPowCorrect
 
 set_option warningAsError true
 
-/-! # Native frozen G1ADD `fpInv` wrapper body -/
+/-! # Frozen G1ADD `fpInv` wrapper body -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

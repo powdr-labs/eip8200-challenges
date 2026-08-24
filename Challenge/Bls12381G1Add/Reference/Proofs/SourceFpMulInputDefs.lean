@@ -4,7 +4,7 @@ set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 100000
 
-/-! # Frozen native `fpMul` wrapper environments and first statement -/
+/-! # Frozen `fpMul` wrapper environments and first statement -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

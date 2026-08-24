@@ -3,7 +3,7 @@ import Challenge.YulProof.Interpreter
 
 set_option warningAsError true
 
-/-! # Generic relational source-call interface for native `fpMul` -/
+/-! # Generic relational source-call interface for local `fpMul` -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -18,7 +18,7 @@ def fpMulDecl : FDecl D :=
     body := fpMulBody }
 
 /-- Any caller whose function environment resolves `fpMul` to the frozen
-declaration may use the already-proved native source body as an opaque call. -/
+declaration may use the already-proved concrete source body as an opaque call. -/
 theorem step_fpMul_call {callerFuns : FunEnv D} {V : VEnv D}
     {args : List (Expr Op)} {yst argsState : EvmState}
     (ahi alo bhi blo : U256)

@@ -5,7 +5,7 @@ import Challenge.EvmProof.ExecSound
 
 set_option warningAsError true
 
-/-! # Native frozen G1ADD inversion helper definitions -/
+/-! # Concrete frozen G1ADD inversion helper definitions -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -262,7 +262,7 @@ theorem conv_montMul2Value (xLo xHi yLo yHi : U256) :
       congrArg Fp.MontgomeryState.t0 hsecond⟩
   rw [hwords]
 
-/-- Opaque arithmetic view of one native source multiplication.  Long source
+/-- Opaque arithmetic view of one local source multiplication. Long source
 traces refer to this boundary without elaborating the concrete CIOS word
 graph or the reducible shared `Fp.montMul2` definition. -/
 @[irreducible] def abstractMontMul2 (xLo xHi yLo yHi : U256) : Fp.Limbs :=

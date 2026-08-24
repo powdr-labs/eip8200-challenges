@@ -2,7 +2,7 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvPowRefinement
 
 set_option warningAsError true
 
-/-! # Implementation-independent contract for native source exponentiation -/
+/-! # Implementation-independent contract for concrete source exponentiation -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

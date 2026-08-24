@@ -3,7 +3,7 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvExec
 
 set_option warningAsError true
 
-/-! # Canonical bridge from native execution words to the stable result -/
+/-! # Canonical bridge from concrete execution words to the stable result -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

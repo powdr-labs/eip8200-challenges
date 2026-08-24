@@ -1,6 +1,4 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFinitePostExec
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDoubleLawful
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteUnequalLawful
 import Challenge.Bls12381.ProofSupport.CodecRepresentation
 import Challenge.EvmProof.ModexpMemory
 
@@ -26,6 +24,9 @@ def mainFinitePostY1 (yst : EvmState) : Fp.Limbs :=
 
 def mainFinitePostX2 (yst : EvmState) : Fp.Limbs :=
   limbsOfWords (mainDecodedWord yst 128, mainDecodedWord yst 160)
+
+def mainFinitePostY2 (yst : EvmState) : Fp.Limbs :=
+  limbsOfWords (mainDecodedWord yst 192, mainDecodedWord yst 224)
 
 def mainFinitePostLambda (lam : U256 × U256) : Fp.Limbs :=
   limbsOfWords lam
@@ -206,7 +207,7 @@ theorem mainFinitePostPoint_eq_add_of_x_ne (yst st : EvmState)
     (hxne : toLawful (mainFinitePostX1 yst) ≠
       toLawful (mainFinitePostX2 yst))
     (hslope : toLawful (mainFinitePostLambda lam) =
-      (toLawful (mainFiniteUnequalY2 yst) -
+      (toLawful (mainFinitePostY2 yst) -
         toLawful (mainFinitePostY1 yst)) /
       (toLawful (mainFinitePostX2 yst) -
         toLawful (mainFinitePostX1 yst))) :
@@ -215,7 +216,7 @@ theorem mainFinitePostPoint_eq_add_of_x_ne (yst st : EvmState)
         (.affine (toLawful (mainFinitePostX1 yst))
           (toLawful (mainFinitePostY1 yst)))
         (.affine (toLawful (mainFinitePostX2 yst))
-          (toLawful (mainFiniteUnequalY2 yst))) := by
+          (toLawful (mainFinitePostY2 yst))) := by
   have hcoords := mainFinitePostCoordinates_toLawful yst st lam
     hx1 hy1 hx2 hlam
   rw [G1Affine.add, LawfulAffine.add_of_x_ne _ _ _ _ _ hxne]

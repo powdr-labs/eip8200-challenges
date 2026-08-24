@@ -2,13 +2,13 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulRefinement
 
 set_option warningAsError true
 
-/-! # Native multiplication memory locality -/
+/-! # Concrete source multiplication memory locality -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
 open YulSemantics.EVM
 
-/-- Native multiplication has no EVM-state effects, hence preserves every
+/-- The local multiplication helper has no EVM-state effects, hence preserves every
 byte range below the historical scratch bound. -/
 theorem fpMulFinalState_readBytes_before_scratch (yst : EvmState)
     (ahi alo bhi blo : U256) (start size : Nat)

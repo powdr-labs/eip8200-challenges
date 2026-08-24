@@ -4,7 +4,7 @@ set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 100000
 
-/-! # Complete frozen G1ADD native `fpMul` wrapper -/
+/-! # Complete frozen G1ADD `fpMul` wrapper -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
@@ -15,7 +15,7 @@ def fpMulSourceBodyResultEnv (ahi alo bhi blo : U256) :
   restore (fpMulInitialEnv ahi alo bhi blo)
     (fpMulSourceAssignedEnv ahi alo bhi blo)
 
-/-- Both parsed wrapper statements execute, calling native `fullMul` and the
+/-- Both parsed wrapper statements execute, calling local `fullMul` and the
 locally verified Barrett reducer. -/
 theorem exec_fpMulBody (ahi alo bhi blo : U256) (yst : EvmState) :
     Interp.execStmt Challenge.YulProof.ClosedEvm.exec 67 fpMulFuns

@@ -31,7 +31,7 @@ theorem fpPowGuardValue_succ_ne_zero (bit : Nat) (hbound : bit + 1 < 2 ^ 256) :
   simp
 
 /-- Relational fold of the fixed-window square-and-multiply schedule.  This
-records only the abstract contract of each native multiplication call. -/
+records only the abstract contract of each local multiplication call. -/
 inductive NativeFoldDown (base : MontResultValue) (word : Nat) :
     Nat → MontResultValue → MontResultValue → Prop
   | zero (acc : MontResultValue) : NativeFoldDown base word 0 acc acc

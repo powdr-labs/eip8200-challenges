@@ -1,4 +1,8 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFinitePostDefs
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteExceptional
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFirstInfinity
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulExecDefs
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceSub
 
 set_option warningAsError true
 

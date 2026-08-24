@@ -4,7 +4,7 @@ set_option warningAsError true
 set_option maxRecDepth 20000
 set_option maxHeartbeats 100000
 
-/-! # Frozen native `fpMul` wrapper reduction call -/
+/-! # Frozen `fpMul` wrapper reduction call -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 

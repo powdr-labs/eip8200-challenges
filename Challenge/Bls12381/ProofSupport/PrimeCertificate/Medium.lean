@@ -156,4 +156,3 @@ theorem prime52437899 : Nat.Prime 52437899 := by
     exact ⟨by bls_norm_mod_pow, by bls_norm_mod_pow, by bls_norm_mod_pow, by simp⟩
 
 end Challenge.Bls12381.ProofSupport.PrimeCertificate
-

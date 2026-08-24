@@ -1,4 +1,5 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDoubleDefs
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteExceptional
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvResultDefs
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulMemory
 
