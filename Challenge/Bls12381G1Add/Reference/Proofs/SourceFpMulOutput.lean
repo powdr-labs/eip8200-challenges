@@ -2,40 +2,50 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulCall
 
 set_option warningAsError true
 
-/-! # Frozen G1ADD `fpMul` output loads -/
-
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
 open YulSemantics YulSemantics.EVM
 
-def fpMulHighEnv (yst : EvmState) (ahi alo bhi blo : U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (fpMulProductEnv ahi alo bhi blo) ["\x0072"]
-    [(fpMulResult yst ahi alo bhi blo).1]
+private theorem eval_fpReduceProductReturned (product : FullMulValue)
+    (yst : EvmState) :
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 65 fpReduceFuns
+      [("r2", product.r2), ("r1", product.r1), ("r0", product.r0)] yst
+      (.call "\x0014" [.var "r2", .var "r1", .var "r0"]) =
+    .ok (.vals [
+      (VEnv.get (fpReduceReturnEnv product (fpReduceProductValue product))
+        "\x00136").getD 0,
+      (VEnv.get (fpReduceReturnEnv product (fpReduceProductValue product))
+        "\x00137").getD 0] yst) := by
+  have hargs :
+      Interp.evalArgs Challenge.YulProof.ClosedEvm.exec 64 fpReduceFuns
+        [("r2", product.r2), ("r1", product.r1), ("r0", product.r0)] yst
+        [.var "r2", .var "r1", .var "r0"] =
+      .ok (.vals [product.r2, product.r1, product.r0] yst) := by rfl
+  have hlookup : lookupFun fpReduceFuns "\x0014" = some
+      ({ params := ["\x00133", "\x00134", "\x00135"]
+         rets := ["\x00136", "\x00137"]
+         body := fpReduceBody }, fpReduceFuns) := by rfl
+  have h := Interp.evalExpr_call_normal hargs hlookup (by rfl)
+    (exec_fpReduceBody product yst)
+  exact h
 
-def fpMulReturnEnv (yst : EvmState) (ahi alo bhi blo : U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  VEnv.setMany (fpMulHighEnv yst ahi alo bhi blo) ["\x0073"]
-    [(fpMulResult yst ahi alo bhi blo).2]
-
-/-- The final two source statements load the returned high and low limbs in
-their exact order and update both memory high-water marks. -/
-theorem exec_fpMulOutput (ahi alo bhi blo : U256) (yst : EvmState) :
-    Interp.execStmts Challenge.EvmProof.modexpExec 56 fpMulBodyFuns
-      (fpMulProductEnv ahi alo bhi blo)
-      (fpMulCallState yst ahi alo bhi blo) [fpMulStmt10, fpMulStmt11] =
-    .ok (fpMulReturnEnv yst ahi alo bhi blo,
-      fpMulFinalState yst ahi alo bhi blo, .normal) := by
-  rfl
-
-theorem fpMulReturnEnv_hi (yst : EvmState) (ahi alo bhi blo : U256) :
-    (VEnv.get (fpMulReturnEnv yst ahi alo bhi blo) "\x0072").getD 0 =
-      (fpMulResult yst ahi alo bhi blo).1 := by
-  rfl
-
-theorem fpMulReturnEnv_lo (yst : EvmState) (ahi alo bhi blo : U256) :
-    (VEnv.get (fpMulReturnEnv yst ahi alo bhi blo) "\x0073").getD 0 =
-      (fpMulResult yst ahi alo bhi blo).2 := by
-  rfl
+/-- The normalized local Barrett helper returns its exact source-word graph. -/
+theorem eval_fpReduceProduct (product : FullMulValue) (yst : EvmState) :
+    Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 65 fpReduceFuns
+      [("r2", product.r2), ("r1", product.r1), ("r0", product.r0)] yst
+      (.call "\x0014" [.var "r2", .var "r1", .var "r0"]) =
+    .ok (.vals [(fpReduceProductValue product).hi,
+      (fpReduceProductValue product).lo] yst) := by
+  calc
+    _ = .ok (.vals [
+        (VEnv.get (fpReduceReturnEnv product (fpReduceProductValue product))
+          "\x00136").getD 0,
+        (VEnv.get (fpReduceReturnEnv product (fpReduceProductValue product))
+          "\x00137").getD 0] yst) :=
+      eval_fpReduceProductReturned product yst
+    _ = _ := congrArg (fun values : List U256 =>
+      (Result.ok (EResult.vals values yst) :
+        Result (EResult Challenge.YulProof.ClosedEvm.dialect)))
+      (fpReduceReturn_values product (fpReduceProductValue product))
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

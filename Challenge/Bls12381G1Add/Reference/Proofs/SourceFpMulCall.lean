@@ -2,43 +2,86 @@ import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulModulus
 
 set_option warningAsError true
 
-/-! # Frozen G1ADD `fpMul` MODEXP call -/
-
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
-open EvmSemantics EvmSemantics.EVM
 open YulSemantics YulSemantics.EVM
 
-private theorem fpMulStmt9_shape : fpMulStmt9 =
-    .cond
-      (.builtin .iszero
-        [.builtin .staticcall
-          [.lit (.number 500), .lit (.number 5), .lit (.number 1024),
-            .lit (.number 241), .lit (.number 1280), .lit (.number 48)]])
-      [.exprStmt (.builtin .invalid [])] := by
-  rfl
+private theorem exec_fpReduceCorrections (product : FullMulValue)
+    (yst : EvmState) :
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 57 fpReduceBodyFuns
+      (fpReduceValueEnv product (fpMulRemainderValue product)) yst
+      [fpReduceStmt6, fpReduceStmt7] =
+    .ok (fpReduceValueEnv product (fpReduceProductValue product),
+      yst, .normal) := by
+  exact Interp.execStmts_cons_normal
+    (exec_fpReduceCorrection1 product yst)
+    (Interp.execStmts_cons_normal (exec_fpReduceCorrection2 product yst) (by rfl))
 
-/-- The literal-500 MODEXP call succeeds on the exact 241-byte input, so the
-source `iszero` failure branch is skipped and the 48-byte result is copied. -/
-theorem exec_fpMulCall (ahi alo bhi blo : U256) (yst : EvmState) :
-    Interp.execStmt Challenge.EvmProof.modexpExec 56 fpMulBodyFuns
-      (fpMulProductEnv ahi alo bhi blo)
-      (fpMulInputState yst ahi alo bhi blo) fpMulStmt9 =
-    .ok (fpMulProductEnv ahi alo bhi blo,
-      fpMulCallState yst ahi alo bhi blo, .normal) := by
-  have hrun := fpMulInput_runModexp_raw ahi alo bhi blo yst
-  change Precompile.runModexp .Osaka
-      ⟨(readBytes (fpMulInputState yst ahi alo bhi blo).memory 1024 241).toArray⟩
-      500 =
-    .success (Precompile.natToBytes
-      ((convFullMul (fullMulValue ahi alo bhi blo)).value %
-        EvmSemantics.Crypto.Bls12381.p) 48) 500 at hrun
-  rw [fpMulStmt9_shape, Interp.execStmt]
-  simp [Interp.evalExpr, Interp.evalArgs,
-    Challenge.EvmProof.modexpExec, Challenge.EvmProof.modexpBuiltinFn,
-    hrun,
-    fpMulCallState, fpMulResponse, fpMulOutputBytes, fpMulReducedValue,
-    EVM.litValue, stepOp, un, Dialect.zero]
-  rfl
+private theorem exec_fpReduceAfterP (product : FullMulValue) (yst : EvmState) :
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 58 fpReduceBodyFuns
+      (fpReducePEnv product) yst
+      [fpReduceStmt5, fpReduceStmt6, fpReduceStmt7] =
+    .ok (fpReduceValueEnv product (fpReduceProductValue product),
+      yst, .normal) := by
+  exact Interp.execStmts_cons_normal (exec_fpReduceRemainder product yst)
+    (exec_fpReduceCorrections product yst)
+
+private theorem exec_fpReduceAfterQ (product : FullMulValue) (yst : EvmState) :
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 60 fpReduceBodyFuns
+      (fpReduceQEnv product) yst
+      [fpReduceStmt3, fpReduceStmt4, fpReduceStmt5, fpReduceStmt6,
+        fpReduceStmt7] =
+    .ok (fpReduceValueEnv product (fpReduceProductValue product),
+      yst, .normal) := by
+  exact Interp.execStmts_append_normal
+    (E := Challenge.YulProof.ClosedEvm.exec) (n := 58)
+    (funs := fpReduceBodyFuns) (V := fpReduceQEnv product) (st := yst)
+    (pre := [fpReduceStmt3, fpReduceStmt4])
+    (tail := [fpReduceStmt5, fpReduceStmt6, fpReduceStmt7]) (by omega)
+    (exec_fpReducePDecls product yst) (exec_fpReduceAfterP product yst)
+
+private theorem exec_fpReduceAfterDecls (product : FullMulValue)
+    (yst : EvmState) :
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 61 fpReduceBodyFuns
+      (fpReduceQDeclEnv product) yst
+      [fpReduceStmt2, fpReduceStmt3, fpReduceStmt4, fpReduceStmt5,
+        fpReduceStmt6, fpReduceStmt7] =
+    .ok (fpReduceValueEnv product (fpReduceProductValue product),
+      yst, .normal) := by
+  exact Interp.execStmts_cons_normal (exec_fpReduceQuotient product yst)
+    (exec_fpReduceAfterQ product yst)
+
+private theorem exec_fpReduceBodyStmts (product : FullMulValue)
+    (yst : EvmState) :
+    Interp.execStmts Challenge.YulProof.ClosedEvm.exec 63 fpReduceBodyFuns
+      (fpReduceInitialEnv product) yst fpReduceBody =
+    .ok (fpReduceValueEnv product (fpReduceProductValue product),
+      yst, .normal) := by
+  rw [show fpReduceBody = [fpReduceStmt0, fpReduceStmt1] ++
+      [fpReduceStmt2, fpReduceStmt3, fpReduceStmt4, fpReduceStmt5,
+        fpReduceStmt6, fpReduceStmt7] by rfl]
+  exact Interp.execStmts_append_normal
+    (E := Challenge.YulProof.ClosedEvm.exec) (n := 61)
+    (funs := fpReduceBodyFuns) (V := fpReduceInitialEnv product) (st := yst)
+    (pre := [fpReduceStmt0, fpReduceStmt1])
+    (tail := [fpReduceStmt2, fpReduceStmt3, fpReduceStmt4, fpReduceStmt5,
+      fpReduceStmt6, fpReduceStmt7]) (by omega)
+    (exec_fpReduceDecls product yst) (exec_fpReduceAfterDecls product yst)
+
+theorem exec_fpReduceBody (product : FullMulValue) (yst : EvmState) :
+    Interp.execStmt Challenge.YulProof.ClosedEvm.exec 64 fpReduceFuns
+      (fpReduceInitialEnv product) yst (.block fpReduceBody) =
+    .ok (fpReduceReturnEnv product (fpReduceProductValue product),
+      yst, .normal) := by
+  rw [Interp.execStmt]
+  change (do
+    let (V, st, outcome) ← Interp.execStmts Challenge.YulProof.ClosedEvm.exec 63
+      fpReduceBodyFuns (fpReduceInitialEnv product) yst fpReduceBody
+    return (restore (fpReduceInitialEnv product) V, st, outcome)) = _
+  rw [exec_fpReduceBodyStmts product yst]
+  change Result.ok (restore (fpReduceInitialEnv product)
+    (fpReduceValueEnv product (fpReduceProductValue product)), yst,
+      Outcome.normal) = _
+  rw [restore_fpReduceValueEnv]
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

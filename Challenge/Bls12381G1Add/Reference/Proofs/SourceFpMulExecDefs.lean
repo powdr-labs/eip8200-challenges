@@ -1,93 +1,152 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulInput
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMul
+import Challenge.Bls12381.ProofSupport.FpMul
 
 set_option warningAsError true
+set_option maxRecDepth 4096
 
-/-! # Frozen G1ADD `fpMul` call and output state -/
+/-! # Frozen G1ADD native multiplication values -/
 
 namespace Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
 
-open EvmSemantics EvmSemantics.EVM
+open EvmSemantics
 open YulSemantics YulSemantics.EVM
 
-def fpMulFuns : FunEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [hoist Challenge.EvmProof.modexpExec.toDialect
-    Compilation.referenceCompiledBlock]
+/-- A source-word low/high pair. -/
+structure FpMulWideValue where
+  hi : U256
+  lo : U256
 
-def fpMulBody : Block Op :=
-  match Compilation.referenceCompiledBlock[9]? with
-  | some (Stmt.funDef _ _ _ body) => body
-  | _ => []
+/-- A wrapped source word together with its accumulated carry word. -/
+structure FpMulSumValue where
+  word : U256
+  carry : U256
 
-def fpMulStmt0 : Stmt Op := fpMulBody[0]!
-def fpMulStmt1 : Stmt Op := fpMulBody[1]!
-def fpMulStmt2 : Stmt Op := fpMulBody[2]!
-def fpMulStmt3 : Stmt Op := fpMulBody[3]!
-def fpMulStmt4 : Stmt Op := fpMulBody[4]!
-def fpMulStmt5 : Stmt Op := fpMulBody[5]!
-def fpMulStmt6 : Stmt Op := fpMulBody[6]!
-def fpMulStmt7 : Stmt Op := fpMulBody[7]!
-def fpMulStmt8 : Stmt Op := fpMulBody[8]!
-def fpMulStmt9 : Stmt Op := fpMulBody[9]!
-def fpMulStmt10 : Stmt Op := fpMulBody[10]!
-def fpMulStmt11 : Stmt Op := fpMulBody[11]!
+private def fpMulAddTwo (x y : U256) : FpMulSumValue :=
+  let word := x + y
+  { word, carry := b2w (BitVec.ult word x) }
 
-/-- The frozen helper has exactly the twelve source statements audited below. -/
-theorem fpMulBody_eq : fpMulBody =
-    [fpMulStmt0, fpMulStmt1, fpMulStmt2, fpMulStmt3,
-      fpMulStmt4, fpMulStmt5, fpMulStmt6, fpMulStmt7,
-      fpMulStmt8, fpMulStmt9, fpMulStmt10, fpMulStmt11] := by
-  rfl
+private def fpMulAddTerm (sum : FpMulSumValue) (term : U256) : FpMulSumValue :=
+  let word := sum.word + term
+  { word, carry := sum.carry + b2w (BitVec.ult word term) }
 
-/-- The helper body introduces no nested function declarations. -/
-theorem hoist_fpMulBody :
-    hoist Challenge.EvmProof.modexpExec.toDialect fpMulBody = [] := by
-  rfl
+private def fpMulBarrettProducts (product : FullMulValue) :
+    FullWordValue × FullWordValue × FullWordValue ×
+      FullWordValue × FullWordValue × FullWordValue :=
+  let m0 := BitVec.ofNat 256
+    0xad397b918f6ff20d533b6c08511c60e2757079ace6bd401859778ceb4dabc4f8
+  let m1 := BitVec.ofNat 256
+    0x1b82741ff6a0a94bdf4771e0286779d3997167a058f1c07b13e207f56591ba2e
+  let m2 := BitVec.ofNat 256 0x9d835d2f3cc9e45ce28101b0cc7a6ba29
+  (fullWordValue product.r1 m0, fullWordValue product.r1 m1,
+    fullWordValue product.r1 m2, fullWordValue product.r2 m0,
+    fullWordValue product.r2 m1, fullWordValue product.r2 m2)
 
-def fpMulBodyFuns : FunEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [] :: fpMulFuns
+def fpMulBarrettL1 (product : FullMulValue) : FpMulSumValue :=
+  let ps := fpMulBarrettProducts product
+  fpMulAddTerm (fpMulAddTwo ps.1.hi ps.2.1.lo) ps.2.2.2.1.lo
 
-theorem fpMulBodyFuns_eq :
-    hoist Challenge.EvmProof.modexpExec.toDialect fpMulBody :: fpMulFuns =
-      fpMulBodyFuns := by
-  rw [hoist_fpMulBody]
-  rfl
+def fpMulBarrettL2 (product : FullMulValue) : FpMulSumValue :=
+  let ps := fpMulBarrettProducts product
+  fpMulAddTerm
+    (fpMulAddTerm
+      (fpMulAddTerm (fpMulAddTwo ps.2.1.hi ps.2.2.2.1.hi) ps.2.2.1.lo)
+      ps.2.2.2.2.1.lo)
+    (fpMulBarrettL1 product).carry
 
-def fpMulDecl : FDecl Challenge.EvmProof.modexpExec.toDialect :=
-  { params := ["\x0068", "\x0069", "\x0070", "\x0071"]
-    rets := ["\x0072", "\x0073"]
-    body := fpMulBody }
+def fpMulBarrettL3 (product : FullMulValue) : FpMulSumValue :=
+  let ps := fpMulBarrettProducts product
+  fpMulAddTerm
+    (fpMulAddTerm (fpMulAddTwo ps.2.2.1.hi ps.2.2.2.2.1.hi)
+      ps.2.2.2.2.2.lo)
+    (fpMulBarrettL2 product).carry
 
-theorem lookup_fpMul : lookupFun fpMulFuns "\x009" =
-    some (fpMulDecl, fpMulFuns) := by
-  rfl
+/-- Exact source-word graph for the fixed Barrett quotient. -/
+def fpMulBarrettQuotient (product : FullMulValue) : FpMulWideValue :=
+  let m0 := BitVec.ofNat 256
+    0xad397b918f6ff20d533b6c08511c60e2757079ace6bd401859778ceb4dabc4f8
+  let m1 := BitVec.ofNat 256
+    0x1b82741ff6a0a94bdf4771e0286779d3997167a058f1c07b13e207f56591ba2e
+  let m2 := BitVec.ofNat 256 0x9d835d2f3cc9e45ce28101b0cc7a6ba29
+  let p00 := fullWordValue product.r1 m0
+  let p01 := fullWordValue product.r1 m1
+  let p02 := fullWordValue product.r1 m2
+  let p10 := fullWordValue product.r2 m0
+  let p11 := fullWordValue product.r2 m1
+  let p12 := fullWordValue product.r2 m2
+  let l1 := fpMulAddTerm (fpMulAddTwo p00.hi p01.lo) p10.lo
+  let l2 := fpMulAddTerm
+    (fpMulAddTerm (fpMulAddTerm (fpMulAddTwo p01.hi p10.hi) p02.lo) p11.lo)
+    l1.carry
+  let l3 := fpMulAddTerm
+    (fpMulAddTerm (fpMulAddTwo p02.hi p11.hi) p12.lo) l2.carry
+  { hi := p12.hi + l3.carry, lo := l3.word }
 
-def fpMulInitialEnv (ahi alo bhi blo : U256) :
-    VEnv Challenge.EvmProof.modexpExec.toDialect :=
-  [("\x0068", ahi), ("\x0069", alo), ("\x0070", bhi), ("\x0071", blo),
-    ("\x0072", 0), ("\x0073", 0)]
+def fpMulModulusWide : FpMulWideValue :=
+  { hi := BitVec.ofNat 256 0x1a0111ea397fe69a4b1ba7b6434bacd7
+    lo := BitVec.ofNat 256
+      0x64774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab }
 
-def fpMulReducedValue (ahi alo bhi blo : U256) : Nat :=
-  ((convFullMul (fullMulValue ahi alo bhi blo)).value %
-    EvmSemantics.Crypto.Bls12381.p)
+def fpMulMultipleLow (quotient : FpMulWideValue) : FpMulWideValue :=
+  let low := fullWordValue quotient.lo fpMulModulusWide.lo
+  { hi := low.hi + quotient.lo * fpMulModulusWide.hi +
+      quotient.hi * fpMulModulusWide.lo
+    lo := low.lo }
 
-def fpMulOutputBytes (ahi alo bhi blo : U256) : ByteArray :=
-  Precompile.natToBytes (fpMulReducedValue ahi alo bhi blo) 48
+def fpMulSubWide (a b : FpMulWideValue) : FpMulWideValue :=
+  { hi := a.hi - b.hi - b2w (BitVec.ult a.lo b.lo)
+    lo := a.lo - b.lo }
 
-def fpMulResponse (yst : EvmState) (ahi alo bhi blo : U256) : CallResponse :=
-  { success := true
-    returndata := (fpMulOutputBytes ahi alo bhi blo).toList
-    world := CallWorld.ofState (fpMulInputState yst ahi alo bhi blo) }
+def fpMulCorrectOnce (remainder : FpMulWideValue) : FpMulWideValue :=
+  if fpGeModulusValue remainder.hi remainder.lo = 0 then remainder
+  else fpMulSubWide remainder fpMulModulusWide
 
-def fpMulCallState (yst : EvmState) (ahi alo bhi blo : U256) : EvmState :=
-  finishCall .staticcall (fpMulInputState yst ahi alo bhi blo)
-    (fpMulResponse yst ahi alo bhi blo) 1024 241 1280 48
+/-- Exact source-word graph before the two Barrett corrections. -/
+def fpMulRemainderValue (product : FullMulValue) : FpMulWideValue :=
+  let quotient := fpMulBarrettQuotient product
+  fpMulSubWide { hi := product.r1, lo := product.r0 }
+    (fpMulMultipleLow quotient)
 
-def fpMulResult (yst : EvmState) (ahi alo bhi blo : U256) : U256 × U256 :=
-  (loadWord (fpMulCallState yst ahi alo bhi blo).memory 1280 >>> 128,
-    loadWord (fpMulCallState yst ahi alo bhi blo).memory 1296)
+/-- Exact source-word graph of `fpReduceProduct`, including both corrections. -/
+def fpReduceProductValue (product : FullMulValue) : FpMulWideValue :=
+  fpMulCorrectOnce (fpMulCorrectOnce (fpMulRemainderValue product))
 
-def fpMulFinalState (yst : EvmState) (ahi alo bhi blo : U256) : EvmState :=
-  touchMemory (touchMemory (fpMulCallState yst ahi alo bhi blo) 1280 32)
-    1296 32
+/-- An opaque wrapper result together with its checked source-graph equation. -/
+structure FpMulResultContract where
+  value : U256 → U256 → U256 → U256 → U256 × U256
+  refines : ∀ ahi alo bhi blo,
+    value ahi alo bhi blo =
+      ((fpReduceProductValue (fullMulValue ahi alo bhi blo)).hi,
+        (fpReduceProductValue (fullMulValue ahi alo bhi blo)).lo)
+
+opaque fpMulResultContract : FpMulResultContract :=
+  { value := fun ahi alo bhi blo =>
+      let reduced := fpReduceProductValue (fullMulValue ahi alo bhi blo)
+      (reduced.hi, reduced.lo)
+    refines := by intro ahi alo bhi blo; rfl }
+
+/-- Pure native multiplication result, kept opaque at wrapper boundaries. -/
+def fpMulResultValue (ahi alo bhi blo : U256) : U256 × U256 :=
+  fpMulResultContract.value ahi alo bhi blo
+
+def fpMulResultHi (ahi alo bhi blo : U256) : U256 :=
+  (fpMulResultValue ahi alo bhi blo).1
+
+def fpMulResultLo (ahi alo bhi blo : U256) : U256 :=
+  (fpMulResultValue ahi alo bhi blo).2
+
+theorem fpMulResultValue_spec (ahi alo bhi blo : U256) :
+    fpMulResultValue ahi alo bhi blo =
+      ((fpReduceProductValue (fullMulValue ahi alo bhi blo)).hi,
+        (fpReduceProductValue (fullMulValue ahi alo bhi blo)).lo) :=
+  fpMulResultContract.refines ahi alo bhi blo
+
+
+/-- Native multiplication result in the source theorem interface. -/
+def fpMulResult (_yst : EvmState) (ahi alo bhi blo : U256) : U256 × U256 :=
+  fpMulResultValue ahi alo bhi blo
+
+/-- Native multiplication leaves the EVM state unchanged. -/
+def fpMulFinalState (yst : EvmState) (_ahi _alo _bhi _blo : U256) : EvmState :=
+  yst
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
