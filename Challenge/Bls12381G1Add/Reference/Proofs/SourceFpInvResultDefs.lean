@@ -28,9 +28,8 @@ theorem conv_sourceWordOfUInt256 (word : EvmSemantics.UInt256) :
 
 def fpInvFinalState (yst : EvmState) (_hi _lo : U256) : EvmState := yst
 
-def fpInvOutputLimbs (yst : EvmState) (hi lo : U256) : Fp.Limbs :=
-  { hi := YulEvmCompiler.conv (fpInvResult yst hi lo).1
-    lo := YulEvmCompiler.conv (fpInvResult yst hi lo).2 }
+@[irreducible] def fpInvOutputLimbs (_yst : EvmState) (hi lo : U256) : Fp.Limbs :=
+  Fp.invCanonical (fpInvInputLimbs hi lo)
 
 theorem fpInvResult_hi_conv (yst : EvmState) (hi lo : U256) :
     YulEvmCompiler.conv (fpInvResult yst hi lo).1 =
@@ -43,5 +42,27 @@ theorem fpInvResult_lo_conv (yst : EvmState) (hi lo : U256) :
       (Fp.invCanonical (fpInvInputLimbs hi lo)).lo := by
   unfold fpInvResult
   exact conv_sourceWordOfUInt256 _
+
+theorem fpInvOutputLimbs_hi (yst : EvmState) (hi lo : U256) :
+    (fpInvOutputLimbs yst hi lo).hi =
+      (Fp.invCanonical (fpInvInputLimbs hi lo)).hi := by
+  unfold fpInvOutputLimbs
+  rfl
+
+theorem fpInvOutputLimbs_lo (yst : EvmState) (hi lo : U256) :
+    (fpInvOutputLimbs yst hi lo).lo =
+      (Fp.invCanonical (fpInvInputLimbs hi lo)).lo := by
+  unfold fpInvOutputLimbs
+  rfl
+
+theorem fpInvResult_toOutput_hi (yst : EvmState) (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResult yst hi lo).1 =
+      (fpInvOutputLimbs yst hi lo).hi := by
+  rw [fpInvResult_hi_conv, fpInvOutputLimbs_hi]
+
+theorem fpInvResult_toOutput_lo (yst : EvmState) (hi lo : U256) :
+    YulEvmCompiler.conv (fpInvResult yst hi lo).2 =
+      (fpInvOutputLimbs yst hi lo).lo := by
+  rw [fpInvResult_lo_conv, fpInvOutputLimbs_lo]
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics
