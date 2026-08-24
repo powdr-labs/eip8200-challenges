@@ -1,5 +1,6 @@
 import Challenge.Bls12381.ProofSupport.FpInv
 import Challenge.YulProof.SoftwareModexp
+import Challenge.YulProof.SoftwareModexpMath
 
 set_option warningAsError true
 
@@ -34,6 +35,16 @@ def Request.base (request : Request) : Fp.Limbs :=
   { hi := YulEvmCompiler.conv request.baseHi
     lo := YulEvmCompiler.conv request.baseLo }
 
+/-- The implementation-free natural-number MODEXP operation represented by a
+BLS request.  BLS fixes the modulus and its canonical byte width, while the
+source ABI remains a separate concern. -/
+def Request.operation (request : Request) :
+    Challenge.YulProof.SoftwareModexpMath.Operation :=
+  { base := Fp.value request.base
+    exponent := Fp.bytesValue request.exponent
+    modulus := EvmSemantics.Crypto.Bls12381.p
+    outputSize := 48 }
+
 /-- Mathematical modular-exponentiation result for one canonical BLS field
 base.  This predicate does not select an implementation or representation
 algorithm. -/
@@ -43,6 +54,28 @@ def LimbsRefines (request : Request) (output : Fp.Limbs) : Prop :=
       (Fp.value request.base :
         Challenge.Bls12381.ProofSupport.PrimeField.LawfulFp) ^
           Fp.bytesValue request.exponent
+
+/-- The field-facing result relation implies the same implementation-free
+natural-number MODEXP result used by the general EIP-198 Yul implementation. -/
+theorem LimbsRefines.resultNat {request : Request} {output : Fp.Limbs}
+    (hrefines : LimbsRefines request output) :
+    Challenge.YulProof.SoftwareModexpMath.ResultNat request.operation
+      (Fp.value output) := by
+  unfold Challenge.YulProof.SoftwareModexpMath.ResultNat
+    Challenge.YulProof.SoftwareModexpMath.Operation.resultNat
+    Request.operation
+  apply Nat.ModEq.eq_of_lt_of_lt
+  · rw [← ZMod.natCast_eq_natCast_iff]
+    exact hrefines.2.trans
+      (Challenge.Bls12381.ProofSupport.PrimeField.natCast_modPow_eq_pow
+        (Fp.value request.base) (Fp.bytesValue request.exponent)
+        EvmSemantics.Crypto.Bls12381.p
+        (by norm_num [EvmSemantics.Crypto.Bls12381.p,
+          EvmSemantics.Crypto.Bls12381.absU])).symm
+  · exact hrefines.1.2
+  · exact Challenge.EvmProof.ModPow.eval_lt
+      (by norm_num [EvmSemantics.Crypto.Bls12381.p,
+        EvmSemantics.Crypto.Bls12381.absU])
 
 /-- Exact returned-word refinement expected from any two-limb BLS MODEXP
 component. -/
