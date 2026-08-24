@@ -1,15 +1,25 @@
 # Independent gas cross-check
 
-The gas numbers in the challenge READMEs are produced by concrete execution in
-the pinned Lean EVM semantics. This directory re-derives them with a completely
-separate EVM — the revm implementation inside Foundry — running the same frozen
-bytecode over the same vectors, and asserts exact agreement.
+For the direct-bytecode challenges, the gas numbers in the challenge READMEs
+are produced by concrete execution in the pinned Lean EVM semantics. This
+directory re-derives them with a completely separate EVM — the revm
+implementation inside Foundry — running the same frozen bytecode over the same
+vectors, and asserts exact agreement. The source-only BLS12-381 challenge has
+no Lean gas model; its README numbers are measured here directly and labeled
+as artifact tests rather than proofs.
 
-Nothing here is part of any proof, and nothing here feeds the generated README
-gas tables. It is a falsification check on the published measurements: if the
-pinned semantics ever mispriced an opcode, charged memory expansion wrongly, or
-disagreed with a production EVM about a fork rule, the numbers in this
-repository would be wrong in a way no Lean-side test could reveal.
+Nothing here is part of any proof. For the direct-bytecode challenges, nothing
+here feeds the generated README gas tables; Foundry independently falsifies
+their Lean-produced measurements. BLS is the explicit exception: because its
+source semantics has no gas model, its artifact-only table is generated from
+the pinned Foundry test itself.
+
+The BLS12-381 G1ADD tests are intentionally different: they compare the
+generated source-only artifact with native `0x0b` over representative valid
+and malformed inputs, and publish artifact-only frame-gas measurements for the
+successful branches. The Lean theorem covers parsed Yul, not these EVM bytes,
+so both are compiler/artifact falsification checks rather than gas
+cross-checks for proved bytecode.
 
 ```sh
 cd foundry
@@ -19,7 +29,8 @@ forge test -vv    # with the comparison tables
 
 ## Result
 
-Every successful scored vector agrees to the gas. Suite totals:
+Every successful scored vector in the direct-bytecode challenges agrees to the
+gas. The source-only BLS row has no Lean scorer, shown as `—`. Suite totals:
 
 | challenge | vectors | reference (Lean scorer) | reference (revm) | delta |
 |---|---:|---:|---:|---:|
@@ -27,6 +38,7 @@ Every successful scored vector agrees to the gas. Suite totals:
 | SHA-256 | 19 | 10,179,119 | 10,179,119 | 0 |
 | MODEXP | 9 | 19,046,904 | 19,046,904 | 0 |
 | BLAKE2f (valid) | 10 | 915,564 | 915,564 | 0 |
+| BLS12-381 G1ADD (valid) | 6 | — | 1,449,538 | n/a |
 
 The `vs precompile` ratios the READMEs publish reproduce exactly as well:
 419.31× for RIPEMD-160, 4199.31× for SHA-256, 1633.53× for MODEXP, and
@@ -136,7 +148,7 @@ are fixed by protocol in closed form, and requires the results to match
 sizes. Any offset or scaling error in the probe fails those assertions before it
 can reach a reported number.
 
-## Testing the same artifact the proofs cover
+## Bytecode suites: testing the same artifact the proofs cover
 
 A gas measurement is only interesting if it measures the bytecode the Lean
 theorems are about, and reading `reference.hex` alone would not establish that.
@@ -173,18 +185,24 @@ fixes, under `evm_version = "osaka"`, the fork each `initialState` fixes.
 |---|---|
 | [`src/GasProbe.sol`](src/GasProbe.sol) | exact frame-gas measurement |
 | [`src/LeanArtifact.sol`](src/LeanArtifact.sol) | artifact loading and provenance |
+| [`src/YulArtifact.sol`](src/YulArtifact.sol) | generated source-only artifact loading |
 | [`src/Vectors.sol`](src/Vectors.sol) | the scorers' vector generators, in Solidity |
 | [`test/GasProbe.t.sol`](test/GasProbe.t.sol) | probe controls against known schedules |
 | [`test/LeanArtifact.t.sol`](test/LeanArtifact.t.sol) | provenance negative controls |
 | [`test/GasCrossCheck.sol`](test/GasCrossCheck.sol) | shared scaffolding and report formatting |
-| `test/{Ripemd160,Sha256,Modexp}Gas.t.sol` | per-challenge vectors, Lean numbers, assertions |
+| `test/{Ripemd160,Sha256,Modexp,Blake2f}Gas.t.sol` | per-challenge vectors, Lean numbers, assertions |
+| [`test/Bls12381G1Add.t.sol`](test/Bls12381G1Add.t.sol) | source-artifact differential checks against native G1ADD |
+| [`test/Bls12381G1AddGas.t.sol`](test/Bls12381G1AddGas.t.sol) | source-artifact frame-gas leaderboard and exact measurements |
 
-The vectors are regenerated in Solidity from the definitions in each
-`Scorer.lean` rather than exported from Lean, and every generated vector's byte
-length is asserted, so a drifted generator fails instead of quietly changing a
-gas number. The Lean-reported gas is recorded as constants: this suite never
-recomputes it, which is what keeps the comparison between two independent
-implementations of the EVM's gas rules instead of two runs of one.
+For the direct-bytecode suites, vectors are regenerated in Solidity from the
+definitions in each `Scorer.lean` rather than exported from Lean, and every
+generated vector's byte length is asserted, so a drifted generator fails
+instead of quietly changing a gas number. Lean-reported gas is recorded as
+constants: this suite never recomputes it, which keeps the comparison between
+two independent implementations of the EVM's gas rules instead of two runs of
+one. The BLS suite instead fixes representative source-level branch vectors and
+revm gas constants directly; its test checks every result against native
+G1ADD, and the README labels those numbers as artifact-only measurements.
 
 Both dependencies are pinned submodules, and CI pins Foundry itself to a fixed
 release — an exact-equality gas assertion is only reproducible against a fixed
@@ -203,4 +221,7 @@ lake exe ripemd160challenge   # or sha256challenge, modexpchallenge
 Copy the per-vector gas into the corresponding `cases.push(...)` line and the
 suite total into the `README suite total` assertion. A mismatch between this
 suite and the scorers is the finding, so the numbers are meant to be updated
-deliberately, never auto-synchronized.
+deliberately, never auto-synchronized. For BLS, update the pinned constants in
+`Bls12381G1AddGas.t.sol` after reviewing the compiler-artifact change, then run
+`scripts/report-bls12381-g1add-gas.sh` from the repository root; the generated
+README table remains an artifact measurement, not a proof claim.

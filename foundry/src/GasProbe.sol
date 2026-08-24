@@ -57,6 +57,32 @@ library GasProbe {
     /// @param input Calldata for the frame, byte for byte as the Lean scorer
     ///        supplies it.
     function probe(address target, bytes memory input) internal view returns (Result memory result) {
+        return _probe(target, input, 0);
+    }
+
+    /// @notice `probe` with an explicit gas cap for each callee frame.
+    /// @dev The cap prevents a non-halting or exceptionally halting target from
+    ///      consuming an arbitrarily large surrounding test budget. It does not
+    ///      change the reported gas when the target halts below `gasLimit`.
+    function probeCapped(address target, bytes memory input, uint256 gasLimit)
+        internal
+        view
+        returns (Result memory result)
+    {
+        require(gasLimit != 0, "GasProbe: zero gas limit");
+        require(
+            gasleft() > 100_000 && gasLimit < (gasleft() - 100_000) / 2, "GasProbe: insufficient gas for cap"
+        );
+        return _probe(target, input, gasLimit);
+    }
+
+    /// @dev A zero `gasLimit` forwards the ordinary `gas()` amount. Otherwise
+    ///      both iterations use the same explicit cap at the same call site.
+    function _probe(address target, bytes memory input, uint256 gasLimit)
+        private
+        view
+        returns (Result memory result)
+    {
         uint256 argOffset = _reserveArgBuffer(input);
         uint256 argLen = input.length;
         address calibrationTarget = STOP_TARGET;
@@ -78,8 +104,10 @@ library GasProbe {
             for { let i := 0 } lt(i, 2) { i := add(i, 1) } {
                 if i { current := target }
 
+                let forwarded := gas()
+                if gasLimit { forwarded := gasLimit }
                 let before := gas()
-                let success := staticcall(gas(), current, argOffset, argLen, 0, 0)
+                let success := staticcall(forwarded, current, argOffset, argLen, 0, 0)
                 let used := sub(before, gas())
 
                 // Measurement closed; the rest is bookkeeping.
