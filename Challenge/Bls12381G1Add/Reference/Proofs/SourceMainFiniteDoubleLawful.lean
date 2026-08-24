@@ -1,4 +1,5 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDoubleExec
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpInvRefinement
 import Challenge.Bls12381.ProofSupport.FpInv
 
 set_option warningAsError true
@@ -36,8 +37,7 @@ def mainFiniteDoubleDenominator (yst : EvmState) : Fp.Limbs :=
   limbsOfWords (mainFiniteDoubleDenominatorWords yst)
 
 def mainFiniteDoubleDenInv (yst : EvmState) : Fp.Limbs :=
-  fpInvOutputLimbs (mainFiniteDoubleDenArgsState yst)
-    (mainFiniteDoubleDenominatorWords yst).1
+  fpInvResultLimbs (mainFiniteDoubleDenominatorWords yst).1
     (mainFiniteDoubleDenominatorWords yst).2
 
 def mainFiniteDoubleLambda (yst : EvmState) : Fp.Limbs :=
@@ -88,31 +88,23 @@ private theorem mainFiniteDoubleDenominator_eq (yst : EvmState) :
       Fp.addSource (mainFiniteDoubleY yst) (mainFiniteDoubleY yst) := by
   exact conv_fpAddValue _ _ _ _
 
-private theorem mainFiniteDoubleDenInv_eq (yst : EvmState)
+private theorem canonical_mainFiniteDoubleDenInv (yst : EvmState)
     (hy : Fp.Canonical (mainFiniteDoubleY yst)) :
-    mainFiniteDoubleDenInv yst =
-      Fp.invCanonical (mainFiniteDoubleDenominator yst) := by
-  apply fpInvOutput_eq_invCanonical
-  change Fp.Canonical (mainFiniteDoubleDenominator yst)
-  rw [mainFiniteDoubleDenominator_eq]
-  exact Fp.canonical_addSource hy hy
+    Fp.Canonical (mainFiniteDoubleDenInv yst) := by
+  let den := mainFiniteDoubleDenominatorWords yst
+  have hden : Fp.Canonical (fpInvInputLimbs den.1 den.2) := by
+    change Fp.Canonical (mainFiniteDoubleDenominator yst)
+    rw [mainFiniteDoubleDenominator_eq]
+    exact Fp.canonical_addSource hy hy
+  exact canonical_fpInvResultLimbs den.1 den.2 hden
 
 theorem mainFiniteDoubleLambda_eq (yst : EvmState)
-    (hx : Fp.Canonical (mainFiniteDoubleX yst))
-    (hy : Fp.Canonical (mainFiniteDoubleY yst)) :
+    (_hx : Fp.Canonical (mainFiniteDoubleX yst))
+    (_hy : Fp.Canonical (mainFiniteDoubleY yst)) :
     mainFiniteDoubleLambda yst =
       Fp.mulCanonical (mainFiniteDoubleNumerator yst)
         (mainFiniteDoubleDenInv yst) := by
-  apply fpMulOutput_eq_mulCanonical
-  · change Fp.Canonical (mainFiniteDoubleNumerator yst)
-    rw [mainFiniteDoubleNumerator_eq, mainFiniteDoubleTwice_eq,
-      mainFiniteDoubleXSq_eq yst hx]
-    have hxsq := Fp.canonical_mulCanonical hx hx
-    exact Fp.canonical_addSource (Fp.canonical_addSource hxsq hxsq) hxsq
-  · change Fp.Canonical (mainFiniteDoubleDenInv yst)
-    rw [mainFiniteDoubleDenInv_eq yst hy]
-    rw [mainFiniteDoubleDenominator_eq]
-    exact Fp.canonical_invCanonical (Fp.canonical_addSource hy hy)
+  exact fpMulOutput_eq_mulCanonical_source _ _ _ _ _
 
 theorem canonical_mainFiniteDoubleLambda (yst : EvmState)
     (hx : Fp.Canonical (mainFiniteDoubleX yst))
@@ -124,10 +116,7 @@ theorem canonical_mainFiniteDoubleLambda (yst : EvmState)
       mainFiniteDoubleXSq_eq yst hx]
     have hxsq := Fp.canonical_mulCanonical hx hx
     exact Fp.canonical_addSource (Fp.canonical_addSource hxsq hxsq) hxsq
-  · rw [mainFiniteDoubleDenInv_eq yst hy]
-    apply Fp.canonical_invCanonical
-    rw [mainFiniteDoubleDenominator_eq]
-    exact Fp.canonical_addSource hy hy
+  · exact canonical_mainFiniteDoubleDenInv yst hy
 
 /-- Canonical operands discharge the source inversion helper's high-limb
 precondition, yielding the complete checked doubling-slope execution. -/
@@ -139,9 +128,9 @@ theorem step_mainFiniteDoubleBody_canonical (yst : EvmState)
       mainFiniteDoubleBody (mainFiniteDoubleEnv6 yst)
       (mainFiniteDoubleFinalState yst) .normal := by
   apply step_mainFiniteDoubleBody
-  change (mainFiniteDoubleDenominator yst).hi.toNat < 2 ^ 128
+  change Fp.Canonical (mainFiniteDoubleDenominator yst)
   rw [mainFiniteDoubleDenominator_eq]
-  exact (Fp.canonical_addSource hy hy).1
+  exact Fp.canonical_addSource hy hy
 
 private theorem lawful_mulCanonical {a b : Fp.Limbs}
     (ha : Fp.Canonical a) (hb : Fp.Canonical b) :
@@ -160,6 +149,20 @@ private theorem lawful_invCanonical {a : Fp.Limbs}
     (ha : Fp.Canonical a) :
     toLawful (Fp.invCanonical a) = (toLawful a)⁻¹ := by
   simpa only [toLawful, Fp.finEquiv_toField] using Fp.lawful_invCanonical ha
+
+private theorem lawful_mainFiniteDoubleDenInv (yst : EvmState)
+    (hy : Fp.Canonical (mainFiniteDoubleY yst)) :
+    toLawful (mainFiniteDoubleDenInv yst) =
+      (toLawful (mainFiniteDoubleDenominator yst))⁻¹ := by
+  let den := mainFiniteDoubleDenominatorWords yst
+  have hden : Fp.Canonical (fpInvInputLimbs den.1 den.2) := by
+    change Fp.Canonical (mainFiniteDoubleDenominator yst)
+    rw [mainFiniteDoubleDenominator_eq]
+    exact Fp.canonical_addSource hy hy
+  change PrimeField.finEquiv (Fp.toField (fpInvResultLimbs den.1 den.2)) =
+    (PrimeField.finEquiv (Fp.toField (fpInvInputLimbs den.1 den.2)))⁻¹
+  simpa only [toLawful, Fp.finEquiv_toField] using
+    fpInvResultLimbs_toLawful den.1 den.2 hden
 
 /-- The exact source lambda is the lawful affine doubling slope
 `3*x² / (2*y)`. -/
@@ -190,8 +193,7 @@ theorem mainFiniteDoubleLambda_toLawful (yst : EvmState)
     rw [mainFiniteDoubleDenominator_eq]
     exact Fp.canonical_addSource hy hy
   have hdenInvActual : Fp.Canonical (mainFiniteDoubleDenInv yst) := by
-    rw [mainFiniteDoubleDenInv_eq yst hy]
-    exact Fp.canonical_invCanonical hdenActual
+    exact canonical_mainFiniteDoubleDenInv yst hy
   rw [mainFiniteDoubleLambda_eq yst hx hy,
     lawful_mulCanonical hnumActual hdenInvActual,
     mainFiniteDoubleNumerator_eq,
@@ -200,8 +202,7 @@ theorem mainFiniteDoubleLambda_toLawful (yst : EvmState)
     lawful_addSource hxsqActual hxsqActual,
     mainFiniteDoubleXSq_eq yst hx,
     lawful_mulCanonical hx hx,
-    mainFiniteDoubleDenInv_eq yst hy,
-    lawful_invCanonical hdenActual,
+    lawful_mainFiniteDoubleDenInv yst hy,
     mainFiniteDoubleDenominator_eq,
     lawful_addSource hy hy]
   ring
