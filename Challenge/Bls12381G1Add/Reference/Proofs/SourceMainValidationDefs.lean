@@ -12,18 +12,18 @@ def mainFuns : FunEnv Challenge.YulProof.ClosedEvm.exec.toDialect :=
   [hoist Challenge.YulProof.ClosedEvm.exec.toDialect
     Compilation.referenceCompiledBlock]
 
-def mainLengthStmt : Stmt Op := Compilation.referenceCompiledBlock[13]!
-def mainStore0 : Stmt Op := Compilation.referenceCompiledBlock[14]!
-def mainStore1 : Stmt Op := Compilation.referenceCompiledBlock[15]!
-def mainStore2 : Stmt Op := Compilation.referenceCompiledBlock[16]!
-def mainStore3 : Stmt Op := Compilation.referenceCompiledBlock[17]!
-def mainStore4 : Stmt Op := Compilation.referenceCompiledBlock[18]!
-def mainStore5 : Stmt Op := Compilation.referenceCompiledBlock[19]!
-def mainStore6 : Stmt Op := Compilation.referenceCompiledBlock[20]!
-def mainStore7 : Stmt Op := Compilation.referenceCompiledBlock[21]!
-def mainPaddingStmt : Stmt Op := Compilation.referenceCompiledBlock[22]!
-def mainCanonicalStmt : Stmt Op := Compilation.referenceCompiledBlock[23]!
-def mainPointScope : Stmt Op := Compilation.referenceCompiledBlock[24]!
+def mainLengthStmt : Stmt Op := Compilation.referenceCompiledBlock[16]!
+def mainStore0 : Stmt Op := Compilation.referenceCompiledBlock[17]!
+def mainStore1 : Stmt Op := Compilation.referenceCompiledBlock[18]!
+def mainStore2 : Stmt Op := Compilation.referenceCompiledBlock[19]!
+def mainStore3 : Stmt Op := Compilation.referenceCompiledBlock[20]!
+def mainStore4 : Stmt Op := Compilation.referenceCompiledBlock[21]!
+def mainStore5 : Stmt Op := Compilation.referenceCompiledBlock[22]!
+def mainStore6 : Stmt Op := Compilation.referenceCompiledBlock[23]!
+def mainStore7 : Stmt Op := Compilation.referenceCompiledBlock[24]!
+def mainPaddingStmt : Stmt Op := Compilation.referenceCompiledBlock[25]!
+def mainCanonicalStmt : Stmt Op := Compilation.referenceCompiledBlock[26]!
+def mainPointScope : Stmt Op := Compilation.referenceCompiledBlock[27]!
 
 def mainCanonicalCondition : Expr Op :=
   match mainCanonicalStmt with

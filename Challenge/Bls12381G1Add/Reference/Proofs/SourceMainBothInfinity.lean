@@ -1,5 +1,6 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainPrefix
 import Challenge.Bls12381.ProofSupport.CodecG1
+import Challenge.EvmProof.ModexpMemory
 
 set_option warningAsError true
 

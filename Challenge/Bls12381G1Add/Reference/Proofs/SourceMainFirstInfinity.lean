@@ -1,4 +1,5 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainBothInfinity
+import Challenge.EvmProof.ModexpMemory
 
 set_option warningAsError true
 
@@ -129,7 +130,7 @@ private theorem sound_evalExpr {n funs V st expr result}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).1
     _ _ _ _ _ h
 
 /-- Exact source execution of the first-infinity identity branch. -/

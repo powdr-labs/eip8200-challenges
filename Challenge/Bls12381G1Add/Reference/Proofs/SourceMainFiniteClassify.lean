@@ -11,15 +11,15 @@ open YulSemantics YulSemantics.EVM
 /-- The two-word slope declaration immediately following the scoped infinity
 branches. -/
 def mainFiniteSlopeDecl : Stmt Op :=
-  Compilation.referenceCompiledBlock[25]!
+  Compilation.referenceCompiledBlock[28]!
 
 /-- The equal-x (doubling/opposite) dispatch. -/
 def mainFiniteEqualStmt : Stmt Op :=
-  Compilation.referenceCompiledBlock[26]!
+  Compilation.referenceCompiledBlock[29]!
 
 /-- The unequal-x general-addition dispatch. -/
 def mainFiniteUnequalStmt : Stmt Op :=
-  Compilation.referenceCompiledBlock[27]!
+  Compilation.referenceCompiledBlock[30]!
 
 def mainFiniteEqualBody : Block Op :=
   match mainFiniteEqualStmt with

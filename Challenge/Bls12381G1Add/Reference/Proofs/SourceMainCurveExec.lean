@@ -18,7 +18,7 @@ private theorem sound_evalArgs {n funs V st args vals st'}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).2.1
     _ _ _ _ _ h
 
 private theorem eval_curve1Args (yst : EvmState) :

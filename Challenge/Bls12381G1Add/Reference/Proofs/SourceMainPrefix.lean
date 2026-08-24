@@ -16,7 +16,7 @@ private theorem sound_execStmt {n funs V st stmt V' st' outcome}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.2.1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).2.2.1
     _ _ _ _ _ _ _ h
 
 private theorem sound_execStmts {n funs V st stmts V' st' outcome}
@@ -27,7 +27,7 @@ private theorem sound_execStmts {n funs V st stmts V' st' outcome}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.2.2.1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).2.2.2.1
     _ _ _ _ _ _ _ h
 
 private theorem step_append_normal {funs V st pre Vmid stmid suffix Vend stend outcome}
