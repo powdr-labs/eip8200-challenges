@@ -89,10 +89,16 @@ The proof proceeds entirely in Yul big-step semantics:
   contains no call-family or create-family operation;
 - codec and two-limb arithmetic lemmas refine memory and word schedules to
   lawful `ZMod p` operations;
-- a reusable local-function contract states software MODEXP correctness
-  independently of its Yul implementation, scratch-memory choice, compiler,
-  and bytecode; the BLS inversion proof instantiates that contract with the
-  reference's Montgomery implementation;
+- [`SoftwareModexpMath.lean`](../YulProof/SoftwareModexpMath.lean) states the
+  implementation-free natural-number MODEXP result. The repository's existing
+  [general EIP-198 Yul proof adapter](../Modexp/Reference/Proofs/Yul/SoftwareModexpMath.lean)
+  certifies that property at its calldata/halting ABI, while the BLS adapter
+  maps its field result to the same property without importing the large
+  MODEXP proof closure into this challenge;
+- a reusable local-function contract additionally states normal-return source
+  execution, scratch-memory framing, and the BLS `p - 2` specialization. The
+  inversion proof instantiates that contract with the reference's optimized
+  Montgomery implementation, and G1ADD callers consume only the contract;
 - source execution covers every validation and affine-addition branch; and
 - normalization transports the universal theorem back to the parsed source.
 
