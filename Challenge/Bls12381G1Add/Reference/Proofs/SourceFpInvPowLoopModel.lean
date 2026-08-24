@@ -31,6 +31,26 @@ structure PowLoopInv (V : VEnv D) (bitName : Ident) (bit : Nat)
   baseLo : VEnv.get V "\x00127" = some base.lo
   baseHi : VEnv.get V "\x00128" = some base.hi
 
+/-- The loop-local countdown variable is the sole binding introduced by the
+`for` initializer.  Keeping this small scoping fact separate from the value
+invariant makes restoration at the end of the source `for` compositional. -/
+def PowLoopHead (V : VEnv D) (bitName : Ident) (bit : Nat) : Prop :=
+  ∃ tail : VEnv D, V = (bitName, BitVec.ofNat 256 bit) :: tail
+
+theorem PowLoopHead.afterSetBit {V : VEnv D} {bitName : Ident} {bit : Nat}
+    (hhead : PowLoopHead V bitName bit) (next : Nat) :
+    PowLoopHead (setBit V bitName next) bitName next := by
+  rcases hhead with ⟨tail, rfl⟩
+  exact ⟨tail, by simp [setBit, VEnv.set]⟩
+
+theorem PowLoopHead.afterSetAcc {V : VEnv D} {bitName : Ident} {bit : Nat}
+    (hhead : PowLoopHead V bitName bit) (next : MontResultValue)
+    (hfreshLo : bitName ≠ "\x00129") (hfreshHi : bitName ≠ "\x00130") :
+    PowLoopHead (setAcc V next) bitName bit := by
+  rcases hhead with ⟨tail, rfl⟩
+  exact ⟨setAcc tail next, by
+    simp [setAcc, VEnv.set, hfreshLo, hfreshHi]⟩
+
 theorem set_length {D : Dialect} (V : VEnv D) (name : Ident) (value : D.Value) :
     (VEnv.set V name value).length = V.length := by
   induction V with
