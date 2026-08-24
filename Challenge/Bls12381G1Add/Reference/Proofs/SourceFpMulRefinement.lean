@@ -1,4 +1,4 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulBody
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceFpMulResult
 import Challenge.Bls12381.ProofSupport.FpRepresentation
 
 set_option warningAsError true
@@ -277,6 +277,17 @@ theorem conv_fpReduceProductValue (product : FullMulValue) :
   rw [conv_fpMulCorrectOnce, conv_fpMulCorrectOnce,
     conv_fpMulRemainderValue]
 
+theorem conv_fpMulResultGraph (ahi alo bhi blo : U256) :
+    convFpMulWide (fpMulResultGraph ahi alo bhi blo) =
+      Challenge.Bls12381.ProofSupport.Fp.barrettReduce
+        (convFullMul (fullMulValue ahi alo bhi blo)) := by
+  calc
+    convFpMulWide (fpMulResultGraph ahi alo bhi blo) =
+        convFpMulWide
+          (fpReduceProductValue (fullMulValue ahi alo bhi blo)) :=
+      congrArg convFpMulWide (fpMulResultGraph_spec ahi alo bhi blo)
+    _ = _ := conv_fpReduceProductValue (fullMulValue ahi alo bhi blo)
+
 def fpMulOutputLimbs (yst : EvmState) (ahi alo bhi blo : U256) :
     Challenge.Bls12381.ProofSupport.Fp.Limbs :=
   { hi := YulEvmCompiler.conv (fpMulResult yst ahi alo bhi blo).1
@@ -290,11 +301,59 @@ def fpMulRight (bhi blo : U256) :
     Challenge.Bls12381.ProofSupport.Fp.Limbs :=
   { hi := YulEvmCompiler.conv bhi, lo := YulEvmCompiler.conv blo }
 
-/-- The opaque wrapper result is exactly the parsed native reduction graph. -/
-theorem fpMulResultValue_sourceGraph (ahi alo bhi blo : U256) :
-    fpMulResultValue ahi alo bhi blo =
-      ((fpReduceProductValue (fullMulValue ahi alo bhi blo)).hi,
-        (fpReduceProductValue (fullMulValue ahi alo bhi blo)).lo) :=
-  fpMulResultValue_spec ahi alo bhi blo
+private theorem fpMulOutputLimbs_graph (yst : EvmState)
+    (ahi alo bhi blo : U256) :
+    fpMulOutputLimbs yst ahi alo bhi blo =
+      Challenge.Bls12381.ProofSupport.Fp.ofWide
+        (convFpMulWide (fpMulResultGraph ahi alo bhi blo)) := by
+  rw [Challenge.Bls12381.ProofSupport.Fp.Limbs.mk.injEq]
+  constructor
+  · simp only [fpMulOutputLimbs,
+      Challenge.Bls12381.ProofSupport.Fp.ofWide, convFpMulWide]
+    exact congrArg YulEvmCompiler.conv
+      (fpMulResult_hi_graph yst ahi alo bhi blo)
+  · simp only [fpMulOutputLimbs,
+      Challenge.Bls12381.ProofSupport.Fp.ofWide, convFpMulWide]
+    exact congrArg YulEvmCompiler.conv
+      (fpMulResult_lo_graph yst ahi alo bhi blo)
+
+/-- The parsed native word graph is exactly the shared source-faithful
+canonical multiplication schedule. -/
+theorem fpMulOutput_eq_mulCanonical_source (yst : EvmState)
+    (ahi alo bhi blo : U256) :
+    fpMulOutputLimbs yst ahi alo bhi blo =
+      Challenge.Bls12381.ProofSupport.Fp.mulCanonical
+        (fpMulLeft ahi alo) (fpMulRight bhi blo) := by
+  rw [fpMulOutputLimbs_graph, conv_fpMulResultGraph, conv_fullMulValue]
+  rfl
+
+theorem fpMulOutput_value (yst : EvmState) (ahi alo bhi blo : U256)
+    (ha : Challenge.Bls12381.ProofSupport.Fp.Canonical (fpMulLeft ahi alo))
+    (hb : Challenge.Bls12381.ProofSupport.Fp.Canonical (fpMulRight bhi blo)) :
+    Challenge.Bls12381.ProofSupport.Fp.value
+        (fpMulOutputLimbs yst ahi alo bhi blo) =
+      (Challenge.Bls12381.ProofSupport.Fp.value (fpMulLeft ahi alo) *
+        Challenge.Bls12381.ProofSupport.Fp.value (fpMulRight bhi blo)) %
+          EvmSemantics.Crypto.Bls12381.p := by
+  rw [fpMulOutput_eq_mulCanonical_source]
+  exact Challenge.Bls12381.ProofSupport.Fp.value_mulCanonical ha hb
+
+theorem canonical_fpMulOutput (yst : EvmState) (ahi alo bhi blo : U256)
+    (ha : Challenge.Bls12381.ProofSupport.Fp.Canonical (fpMulLeft ahi alo))
+    (hb : Challenge.Bls12381.ProofSupport.Fp.Canonical (fpMulRight bhi blo)) :
+    Challenge.Bls12381.ProofSupport.Fp.Canonical
+      (fpMulOutputLimbs yst ahi alo bhi blo) := by
+  rw [fpMulOutput_eq_mulCanonical_source]
+  exact Challenge.Bls12381.ProofSupport.Fp.canonical_mulCanonical ha hb
+
+theorem fpMulOutput_toField (yst : EvmState) (ahi alo bhi blo : U256)
+    (ha : Challenge.Bls12381.ProofSupport.Fp.Canonical (fpMulLeft ahi alo))
+    (hb : Challenge.Bls12381.ProofSupport.Fp.Canonical (fpMulRight bhi blo)) :
+    Challenge.Bls12381.ProofSupport.Fp.toField
+        (fpMulOutputLimbs yst ahi alo bhi blo) =
+      Challenge.Bls12381.ProofSupport.Fp.toField (fpMulLeft ahi alo) *
+        Challenge.Bls12381.ProofSupport.Fp.toField (fpMulRight bhi blo) := by
+  rw [fpMulOutput_eq_mulCanonical_source]
+  exact Challenge.Bls12381.ProofSupport.Fp.toField_mulCanonical ha hb
 
 end Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics

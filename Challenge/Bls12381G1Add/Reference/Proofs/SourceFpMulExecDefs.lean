@@ -96,19 +96,34 @@ def fpMulRemainderValue (product : FullMulValue) : FpMulWideValue :=
 def fpReduceProductValue (product : FullMulValue) : FpMulWideValue :=
   fpMulCorrectOnce (fpMulCorrectOnce (fpMulRemainderValue product))
 
-/-- An opaque wrapper result together with its checked source-graph equation. -/
+/-- Opaque source graph together with its checked concrete equation. -/
+structure FpMulGraphContract where
+  graph : U256 → U256 → U256 → U256 → FpMulWideValue
+  graph_eq : ∀ ahi alo bhi blo,
+    graph ahi alo bhi blo =
+      fpReduceProductValue (fullMulValue ahi alo bhi blo)
+
+opaque fpMulGraphContract : FpMulGraphContract :=
+  { graph := fun ahi alo bhi blo =>
+      fpReduceProductValue (fullMulValue ahi alo bhi blo)
+    graph_eq := by intro ahi alo bhi blo; rfl }
+
+def fpMulResultGraph (ahi alo bhi blo : U256) : FpMulWideValue :=
+  fpMulGraphContract.graph ahi alo bhi blo
+
+/-- Opaque pair result tied only to the already-opaque graph boundary. -/
 structure FpMulResultContract where
   value : U256 → U256 → U256 → U256 → U256 × U256
-  refines : ∀ ahi alo bhi blo,
+  value_eq : ∀ ahi alo bhi blo,
     value ahi alo bhi blo =
-      ((fpReduceProductValue (fullMulValue ahi alo bhi blo)).hi,
-        (fpReduceProductValue (fullMulValue ahi alo bhi blo)).lo)
+      ((fpMulResultGraph ahi alo bhi blo).hi,
+        (fpMulResultGraph ahi alo bhi blo).lo)
 
 opaque fpMulResultContract : FpMulResultContract :=
   { value := fun ahi alo bhi blo =>
-      let reduced := fpReduceProductValue (fullMulValue ahi alo bhi blo)
+      let reduced := fpMulResultGraph ahi alo bhi blo
       (reduced.hi, reduced.lo)
-    refines := by intro ahi alo bhi blo; rfl }
+    value_eq := by intro ahi alo bhi blo; rfl }
 
 /-- Pure native multiplication result, kept opaque at wrapper boundaries. -/
 def fpMulResultValue (ahi alo bhi blo : U256) : U256 × U256 :=
@@ -122,9 +137,14 @@ def fpMulResultLo (ahi alo bhi blo : U256) : U256 :=
 
 theorem fpMulResultValue_spec (ahi alo bhi blo : U256) :
     fpMulResultValue ahi alo bhi blo =
-      ((fpReduceProductValue (fullMulValue ahi alo bhi blo)).hi,
-        (fpReduceProductValue (fullMulValue ahi alo bhi blo)).lo) :=
-  fpMulResultContract.refines ahi alo bhi blo
+      ((fpMulResultGraph ahi alo bhi blo).hi,
+        (fpMulResultGraph ahi alo bhi blo).lo) :=
+  fpMulResultContract.value_eq ahi alo bhi blo
+
+theorem fpMulResultGraph_spec (ahi alo bhi blo : U256) :
+    fpMulResultGraph ahi alo bhi blo =
+      fpReduceProductValue (fullMulValue ahi alo bhi blo) :=
+  fpMulGraphContract.graph_eq ahi alo bhi blo
 
 
 /-- Native multiplication result in the source theorem interface. -/
