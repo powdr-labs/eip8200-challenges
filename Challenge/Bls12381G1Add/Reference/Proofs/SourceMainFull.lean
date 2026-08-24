@@ -1,4 +1,4 @@
-import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDispatcherLawful
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDispatcher
 import YulEvmCompiler.Optimizer.Implementation.StackLayoutSound
 
 set_option warningAsError true

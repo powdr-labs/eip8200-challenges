@@ -1,6 +1,7 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainPrefix
 import Challenge.Bls12381.ProofSupport.CodecG1
 import Challenge.EvmProof.ModexpMemory
+import Challenge.YulProof.ClosedEvmMemory
 
 set_option warningAsError true
 
@@ -19,8 +20,50 @@ def mainBothInfinityValue (yst : EvmState) : U256 :=
 
 /-- Exact state produced by the source `return(0, 128)`. -/
 def mainBothInfinityReturnState (yst : EvmState) : EvmState :=
-  { touchMemory (mainValidatedState yst) 0 128 with
-    halted := some (.ret, readBytes (mainValidatedState yst).memory 0 128) }
+  Challenge.YulProof.ClosedEvm.returnState (mainValidatedState yst) 0 128
+
+theorem mainBothInfinityReturnState_halted (yst : EvmState) :
+    (mainBothInfinityReturnState yst).halted =
+      some (.ret, readBytes (mainValidatedState yst).memory 0 128) := by
+  exact Challenge.YulProof.ClosedEvm.returnState_halted _ _ _
+
+theorem mainBothInfinityReturnState_memory (yst : EvmState) :
+    (mainBothInfinityReturnState yst).memory =
+      (mainValidatedState yst).memory := by
+  exact Challenge.YulProof.ClosedEvm.returnState_memory _ _ _
+
+theorem mainBothInfinityReturnState_activeWords (yst : EvmState) :
+    (mainBothInfinityReturnState yst).activeWords = BitVec.ofNat 256
+      (activeWordsAfter (mainValidatedState yst).activeWords.toNat 0 128) := by
+  exact Challenge.YulProof.ClosedEvm.returnState_activeWords _ _ _
+
+theorem mainBothInfinityReturnState_storage (yst : EvmState) :
+    (mainBothInfinityReturnState yst).storage =
+      (mainValidatedState yst).storage := by
+  exact Challenge.YulProof.ClosedEvm.returnState_storage _ _ _
+
+theorem mainBothInfinityReturnState_transient (yst : EvmState) :
+    (mainBothInfinityReturnState yst).transient =
+      (mainValidatedState yst).transient := by
+  exact Challenge.YulProof.ClosedEvm.returnState_transient _ _ _
+
+theorem mainBothInfinityReturnState_env (yst : EvmState) :
+    (mainBothInfinityReturnState yst).env = (mainValidatedState yst).env := by
+  exact Challenge.YulProof.ClosedEvm.returnState_env _ _ _
+
+theorem mainBothInfinityReturnState_returndata (yst : EvmState) :
+    (mainBothInfinityReturnState yst).returndata =
+      (mainValidatedState yst).returndata := by
+  exact Challenge.YulProof.ClosedEvm.returnState_returndata _ _ _
+
+theorem mainBothInfinityReturnState_logs (yst : EvmState) :
+    (mainBothInfinityReturnState yst).logs = (mainValidatedState yst).logs := by
+  exact Challenge.YulProof.ClosedEvm.returnState_logs _ _ _
+
+theorem mainBothInfinityReturnState_selfdestructs (yst : EvmState) :
+    (mainBothInfinityReturnState yst).selfdestructs =
+      (mainValidatedState yst).selfdestructs := by
+  exact Challenge.YulProof.ClosedEvm.returnState_selfdestructs _ _ _
 
 private theorem mainBothInfinityStmt_shape : mainBothInfinityStmt =
     .cond (.builtin .and [.var "\x0099", .var "\x00100"])

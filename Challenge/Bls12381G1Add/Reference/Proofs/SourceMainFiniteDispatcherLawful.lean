@@ -1,4 +1,6 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDispatcher
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFinitePostLawful
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteUnequalLawful
 
 set_option warningAsError true
 

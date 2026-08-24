@@ -1,4 +1,5 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFull
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDispatcherLawful
 import Challenge.EvmProof.YulContract
 
 set_option warningAsError true
@@ -484,16 +485,15 @@ theorem main_bothInfinity_yulContract : Challenge.EvmProof.YulRunContract
       pre.both_infinity, ?_⟩
   refine ⟨rfl, rfl, ?_⟩
   refine {
-    returned := ?_
-    memory_eq := ?_
-    activeWords_eq := ?_
-    storage_eq := ?_
-    transient_eq := ?_
-    env_eq := ?_
-    returndata_eq := ?_
-    logs_eq := ?_
-    selfdestructs_eq := ?_ }
-  all_goals simp only [mainBothInfinityReturnState, touchMemory]
+    returned := mainBothInfinityReturnState_halted yst
+    memory_eq := mainBothInfinityReturnState_memory yst
+    activeWords_eq := mainBothInfinityReturnState_activeWords yst
+    storage_eq := mainBothInfinityReturnState_storage yst
+    transient_eq := mainBothInfinityReturnState_transient yst
+    env_eq := mainBothInfinityReturnState_env yst
+    returndata_eq := mainBothInfinityReturnState_returndata yst
+    logs_eq := mainBothInfinityReturnState_logs yst
+    selfdestructs_eq := mainBothInfinityReturnState_selfdestructs yst }
 
 /-- The complete both-infinity path, exposed through a relational boundary
 instead of an equality to a fully expanded final state. -/

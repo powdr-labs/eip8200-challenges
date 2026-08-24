@@ -1,5 +1,7 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceInput
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceRun
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDispatcherLawful
+import Challenge.Bls12381G1Add.Reference.Proofs.SourceMainFiniteDoubleLawful
 import Challenge.Bls12381G1Add.Spec
 
 set_option warningAsError true
