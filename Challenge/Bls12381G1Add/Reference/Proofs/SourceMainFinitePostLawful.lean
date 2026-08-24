@@ -60,7 +60,7 @@ private theorem fpMulOutput_eq_mulCanonical (yst : EvmState)
       Fp.mulCanonical (fpMulLeft ahi alo) (fpMulRight bhi blo) := by
   apply Fp.limbs_ext_of_value_eq
   apply Fp.value_eq_of_lawful_eq
-    (canonical_fpMulOutput yst ahi alo bhi blo)
+    (canonical_fpMulOutput yst ahi alo bhi blo ha hb)
     (Fp.canonical_mulCanonical ha hb)
   have hfield := fpMulOutput_toField yst ahi alo bhi blo ha hb
   have hshared := Fp.toField_mulCanonical ha hb

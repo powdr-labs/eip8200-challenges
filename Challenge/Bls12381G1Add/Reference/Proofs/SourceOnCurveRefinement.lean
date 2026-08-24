@@ -56,7 +56,7 @@ private theorem fpMulOutput_eq_mulCanonical (yst : EvmState)
   rcases Challenge.Bls12381.ProofSupport.Fp.mulCanonical_spec ha hb with
     ⟨hcanonical, hshared⟩
   apply Challenge.Bls12381.ProofSupport.Fp.value_eq_of_lawful_eq
-    (canonical_fpMulOutput yst ahi alo bhi blo)
+    (canonical_fpMulOutput yst ahi alo bhi blo ha hb)
     hcanonical
   have hfield := fpMulOutput_toField yst ahi alo bhi blo ha hb
   have hfin := hfield.trans hshared.symm
@@ -100,7 +100,8 @@ private theorem onCurveRhsCube_eq (yst : EvmState)
     (onCurveState2 yst xHi xLo yHi yLo)
     (onCurveX2Words yst xHi xLo yHi yLo).1
     (onCurveX2Words yst xHi xLo yHi yLo).2 xHi xLo
-    (canonical_fpMulOutput (onCurveState1 yst yHi yLo) xHi xLo xHi xLo) hx
+    (canonical_fpMulOutput (onCurveState1 yst yHi yLo)
+      xHi xLo xHi xLo hx hx) hx
   change onCurveRhsCube yst xHi xLo yHi yLo =
       Challenge.Bls12381.ProofSupport.Fp.mulCanonical
         (onCurveX2 yst xHi xLo yHi yLo) (onCurveX xHi xLo) at h

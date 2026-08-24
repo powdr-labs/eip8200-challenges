@@ -85,6 +85,16 @@ theorem fpMulReturnEnvWith_values (ahi alo bhi blo hi lo : U256) :
     [hi, lo] := by
   rfl
 
+theorem fpMulReturnEnvWith_hi (ahi alo bhi blo hi lo : U256) :
+    (VEnv.get (fpMulReturnEnvWith ahi alo bhi blo hi lo) "\x0075").getD 0 =
+      hi := by
+  rfl
+
+theorem fpMulReturnEnvWith_lo (ahi alo bhi blo hi lo : U256) :
+    (VEnv.get (fpMulReturnEnvWith ahi alo bhi blo hi lo) "\x0076").getD 0 =
+      lo := by
+  rfl
+
 private theorem eval_fullMulLocals (ahi alo bhi blo : U256) (yst : EvmState) :
     Interp.evalExpr Challenge.YulProof.ClosedEvm.exec 65 fpMulBodyFuns
       (fpMulInitialEnv ahi alo bhi blo) yst

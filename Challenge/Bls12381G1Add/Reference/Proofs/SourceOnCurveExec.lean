@@ -1,5 +1,6 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceOnCurveDefs
 import Challenge.EvmProof.ExecSound
+import Challenge.EvmProof.ExecSound
 
 set_option warningAsError true
 
@@ -222,7 +223,7 @@ private theorem sound_execStmt {n funs V st stmt V' st' outcome}
   (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) n).2.2.1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) n).2.2.1
     funs V st stmt V' st' outcome h
 
 def onCurveBodyResultEnv (yst : EvmState) (xHi xLo yHi yLo : U256) :
@@ -283,7 +284,7 @@ theorem step_onCurve (xHi xLo yHi yLo : U256) (yst : EvmState) :
   have hargs := (Interp.sound_all_of
     (E := Challenge.YulProof.ClosedEvm.exec)
     (fun _ _ _ _ hbuiltin =>
-      Challenge.YulProof.ClosedEvm.builtinFn_sound hbuiltin) 8).2.1
+      (Challenge.YulProof.ClosedEvm.exec_lawful _ _ _ _).mpr hbuiltin) 8).2.1
     _ _ _ _ _ hargsEval
   have hcall := Step.callOk hargs lookup_onCurve (by rfl)
     (step_onCurveBody xHi xLo yHi yLo yst) (Or.inl rfl)
