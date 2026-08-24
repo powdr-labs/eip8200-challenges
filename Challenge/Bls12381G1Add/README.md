@@ -98,7 +98,9 @@ The proof proceeds entirely in Yul big-step semantics:
 - a reusable local-function contract additionally states normal-return source
   execution, scratch-memory framing, and the BLS `p - 2` specialization. The
   inversion proof instantiates that contract with the reference's optimized
-  Montgomery implementation, and G1ADD callers consume only the contract;
+  Montgomery implementation. G1ADD callers use its stable source-result
+  boundary, whose arithmetic guarantee is the same `YulModexp.Refines`
+  property required by that contract;
 - source execution covers every validation and affine-addition branch; and
 - normalization transports the universal theorem back to the parsed source.
 

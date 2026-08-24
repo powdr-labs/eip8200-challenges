@@ -1,6 +1,5 @@
 import Challenge.Bls12381G1Add.Reference.Proofs.SourceOnCurveDefs
 import Challenge.EvmProof.ExecSound
-import Challenge.EvmProof.ExecSound
 
 set_option warningAsError true
 
@@ -231,10 +230,10 @@ def onCurveBodyResultEnv (yst : EvmState) (xHi xLo yHi yLo : U256) :
   restore (onCurveInitialEnv xHi xLo yHi yLo)
     (onCurveReturnEnv yst xHi xLo yHi yLo)
 
-/-- The five frozen statements form a checked open-dialect derivation. Each
-nested helper is first verified with the deterministic MODEXP evaluator, then
-transported through its one-way soundness theorem; no common fuel is assumed
-between sibling source calls. -/
+/-- The five frozen statements form a checked closed-dialect source derivation.
+Each local arithmetic helper is first verified with the executable Yul
+interpreter, then transported through its one-way soundness theorem; no common
+fuel is assumed between sibling source calls. -/
 theorem step_onCurveBody (xHi xLo yHi yLo : U256) (yst : EvmState) :
     ExecStmt Challenge.YulProof.ClosedEvm.exec.toDialect onCurveFuns
       (onCurveInitialEnv xHi xLo yHi yLo) yst (.block onCurveBody)
@@ -266,9 +265,9 @@ theorem onCurveBodyResultEnv_yes (yst : EvmState)
       onCurveResult yst xHi xLo yHi yLo := by
   rfl
 
-/-- Relational execution theorem consumed by the profiled compiler proof.
-The frozen helper returns its exact word predicate after the three MODEXP
-multiplications and leaves their final memory state observable. -/
+/-- Relational source-execution theorem consumed by the enclosing G1ADD proof.
+The frozen helper returns its exact word predicate after three local `fpMul`
+calls and leaves their final memory state observable. -/
 theorem step_onCurve (xHi xLo yHi yLo : U256) (yst : EvmState) :
     EvalExpr Challenge.YulProof.ClosedEvm.exec.toDialect onCurveFuns
       [("xHi", xHi), ("xLo", xLo), ("yHi", yHi), ("yLo", yLo)] yst

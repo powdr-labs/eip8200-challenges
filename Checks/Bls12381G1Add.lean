@@ -23,6 +23,16 @@ info: 'Challenge.Bls12381G1Add.Reference.Proofs.Yul.referenceParsedBlock_correct
 #print axioms Challenge.Bls12381G1Add.Reference.Proofs.Yul.referenceParsedBlock_correct
 
 /--
+info: 'Challenge.Bls12381G1Add.Reference.Proofs.Yul.reference_correct' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound,
+ Challenge.Bls12381G1Add.Reference.Proofs.Compilation.referenceNormalizedBlock_eq._native.native_decide.ax_1_1,
+ Challenge.Bls12381G1Add.Reference.Proofs.Compilation.referenceParseSucceeded._native.native_decide.ax_1_1]
+-/
+#guard_msgs in
+#print axioms Challenge.Bls12381G1Add.Reference.Proofs.Yul.reference_correct
+
+/--
 info: 'Challenge.Bls12381G1Add.Reference.referenceParsed_noExternalOps' depends on axioms: [propext,
  Classical.choice,
  Quot.sound,
@@ -30,3 +40,19 @@ info: 'Challenge.Bls12381G1Add.Reference.referenceParsed_noExternalOps' depends 
 -/
 #guard_msgs in
 #print axioms Challenge.Bls12381G1Add.Reference.referenceParsed_noExternalOps
+
+/--
+info: 'Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics.fpInv_inversionCorrect' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in
+#print axioms Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics.fpInv_inversionCorrect
+
+/--
+info: 'Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics.fpPowPMinus2_inversionCorrect' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in
+#print axioms Challenge.Bls12381G1Add.Reference.Proofs.SourceSemantics.fpPowPMinus2_inversionCorrect
